@@ -121,16 +121,14 @@
   nav.bottom button.active { color:var(--text); }
   .badge { position:absolute; top:0; left:calc(50% + 6px); background:#b42318; color:#fff; border-radius:999px; font-size:10.5px; min-width:17px; height:17px; line-height:17px; padding:0 4px; }
   .page { display:none; } .page.on { display:block; }
-  .catgrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .catbtn { background:#fff; border:0; border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 12px; text-align:left; font:inherit; cursor:pointer; min-height:74px; }
-  .catbtn b { display:block; font-size:15.5px; } .catbtn span { font-size:12.5px; color:var(--muted); }
-  .catbtn.feature { grid-column:span 2; background:#1f2a37; color:#fff; } .catbtn.feature span { color:#cbd5e1; }
+  /* Notes tab: dr eggbot's Customer Notes app in a frame, between the header and the bottom nav (its own Save bar stays visible) */
+  #p-notes.on { position:fixed; left:0; right:0; top:var(--hh, 88px); bottom:var(--nh, 64px); height:calc(100dvh - var(--hh, 88px) - var(--nh, 64px));
+    display:flex; flex-direction:column; z-index:4; background:#fff; }
+  #p-notes .nbar { flex:none; display:flex; justify-content:space-between; align-items:center; padding:4px 12px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--line); background:var(--bg, #f4f5f7); }
+  #p-notes .nbar a { color:#1e3a6e; font-weight:600; text-decoration:none; }
+  #notesFrame { flex:1; width:100%; border:0; display:block; background:#fff; }
   .crumb { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-weight:700; font-size:17px; }
   .back { border:0; background:#e6e9ee; border-radius:999px; width:34px; height:34px; font-size:18px; cursor:pointer; }
-  .filters { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px; }
-  .filters select, .filters label.tg { flex:none; width:auto; min-height:36px; font-size:13.5px; padding:6px 28px 6px 10px; border-radius:999px; border:1px solid var(--line-strong); background-color:#fff; }
-  .filters label.tg { padding:6px 12px; display:flex; align-items:center; gap:6px; font-weight:600; }
-  .filters label.tg input { width:auto; min-height:0; }
   .item .row1 { display:flex; gap:10px; }
   .thumb { width:64px; height:64px; border-radius:10px; object-fit:cover; background:#eef0f3; flex:none; }
   .actions { display:flex; gap:8px; margin-top:10px; }
@@ -223,7 +221,8 @@
       <div id="dym"></div><div id="sfilt"></div><div id="meta" class="meta hidden"></div><div id="results"></div>
     </div>
     <!-- BROWSE -->
-    <div class="page" id="p-browse"><div id="browseBody"></div></div>
+    <div class="page" id="p-cabinets"><div id="cabBody"></div></div>
+    <div class="page" id="p-notes"><div class="nbar"><span>Customer Notes · separate sign-in</span><a href="../customer-notes/" target="_blank" rel="noopener">Open full screen ↗</a></div></div>
     <!-- CART -->
     <div class="page" id="p-cart"><div class="card">
       <div id="cartRev" class="revbar hidden"></div>
@@ -309,7 +308,8 @@
   </main>
   <nav class="bottom" id="bnav">
     <button data-go="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
-    <button data-go="browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Browse</button>
+    <button data-go="cabinets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M12 4v16M3 12h18M9.5 8v1.5M14.5 8v1.5M9.5 15v1.5M14.5 15v1.5"/></svg>Cabinets</button>
+    <button data-go="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Notes</button>
     <button data-go="cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h11l2-8H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>Cart<span class="badge hidden" id="cartBadge"></span></button>
     <button data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
   </nav>
@@ -347,10 +347,10 @@ function money(n) { return n == null || n === '' || isNaN(n) ? '—' : '$' + Num
 function qty(n) { return n == null || n === '' ? '—' : Number(n).toLocaleString('en-US'); }
 function msg(el, text, ok) { el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); el.classList.toggle('hidden', !text); }
 function show(id) { ['signin', 'app', 'pinchange'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); }); }
-// ---------------- item data on the phone (fast search/browse; same Search.gs code as the server)
+// ---------------- item data on the phone (fast search/cabinets; same Search.gs code as the server)
 var LOCAL_ACTIONS = {
-  search: function (b, d) { return searchBundle_(b, d.q, d.limit, d.f); }, categories: function (b) { return categories_(b); },
-  browse: function (b, d) { return browse_(b, d.filter); }, cabinetStyles: function (b) { return cabinetStyles_(b); },
+  search: function (b, d) { return searchBundle_(b, d.q, d.limit, d.f); },
+  cabinetStyles: function (b) { return cabinetStyles_(b); },
   cabinetShelf: function (b, d) { return cabinetShelf_(b, String(d.style || ''), String(d.shelf || 'wall')); },
   settingItems: function (b) { return settingItems_(b); }, cabinetCodes: function (b) { return cabinetCodes_(b); },
   containers: function (b) { return containersSummary_(b); } };
@@ -395,7 +395,8 @@ function go(p) {
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   window.scrollTo(0, 0);
-  if (p === 'browse' && !$('browseBody').innerHTML) browseHome();
+  if (p === 'cabinets' && !$('cabBody').innerHTML) cabStyles();
+  if (p === 'notes') openNotes();
   if (p === 'cart') { renderCart(); renderDrafts(); loadCartRequests(); }
   if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
   if (p === 'history') loadHistory();
@@ -408,7 +409,7 @@ function enterApp() {
   show('app'); setHeader(session);
   checkData();
   updateBadge();
-  document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
+  sizeChrome();
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
 function setHeader(m) {
@@ -428,7 +429,7 @@ function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList
 function closeSheet() { $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
-// ---------------- item cards (search + browse)
+// ---------------- item cards (search)
 var shown = {};          // name -> item (for buttons)
 function perSqft(it) { return it.tile && it.tile.sqftPc && it.price ? it.price / it.tile.sqftPc : null; }
 function card(it) {
@@ -521,38 +522,29 @@ $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('bu
   var my = ++seq; $('results').style.opacity = '.5';
   searchPage(sQ, my, 0).then(function () { $('results').style.opacity = ''; }); });
 
-// ---------------- browse
-var browseState = {};
-function browseHome() {
-  $('browseBody').innerHTML = '<div class="spinner"></div>';
-  api('categories').then(function (cs) {
-    $('browseBody').innerHTML = '<div class="catgrid">' + cs.map(function (c) {
-      return '<button class="catbtn' + (c.cat === 'Cabinets' ? ' feature' : '') + '" data-cat="' + esc(c.cat) + '"><b>' + esc(c.cat) + (c.cat === 'Cabinets' ? ': shelf by style' : '') + '</b><span>' + c.count.toLocaleString() + ' items</span></button>'; }).join('') + '</div>';
-    $('browseBody').querySelectorAll('.catbtn').forEach(function (b) { b.onclick = function () { b.dataset.cat === 'Cabinets' ? cabStyles() : browseCat({ cat: b.dataset.cat }); }; });
-  }).catch(function (er) { $('browseBody').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+// ---------------- Notes tab: Customer Notes (dr eggbot's app, same origin) in a frame. Loaded on the first tap, then kept
+// alive (only hidden) when switching tabs, so a half-typed note survives. It has its own name + PIN sign-in.
+var NOTES_URL = '../customer-notes/';
+function sizeChrome() {
+  var h = document.querySelector('#app header'), n = $('bnav');
+  if (h && h.offsetHeight) document.documentElement.style.setProperty('--hh', h.offsetHeight + 'px');
+  if (n && n.offsetHeight) document.documentElement.style.setProperty('--nh', n.offsetHeight + 'px');
 }
-function browseCat(f) {
-  browseState = f;
-  $('browseBody').innerHTML = '<div class="crumb"><button class="back" onclick="browseHome()">‹</button>' + esc(f.cat) + '</div><div class="spinner"></div>';
-  api('browse', { filter: f }).then(function (r) {
-    var sel = function (key, label) { var opts = r.facets[key]; if (!opts.length && !f[key]) return '';
-      return '<select data-f="' + key + '"><option value="">' + label + '</option>' + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (f[key] === o[0] ? ' selected' : '') + '>' + esc(o[0]) + ' (' + o[1] + ')</option>'; }).join('') + '</select>'; };
-    $('browseBody').innerHTML = '<div class="crumb"><button class="back" onclick="browseHome()">‹</button>' + esc(f.cat) + ' <span class="count">' + r.total.toLocaleString() + '</span></div>' +
-      '<div class="filters">' + sel('brand', 'Brand / line') + sel('finish', 'Color / finish') + sel('size', 'Size') +
-      '<label class="tg"><input type="checkbox" id="fStock"' + (f.inStock ? ' checked' : '') + '> In stock</label></div>' +
-      r.items.map(card).join('') + (r.total > (r.page + 1) * r.pageSize ? '<button class="btn" id="moreBtn" style="background:#fff;color:#111;border:1px solid var(--line-strong)">Show more</button>' : '');
-    $('browseBody').querySelectorAll('select[data-f]').forEach(function (s) { s.onchange = function () { var nf = Object.assign({}, f, { page: 0 }); nf[s.dataset.f] = s.value; browseCat(nf); }; });
-    $('fStock').onchange = function () { browseCat(Object.assign({}, f, { inStock: this.checked, page: 0 })); };
-    if ($('moreBtn')) $('moreBtn').onclick = function () { browseCat(Object.assign({}, f, { page: (f.page || 0) + 1 })); };
-  }).catch(function (er) { $('browseBody').innerHTML += '<div class="msg err">' + esc(er.message) + '</div>'; });
+window.addEventListener('resize', sizeChrome);
+function openNotes() {
+  sizeChrome();
+  if ($('notesFrame')) return;
+  var f = document.createElement('iframe');
+  f.id = 'notesFrame'; f.title = 'Customer Notes'; f.src = NOTES_URL; f.setAttribute('allow', 'microphone; camera; clipboard-write');
+  $('p-notes').appendChild(f);
 }
 
 // ---------------- cabinets: style -> Wall / Base / Tall shelf
 var cabStyleList = [];
 function cabStyles() {
-  $('browseBody').innerHTML = '<div class="crumb"><button class="back" onclick="browseHome()">‹</button>Cabinets: pick a style</div><div class="spinner"></div>';
+  $('cabBody').innerHTML = '<div class="crumb">Cabinets: pick a style</div><div class="spinner"></div>';
   api('cabinetStyles').then(function (ss) { cabStyleList = ss;
-    $('browseBody').innerHTML = '<div class="crumb"><button class="back" onclick="browseHome()">‹</button>Cabinets: pick a style</div><div class="stylegrid">' +
+    $('cabBody').innerHTML = '<div class="crumb">Cabinets: pick a style</div><div class="stylegrid">' +
       ss.map(function (s, i) { return '<button class="stylebtn" onclick="cabShelf(' + i + ',\'wall\')">' + (s.photo ? '<img loading="lazy" src="' + esc(s.photo) + '" alt="">' : '<div class="ph">no photo</div>') + '<div class="t">' + esc(s.name) + '</div></button>'; }).join('') + '</div>';
   });
 }
@@ -563,7 +555,7 @@ function cabShelf(i, shelf) {
     (s.photo ? '<img src="' + esc(s.photo) + '" style="width:100%;max-height:150px;object-fit:cover;border-radius:12px" alt="">' : '') +
     '<div class="shelfbtns">' + ['wall', 'base', 'tall'].map(function (k) { return '<button class="' + (k === shelf ? 'active' : '') + '" onclick="cabShelf(' + i + ',\'' + k + '\')">' + k[0].toUpperCase() + k.slice(1) + '<small>' + s.counts[k] + ' sizes</small></button>'; }).join('') + '</div>' +
     (s.note ? '<p class="note" style="margin-top:0">' + esc(s.note) + '</p>' : '');
-  $('browseBody').innerHTML = head + '<div class="spinner"></div>';
+  $('cabBody').innerHTML = head + '<div class="spinner"></div>';
   api('cabinetShelf', { style: s.key, shelf: shelf }).then(function (r) {
     cabRows = {}; r.rows.forEach(function (x) { cabRows[x.code] = x; });
     // group rows into "shelves" by code family (W30.., W36.., B.., DB.., SB..)
@@ -573,10 +565,10 @@ function cabShelf(i, shelf) {
     var PREF = ['W', 'WDC', 'WBC', 'MWC', 'WEA', 'WEQ', 'WR', 'GDW', 'GDWDC', 'B', 'DB', '1DB', '2DB', '3DB', 'SB', 'LSB', 'BBC', 'BCC', 'BEA', 'BMC', 'BSR', 'SGH', 'PC', 'OVD', 'OMD'];
     var fk = function (k) { var f = k.split(' ')[0], i = PREF.indexOf(f); return [i < 0 ? 99 : i, k]; };
     order.sort(function (a, b) { var x = fk(a), y = fk(b); return x[0] - y[0] || (x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0); });
-    $('browseBody').innerHTML = head + '<div class="legend"><span><i style="background:#16a34a"></i>in stock</span><span><i style="background:#2563eb"></i>coming</span><span><i style="background:#dc2626"></i>short</span><span>door + box price</span></div>' +
+    $('cabBody').innerHTML = head + '<div class="legend"><span><i style="background:#16a34a"></i>in stock</span><span><i style="background:#2563eb"></i>coming</span><span><i style="background:#dc2626"></i>short</span><span>door + box price</span></div>' +
       '<div class="shelf-wood">' + order.map(function (k) { return '<div style="font-size:11.5px;font-weight:700;color:#6b5b3e;margin:0 2px 4px">' + esc(k) + '</div><div class="sizegrid">' +
         fam[k].map(function (x) { return '<button class="size st-' + x.status + '" onclick="cabDetail(\'' + esc(x.code) + '\')"><b>' + esc(x.code) + '</b><span>' + money(x.price).replace('.00', '') + '</span><i></i></button>'; }).join('') + '</div>'; }).join('') + '</div>';
-  }).catch(function (er) { $('browseBody').innerHTML = head + '<div class="msg err">' + esc(er.message) + '</div>'; });
+  }).catch(function (er) { $('cabBody').innerHTML = head + '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
 function cabDetail(code) {
   var x = cabRows[code], s = cabCur.s;
@@ -607,7 +599,7 @@ function renderCart() {
   var c = cart();
   $('cartLines').innerHTML = c.length ? c.map(function (l, i) { return '<div class="cartline"><div class="n"><b>' + esc(l.name) + '</b><span>' + (l.missing ? '<span class="missing">no longer in the item list: remove it</span>' : money(l.price) + ' each') + '</span></div>' +
     '<div class="stepper"><button onclick="setQty(' + i + ',-1)">−</button><input inputmode="numeric" value="' + l.qty + '" onchange="setQty(' + i + ',0,this.value)"><button onclick="setQty(' + i + ',1)">+</button></div>' +
-    '<div class="amt">' + money(l.price * l.qty) + '</div></div>'; }).join('') : '<div class="empty">Cart is empty. Add items from Search or Browse.</div>';
+    '<div class="amt">' + money(l.price * l.qty) + '</div></div>'; }).join('') : '<div class="empty">Cart is empty. Add items from Search or Cabinets.</div>';
   var sub = c.reduce(function (a, l) { return a + l.price * l.qty; }, 0), tax = Math.round(sub * TAX[taxStore] * 100) / 100;
   $('cartTotals').innerHTML = c.length ? '<div class="kv"><span>Subtotal (retail)</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + taxStore + ' tax ' + (TAX[taxStore] * 100).toFixed(TAX[taxStore] === 0.1025 ? 2 : 3) + '%</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>' : '';
 }
