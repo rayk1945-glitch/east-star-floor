@@ -68,6 +68,16 @@
   .keepbox { display:flex; gap:10px; align-items:center; border:1px solid var(--line-strong); border-radius:10px; padding:8px; margin-top:6px; font-size:14px; }
   .keepbox img { width:64px; height:64px; object-fit:cover; border-radius:6px; background:#eee; }
   .missing { color:var(--err-fg); font-weight:700; }
+  .reader { border:1px solid var(--line-strong); border-radius:12px; padding:10px 12px; margin-top:10px; background:#fbfcfd; }
+  .reader .rh { display:flex; align-items:center; gap:8px; } .reader .rh b { flex:1; font-size:15px; }
+  .reader .rstat { font-size:13.5px; color:var(--muted); margin:4px 0 6px; }
+  .crow { display:grid; grid-template-columns:1fr 60px 50px 34px; gap:6px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); }
+  .crow input { min-height:40px; font-size:16px; padding:6px 8px; } .crow input.code { text-transform:uppercase; font-weight:700; letter-spacing:.02em; }
+  .crow .x { border:0; background:#eef0f3; border-radius:999px; width:34px; height:34px; font-size:18px; cursor:pointer; }
+  .crow .nt { grid-column:1 / -1; font-size:12px; color:var(--muted); margin-top:-2px; }
+  .fl { font-size:11.5px; font-weight:800; border-radius:6px; padding:3px 6px; text-align:center; }
+  .fl.ok { background:var(--ok-bg); color:var(--ok-fg); } .fl.check { background:var(--err-bg); color:var(--err-fg); } .fl.odd { background:var(--warn-bg); color:var(--warn-fg); }
+  .reader .spinner { margin:10px auto; }
   .searchbar input { padding-left:40px; font-size:17px; min-height:50px; border-radius:12px; }
   .searchbar svg { position:absolute; left:12px; top:15px; width:20px; height:20px; color:#6b7280; }
   .hint { font-size:13px; color:var(--muted); margin:8px 2px 0; }
@@ -239,6 +249,14 @@
       <div id="plKeep" class="keepbox hidden"></div>
       <input id="plFile" type="file" accept="image/*,application/pdf" capture="environment">
       <img id="plPrev" class="planpreview hidden" alt="">
+      <div id="plReader" class="reader hidden">
+        <div class="rh"><b>Cabinet codes on the plan</b><button class="link" id="crRead">Read again</button></div>
+        <div class="rstat" id="crStat"></div>
+        <div id="crRows"></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="link" id="crAdd">+ Add row</button><span style="flex:1"></span>
+          <label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:600"><input type="checkbox" id="crUse" checked style="width:auto;min-height:0"> Send this list</label></div>
+        <p class="note" style="margin:6px 0 0">Read by the computer from the photo: check every code and quantity against the plan. <span class="fl check">check</span> = not in our item list, <span class="fl odd">odd</span> = the reader guessed or the label looks cut off.</p>
+      </div>
       <div class="twocol"><div><label class="f">Customer name <span class="req">*</span></label><input id="plName" autocapitalize="words"></div>
         <div><label class="f">Phone</label><input id="plPhone" type="tel" inputmode="tel"></div></div>
       <div class="twocol"><div><label class="f">Job city</label><input id="plCity" autocapitalize="words" placeholder="e.g. Hercules"></div>
@@ -299,7 +317,7 @@
 var API_URL = 'https://script.google.com/macros/s/AKfycbzmMaB6B78-sJABGFGZ9vpLGsCSN67lPF3hf0aGIM8AVLbsKJrdCKovVZDi6nKdXNTO/exec';   // set by set_exec_url.sh (the rayk1945 web app /exec URL)
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) API_URL = '/api';   // local test server only
 var SESSION_KEY = 'esRedSession', CART_KEY = 'esRedCart', TAX = { SF: 0.08625, Fremont: 0.1025 };
-var TRIM_KEYS = ['WSP40', 'BSP', 'TK8', 'WF3X40', 'WF3X96', 'DWP1/DWP3', 'REP', '4X8', 'OCM', 'CM2', '25.5X96', 'SM8'];
+var TRIM_KEYS = ['WSP40', 'BSP', 'TK8', 'WF3X40', 'WF3X96', 'DWP1', 'DWP3', 'REP', '4X8', 'OCM', 'CM2', '25.5X96', 'SM8'];
 var session = (function () { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return s && s.token ? s : null; } catch (e) { return null; } })();
 var $ = function (id) { return document.getElementById(id); };
 function api(action, data) {
@@ -630,7 +648,10 @@ function openRequest(rid) {
       body += '<div class="sec-h" style="margin-top:12px"><h2>Items</h2></div>' + g.lines.map(function (l) { return '<div class="kv"><span>' + l.qty + ' × ' + esc(l.name) + (l.missing ? ' <span class="missing">(gone)</span>' : '') + '</span><b>' + (l.missing ? '' : money(l.price * l.qty)) + '</b></div>'; }).join('') +
         '<div class="kv"><span>Retail today (before tax)</span><b>' + money(sub) + '</b></div>'; }
     else { var t = Object.keys(p.trim || {}).filter(function (k) { return p.trim[k] !== '' && p.trim[k] != null; });
-      body += '<div class="sec-h" style="margin-top:12px"><h2>Trim</h2></div>' + (t.length ? t.map(function (k) { return kv(k, p.trim[k]); }).join('') : '<div class="hint">None</div>') + '<div id="opThumb"></div>'; }
+      body += '<div class="sec-h" style="margin-top:12px"><h2>Trim</h2></div>' + (t.length ? t.map(function (k) { return kv(k, p.trim[k]); }).join('') : '<div class="hint">None</div>');
+      if (p.cabinet_list && p.cabinet_list.length) body += '<div class="sec-h" style="margin-top:12px"><h2>Cabinet list (staff-confirmed)</h2></div>' +
+        p.cabinet_list.map(function (c) { return '<div class="kv"><span>' + c.qty + ' × ' + esc(c.code) + '</span><b>' + (c.flag ? '<span class="fl ' + esc(c.flag) + '">' + esc(c.flag) + '</span>' : '') + '</b></div>'; }).join('');
+      body += '<div id="opThumb"></div>'; }
     if (p.notes) body += '<div class="sec-h" style="margin-top:12px"><h2>Notes</h2></div><div style="white-space:pre-wrap;font-size:14px">' + esc(p.notes) + '</div>';
     body += '<div class="actions"><button data-hact="edit" data-rid="' + esc(rid) + '">Edit</button><button data-hact="clone" data-rid="' + esc(rid) + '">Clone</button><button data-hact="resend" data-rid="' + esc(rid) + '">Re-send</button></div>';
     $('sheetBody').innerHTML = body;
@@ -658,7 +679,10 @@ function loadRequestIntoForm(rid, clone, btn) {
         if (p.style && ![].some.call($('plStyle').options, function (o) { return o.value === p.style; })) $('plStyle').insertAdjacentHTML('beforeend', '<option>' + esc(p.style) + '</option>');
         $('plStyle').value = p.style || ''; $('plDisc').value = p.discount_pct == null ? '' : p.discount_pct; $('plTax').value = p.tax_store === 'Fremont' ? 'Fremont' : 'SF';
         $('plTrim').querySelectorAll('input').forEach(function (i) { var v = (p.trim || {})[i.dataset.k]; i.value = v === '' || v == null ? '' : v; });
-        $('plNotes').value = notes; setPlanRev(clone ? null : rid); setPlanKeep(g.has_file ? rid : null); msg($('plMsg'), '');
+        var oldDwp = (p.trim || {})['DWP1/DWP3'];
+        if (oldDwp !== '' && oldDwp != null) notes = (notes ? notes + '\n' : '') + 'Old form “DWP1/DWP3”: ' + oldDwp + ' (enter it as DWP1 or DWP3)';
+        $('plNotes').value = notes; setPlanRev(clone ? null : rid); clearReader(); setPlanKeep(g.has_file ? rid : null); msg($('plMsg'), '');
+        if (p.cabinet_list && p.cabinet_list.length) loadCabCodes().catch(function () {}).then(function () { setReader(p.cabinet_list, 'Cabinet list from ' + esc(rid) + '. Check it, then send.'); });
         toast(clone ? 'Copied into a new plan form' : 'Loaded ' + rid + ' for editing'); if (clone) $('plName').focus();
       });
     }
@@ -727,22 +751,70 @@ var planRev = null, planKeep = null;
 function setPlanRev(rid) { planRev = rid || null;
   $('planRev').innerHTML = planRev ? '<span>Editing <b>' + esc(planRev) + '</b>. Sending makes a new request marked “revised from ' + esc(planRev) + '”.</span><button class="link" id="planRevX">Stop editing</button>' : '';
   $('planRev').classList.toggle('hidden', !planRev); if (planRev) $('planRevX').onclick = function () { setPlanRev(null); }; }
-function clearPlanFile() { planFile = null; $('plFile').value = ''; $('plPrev').classList.add('hidden'); $('plPrev').removeAttribute('src'); }
+function clearPlanFile() { planFile = null; $('plFile').value = ''; $('plPrev').classList.add('hidden'); $('plPrev').removeAttribute('src'); clearReader(); }
 function setPlanKeep(rid) { planKeep = rid || null; var k = $('plKeep'); if (planKeep) clearPlanFile();
   k.classList.toggle('hidden', !planKeep); if (!planKeep) { k.innerHTML = ''; return; }
   k.innerHTML = '<img id="plKeepImg" alt=""><span style="flex:1">Using the plan photo from <b>' + esc(planKeep) + '</b>. Pick a file below to replace it.</span><button class="link" id="plKeepX">Remove</button>';
-  $('plKeepX').onclick = function () { setPlanKeep(null); };
+  $('plReader').classList.remove('hidden'); if (!crList.length) { $('crStat').innerHTML = 'Tap “Read again” to read cabinet codes from this photo.'; renderReader(); }
+  $('plKeepX').onclick = function () { setPlanKeep(null); clearReader(); };
   api('planThumb', { request_id: planKeep }).then(function (t) { if (t.thumb && $('plKeepImg')) $('plKeepImg').src = t.thumb; }).catch(function () {}); }
+// ---- plan code reader: OCR on the server, editable list here, sent as cabinet_list
+var cabCodes = null, crList = [], crSeq = 0;
+function loadCabCodes() { if (cabCodes) return Promise.resolve(cabCodes); return api('cabinetCodes').then(function (l) { cabCodes = {}; l.forEach(function (c) { cabCodes[c] = 1; }); return cabCodes; }); }
+function knownCode(c) { c = String(c || '').toUpperCase().replace(/\s+/g, ''); if (!cabCodes) return true;
+  return !!(cabCodes[c] || cabCodes[c.replace(/(\d)[LR]$/, '$1')] || (/^\d+(\.\d)?X\d+$/.test(c) && cabCodes[c + 'X6'])); }
+function crFlag(r) { return !knownCode(r.code) ? 'check' : (r.flag === 'odd' ? 'odd' : ''); }
+function renderReader() {
+  $('crRows').innerHTML = crList.map(function (r, i) { var f = crFlag(r);
+    return '<div class="crow"><input class="code" data-i="' + i + '" data-f="code" value="' + esc(r.code) + '" autocapitalize="characters" autocomplete="off" spellcheck="false">' +
+      '<input data-i="' + i + '" data-f="qty" type="number" inputmode="numeric" min="1" value="' + r.qty + '">' +
+      '<span class="fl ' + (f || 'ok') + '">' + (f || 'ok') + '</span><button class="x" data-del="' + i + '" aria-label="Remove">×</button>' +
+      (r.note ? '<div class="nt">' + esc(r.note) + '</div>' : '') + '</div>'; }).join('');
+}
+$('crRows').addEventListener('input', function (e) { var t = e.target, i = +t.dataset.i; if (!crList[i]) return;
+  if (t.dataset.f === 'code') { crList[i].code = t.value.toUpperCase().replace(/\s+/g, ''); crList[i].flag = ''; crList[i].note = '';
+    var f = crFlag(crList[i]), pill = t.parentNode.querySelector('.fl'); pill.className = 'fl ' + (f || 'ok'); pill.textContent = f || 'ok';
+    var nt = t.parentNode.querySelector('.nt'); if (nt) nt.remove(); }
+  else crList[i].qty = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); });
+$('crRows').addEventListener('click', function (e) { var b = e.target.closest('[data-del]'); if (!b) return; crList.splice(+b.dataset.del, 1); renderReader(); });
+$('crAdd').onclick = function () { $('plReader').classList.remove('hidden'); crList.push({ code: '', qty: 1, flag: '', note: '' }); renderReader();
+  var ins = $('crRows').querySelectorAll('input.code'); if (ins.length) ins[ins.length - 1].focus(); };
+function setReader(list, stat) { crList = (list || []).map(function (r) { return { code: r.code, qty: r.qty || 1, flag: r.flag || '', note: r.note || '' }; });
+  $('plReader').classList.remove('hidden'); $('crStat').innerHTML = stat || ''; renderReader(); }
+function clearReader() { crList = []; crSeq++; $('plReader').classList.add('hidden'); $('crRows').innerHTML = ''; $('crStat').textContent = ''; $('crUse').checked = true; }
+/** Resize a photo for OCR (JPEG; small screenshots enlarged to ~1600 px, big photos reduced to 2600 px) so it stays under Drive's OCR size limit. PDFs go as they are. */
+function ocrCopy(file) {
+  if (file.mimeType === 'application/pdf') return Promise.resolve(file.data.length < 2.9e6 ? { data: file.data, mimeType: 'application/pdf' } : null);
+  return new Promise(function (res) { var img = new Image();
+    img.onload = function () { var L = Math.max(img.width, img.height), k = L < 1600 ? Math.min(2, 1600 / L) : Math.min(1, 2600 / L), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      res({ data: c.toDataURL('image/jpeg', 0.85), mimeType: 'image/jpeg' }); };
+    img.onerror = function () { res(null); }; img.src = file.data; });
+}
+function readPlan() {
+  var my = ++crSeq;
+  $('plReader').classList.remove('hidden'); $('crRows').innerHTML = '<div class="spinner"></div>'; $('crStat').textContent = 'Reading cabinet codes from the plan…';
+  var req = planFile ? ocrCopy(planFile).then(function (f) { if (!f) throw new Error('This photo type cannot be read here (try a JPG/PNG screenshot or a smaller PDF).'); return { file: f }; })
+    : planKeep ? Promise.resolve({ request_id: planKeep }) : Promise.reject(new Error('Pick the plan photo first.'));
+  Promise.all([req, loadCabCodes().catch(function () {})]).then(function (a) { return api('planRead', a[0]); }).then(function (r) { if (my !== crSeq) return;
+    if (!r.ok) { setReader([], '<span class="missing">' + esc(r.error || 'Could not read the plan.') + '</span> You can still send the photo alone, or add the codes yourself.'); return; }
+    if (!r.codes.length) { setReader([], 'No cabinet codes found on this photo. You can still send the photo alone, or add the codes yourself.'); return; }
+    var n = r.codes.reduce(function (a, c) { return a + c.qty; }, 0), bad = r.codes.filter(function (c) { return c.flag; }).length;
+    setReader(r.codes, 'Found <b>' + n + '</b> cabinet' + (n === 1 ? '' : 's') + ' (' + r.codes.length + ' codes)' + (bad ? ', <b>' + bad + '</b> to check' : '') + '. Fix anything wrong, then send.');
+  }).catch(function (er) { if (my !== crSeq) return; setReader([], '<span class="missing">' + esc(er.message) + '</span> You can still send the photo alone.'); });
+}
+$('crRead').onclick = readPlan;
 $('plFile').onchange = function () { var f = this.files[0]; if (!f) return;
   if (f.size > 10 * 1024 * 1024) { msg($('plMsg'), 'That file is over 10 MB. Take the photo again at a lower size.'); return; }
   var rd = new FileReader(); rd.onload = function () { planFile = { data: rd.result, mimeType: f.type || 'image/jpeg', name: f.name };
-    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); }; rd.readAsDataURL(f); };
+    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); readPlan(); }; rd.readAsDataURL(f); };
 $('plSend').onclick = function () {
   var trim = {}; $('plTrim').querySelectorAll('input').forEach(function (i) { trim[i.dataset.k] = i.value.trim(); });
   var b = this; b.disabled = true; msg($('plMsg'), 'Sending…', true);
   api('planRequest', { plan: { file: planFile, customer_name: $('plName').value, customer_phone: $('plPhone').value, job_city: $('plCity').value,
     style: $('plStyle').value, discount_pct: $('plDisc').value, tax_store: $('plTax').value, trim: trim, notes: $('plNotes').value,
-    revised_from: planRev || '', reuse_file_from: planFile ? '' : (planKeep || '') } })
+    revised_from: planRev || '', reuse_file_from: planFile ? '' : (planKeep || ''),
+    cabinet_list: $('crUse').checked ? crList.filter(function (r) { return r.code; }).map(function (r) { return { code: r.code, qty: r.qty, flag: crFlag(r) }; }) : [] } })
     .then(function (r) { var rv = r.revised_from ? ' (revised from ' + r.revised_from + ')' : '';
       msg($('plMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + rv + '.' : 'Saved as ' + r.request_id + rv + ' but the bot did not answer (' + r.status + '). Re-send it below or from History.', r.sent);
       setPlanRev(null); clearPlanFile(); setPlanKeep(null); loadRecent('plan', 'plList', 5); })
