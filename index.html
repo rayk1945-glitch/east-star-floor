@@ -150,6 +150,7 @@
   .calcres .big { font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; }
   .note { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.4; }
   .cartline { display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+  .cthumb { width:44px; height:44px; border-radius:8px; object-fit:contain; background:#fff; border:1px solid var(--line); flex:none; }
   .cartline .n { flex:1; min-width:0; } .cartline .n b { display:block; font-size:14px; word-break:break-word; } .cartline .n span { font-size:12px; color:var(--muted); }
   .stepper { display:flex; align-items:center; border:1px solid var(--line-strong); border-radius:999px; overflow:hidden; }
   .stepper button { border:0; background:#fff; width:34px; height:34px; font-size:18px; cursor:pointer; } .stepper input { width:46px; min-height:34px; border:0; text-align:center; padding:0; font-size:15px; border-radius:0; }
@@ -420,7 +421,7 @@ function card(it) {
   var chip = function (l, v) { return v ? '<span class="chip">' + l + ' ' + esc(v) + '</span>' : '<span class="chip none">' + l + ' —</span>'; };
   var ps = perSqft(it), disc = /discontinu/i.test(it.desc) ? ' <span class="chip" style="background:#fdecec;color:#7f1d1d">discontinued</span>' : '';
   var nm = encodeURIComponent(it.name);
-  return '<div class="card item"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="">' : '') +
+  return '<div class="card item"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
     '<div style="flex:1;min-width:0"><div class="top"><div class="name">' + esc(it.name) + disc + '</div><div class="price">' + money(it.price) +
     '<small>' + (it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '') + '</div></div>' +
     '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
@@ -524,12 +525,13 @@ function cart() { try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'
 function saveCart(c) { localStorage.setItem(CART_KEY, JSON.stringify(c)); updateBadge(); }
 function updateBadge() { var n = cart().reduce(function (a, l) { return a + 1; }, 0); $('cartBadge').textContent = n; $('cartBadge').classList.toggle('hidden', !n); }
 function addLine(l) { var c = cart(), ex = c.filter(function (x) { return x.name === l.name; })[0]; if (ex) ex.qty += l.qty; else c.push(l); saveCart(c); toast('Added ' + l.name); }
-function addItem(name) { var it = shown[name]; addLine({ name: it.name, desc: it.desc.slice(0, 90), price: it.price, qty: 1 }); }
+function addItem(name) { var it = shown[name]; addLine({ name: it.name, desc: it.desc.slice(0, 90), price: it.price, qty: 1, photo: it.photo || '' }); }
 var taxStore = 'SF';
 $('taxSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; taxStore = b.dataset.t; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); renderCart(); });
 function renderCart() {
   var c = cart();
-  $('cartLines').innerHTML = c.length ? c.map(function (l, i) { return '<div class="cartline"><div class="n"><b>' + esc(l.name) + '</b><span>' + (l.missing ? '<span class="missing">no longer in the item list: remove it</span>' : money(l.price) + ' each') + '</span></div>' +
+  $('cartLines').innerHTML = c.length ? c.map(function (l, i) { var ph = l.photo || (shown[l.name] || {}).photo || '';
+    return '<div class="cartline">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<div class="n"><b>' + esc(l.name) + '</b><span>' + (l.missing ? '<span class="missing">no longer in the item list: remove it</span>' : money(l.price) + ' each') + '</span></div>' +
     '<div class="stepper"><button onclick="setQty(' + i + ',-1)">−</button><input inputmode="numeric" value="' + l.qty + '" onchange="setQty(' + i + ',0,this.value)"><button onclick="setQty(' + i + ',1)">+</button></div>' +
     '<div class="amt">' + money(l.price * l.qty) + '</div></div>'; }).join('') : '<div class="empty">Cart is empty. Add items from Search.</div>';
   var sub = c.reduce(function (a, l) { return a + l.price * l.qty; }, 0), tax = Math.round(sub * TAX[taxStore] * 100) / 100;
