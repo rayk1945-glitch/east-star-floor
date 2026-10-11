@@ -194,9 +194,18 @@
       <div class="seg2" id="taxSeg"><button data-t="SF" class="active">SF tax 8.625%</button><button data-t="Fremont">Fremont tax 10.25%</button></div>
       <div id="cartTotals"></div>
       <p class="note">Retail list prices, no discount. Discounts are applied on the official quote.</p>
+      <div id="cartForm">
+        <div class="twocol"><div><label class="f">Customer name <span class="req">*</span></label><input id="cqName" autocapitalize="words"></div>
+          <div><label class="f">Phone</label><input id="cqPhone" type="tel" inputmode="tel"></div></div>
+        <div class="twocol"><div><label class="f">Job city</label><input id="cqCity" autocapitalize="words"></div>
+          <div><label class="f">Discount %</label><input id="cqDisc" type="number" inputmode="decimal" placeholder="default"></div></div>
+        <label class="f">Notes</label><textarea id="cqNotes" rows="2" placeholder="Pickup/delivery, color questions, anything for the quote"></textarea>
+      </div>
       <button class="btn" id="cartSend">Send cart to Red for official quote</button>
       <div id="cartMsg" class="msg hidden"></div>
-    </div></div>
+    </div>
+    <div class="card"><div class="sec-h"><h2>Sent cart requests</h2><button class="link" id="cqRefresh">Refresh</button></div><div id="cqList"><div class="empty">None yet.</div></div></div>
+    </div>
     <!-- SEND PLAN (separate page) -->
     <div class="page" id="p-plan"><div class="card">
       <div class="crumb"><button class="back" data-go="search">‹</button>Send a kitchen plan to <span id="planBot">Red</span></div>
@@ -273,7 +282,7 @@ function go(p) {
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   window.scrollTo(0, 0);
   if (p === 'browse' && !$('browseBody').innerHTML) browseHome();
-  if (p === 'cart') renderCart();
+  if (p === 'cart') { renderCart(); loadCartRequests(); }
   if (p === 'plan') planInit();
   if (p === 'admin') adminLoad();
 }
@@ -289,6 +298,7 @@ function setHeader(m) {
   $('acctLine').textContent = (m.name || '') + (m.accountName ? ' · ' + m.accountName : '') + (m.bot ? ' · bot ' + m.bot : '');
   $('adminBtn').classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));
   ['planBot', 'planBot2'].forEach(function (id) { $(id).textContent = m.bot || 'Red'; });
+  $('cartSend').textContent = 'Send cart to ' + (m.bot || 'Red') + ' for official quote';
 }
 $('signinForm').addEventListener('submit', function (e) { e.preventDefault(); var b = $('signinBtn'); b.disabled = true; msg($('signinMsg'), '');
   api('signin', { name: $('inName').value, pin: $('inPin').value }).then(function (s) { session = s; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); $('inPin').value = ''; enterApp(); })
@@ -414,7 +424,9 @@ function cabDetail(code) {
     '<button class="btn" onclick="addCab(\'' + esc(code) + '\')">Add to cart</button>');
 }
 function addCab(code) { var x = cabRows[code], s = cabCur.s;
-  addLine({ name: s.key + ' ' + code, desc: 'Cabinet ' + code + ' (' + x.parts.map(function (p) { return p.item; }).join(' + ') + ')', price: x.price, qty: 1 }); closeSheet(); }
+  // parts = the exact NetSuite items the bot needs; special-order styles (White/Cream/Grey Shaker) are priced from #2083 parts
+  addLine({ name: s.key + ' ' + code, desc: 'Cabinet ' + code + ' (' + x.parts.map(function (p) { return p.item; }).join(' + ') + ')', price: x.price, qty: 1,
+    parts: x.parts.map(function (p) { return p.item; }), special: /^#|^ESV88/.test(s.key) ? '' : s.key }); closeSheet(); }
 
 // ---------------- cart
 function cart() { try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch (e) { return []; } }
@@ -434,7 +446,44 @@ function renderCart() {
 }
 function setQty(i, d, v) { var c = cart(); var n = v != null ? parseInt(v, 10) || 0 : c[i].qty + d; if (n <= 0) c.splice(i, 1); else c[i].qty = n; saveCart(c); renderCart(); }
 $('cartClear').onclick = function () { saveCart([]); renderCart(); };
-$('cartSend').onclick = function () { msg($('cartMsg'), 'Coming next: this will send the cart to ' + (session.bot || 'Red') + ' through the same webhook as plans (action "cart_quote") for an official, discounted quote.', true); };
+/** Cart lines -> [{item, qty}] with exact item names (a cabinet line becomes its door/box/glass parts). */
+function cartItems() {
+  var out = [], special = [];
+  cart().forEach(function (l) {
+    if (l.parts && l.parts.length) {
+      l.parts.forEach(function (p) { out.push({ item: p, qty: l.qty }); });
+      if (l.special) special.push(l.qty + ' x ' + l.name + ' (special order ' + l.special + ', priced from #2083 parts)');
+    } else out.push({ item: l.name, qty: l.qty });
+  });
+  return { items: out, special: special };
+}
+$('cartSend').onclick = function () {
+  var c = cart(); if (!c.length) { msg($('cartMsg'), 'The cart is empty.'); return; }
+  if (!$('cqName').value.trim()) { msg($('cartMsg'), 'Customer name is required.'); $('cqName').focus(); return; }
+  var ci = cartItems(), notes = $('cqNotes').value.trim();
+  if (ci.special.length) notes = (notes ? notes + '\n' : '') + ci.special.join('\n');
+  var b = this; b.disabled = true; msg($('cartMsg'), 'Sending…', true);
+  api('cartQuote', { cart: { customer_name: $('cqName').value, customer_phone: $('cqPhone').value, job_city: $('cqCity').value,
+    tax_store: taxStore, discount_pct: $('cqDisc').value, notes: notes, items: ci.items } })
+    .then(function (r) {
+      msg($('cartMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + ' (' + r.lines + ' items).' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Tap Re-send below.', r.sent);
+      loadCartRequests();
+    }).catch(function (er) { msg($('cartMsg'), er.message); }).then(function () { b.disabled = false; });
+};
+function loadCartRequests() {
+  api('cartRequests', { n: 15 }).then(function (rs) {
+    $('cqList').innerHTML = rs.length ? rs.map(function (r) { var ok = /^sent/.test(r.status);
+      return '<div class="cartline"><div class="n"><b>' + esc(r.customer) + ' · ' + r.lines + ' items</b><span>' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + (r.sends > 1 ? ' · sent ' + r.sends + '×' : '') + '</span></div>' +
+        '<span class="' + (ok ? 'pill-ok' : 'pill-no') + '">' + esc(ok ? 'sent' : r.status) + '</span>' +
+        '<button class="link" data-rid="' + esc(r.request_id) + '">Re-send</button></div>'; }).join('') : '<div class="empty">None yet.</div>';
+  }).catch(function (er) { $('cqList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+}
+$('cqRefresh').onclick = loadCartRequests;
+$('cqList').addEventListener('click', function (e) { var b = e.target.closest('button[data-rid]'); if (!b) return;
+  if (!confirm('Send request ' + b.dataset.rid + ' to ' + (session.bot || 'Red') + ' again?')) return;
+  b.disabled = true; api('cartResend', { request_id: b.dataset.rid }).then(function (r) {
+    msg($('cartMsg'), r.sent ? 'Re-sent ' + r.request_id + '.' : 'Re-send failed (' + r.status + ').', r.sent); loadCartRequests(); })
+    .catch(function (er) { msg($('cartMsg'), er.message); b.disabled = false; }); });
 function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600); }
 
 // ---------------- tile calculator
