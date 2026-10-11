@@ -177,6 +177,11 @@
   .seg2 button.active { background:#fff; box-shadow:0 1px 2px rgba(16,24,40,.12); }
   .trimgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .trimgrid label { font-size:12.5px; font-weight:700; color:#374151; } .trimgrid input { min-height:40px; padding:8px; text-align:center; }
   .twocol { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .schips { display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; margin:0 -2px; scrollbar-width:none; } .schips::-webkit-scrollbar { display:none; }
+  .schips button { flex:none; border:1px solid var(--line-strong); background:#fff; color:#111; border-radius:999px; padding:6px 11px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .schips button small { color:var(--muted); font-weight:500; margin-left:4px; } .schips button.on { background:#111; color:#fff; border-color:#111; } .schips button.on small { color:#ddd; }
+  .schips.sub button { font-size:12.5px; padding:4px 10px; background:#f4f4f5; } .schips.sub button.on { background:#374151; border-color:#374151; }
+  .schips .sep { flex:none; width:1px; background:var(--line-strong); margin:4px 2px; }
   .dym { font-size:14px; margin:6px 2px 10px; } .dym button { border:0; background:#e9f0fb; color:#1e3a6e; border-radius:999px; padding:5px 10px; margin:3px 4px 0 0; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
   .closest { background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
   .planpreview { max-width:100%; max-height:200px; border-radius:10px; margin-top:8px; display:block; }
@@ -215,7 +220,7 @@
         <input id="q" type="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search: matte black faucet, 12x24 white, 15714…"><button class="qx hidden" id="qx" aria-label="Clear search">×</button></div>
       <p class="hint" id="qHint">Typos are OK. Model numbers, colors, sizes and words all work.</p>
       <div id="recent" class="recent"></div>
-      <div id="dym"></div><div id="meta" class="meta hidden"></div><div id="results"></div>
+      <div id="dym"></div><div id="sfilt"></div><div id="meta" class="meta hidden"></div><div id="results"></div>
     </div>
     <!-- BROWSE -->
     <div class="page" id="p-browse"><div id="browseBody"></div></div>
@@ -311,9 +316,12 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
+<script src="search.js"></script>
 <script>
 'use strict';
-// The page holds NO item data, keys or webhook URLs. Everything comes from the PIN-protected Apps Script API.
+// The page itself holds NO item data, keys or webhook URLs. After a PIN sign-in it downloads the item data once per
+// data version from the PIN-protected API (session required), keeps it in this browser (IndexedDB) and searches on the
+// phone with search.js (= apps-script/Search.gs, byte for byte). Signing out (or a dead session) wipes the local copy.
 var API_URL = 'https://script.google.com/macros/s/AKfycbzmMaB6B78-sJABGFGZ9vpLGsCSN67lPF3hf0aGIM8AVLbsKJrdCKovVZDi6nKdXNTO/exec';   // set by set_exec_url.sh (the rayk1945 web app /exec URL)
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) API_URL = '/api';   // local test server only
 var SESSION_KEY = 'esRedSession', CART_KEY = 'esRedCart', TAX = { SF: 0.08625, Fremont: 0.1025 };
@@ -321,6 +329,13 @@ var TRIM_KEYS = ['WSP40', 'BSP', 'TK8', 'WF3X40', 'WF3X96', 'DWP1', 'DWP3', 'REP
 var session = (function () { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return s && s.token ? s : null; } catch (e) { return null; } })();
 var $ = function (id) { return document.getElementById(id); };
 function api(action, data) {
+  if (LOCAL_ACTIONS[action] && (localData || dataP)) return (localData ? Promise.resolve(localData) : dataP).then(function (b) {
+    if (!b) return serverApi(action, data);                                       // download failed: ask the server as before
+    return JSON.parse(JSON.stringify(LOCAL_ACTIONS[action](b, data || {})));       // same functions the server runs
+  });
+  return serverApi(action, data);
+}
+function serverApi(action, data) {
   var body = Object.assign({}, data || {}, { action: action }); if (session) body.token = session.token;
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('Unexpected server reply (HTTP ' + r.status + ').'); }
@@ -332,7 +347,48 @@ function money(n) { return n == null || n === '' || isNaN(n) ? '—' : '$' + Num
 function qty(n) { return n == null || n === '' ? '—' : Number(n).toLocaleString('en-US'); }
 function msg(el, text, ok) { el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); el.classList.toggle('hidden', !text); }
 function show(id) { ['signin', 'app', 'pinchange'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); }); }
-function signedOut() { session = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); }
+// ---------------- item data on the phone (fast search/browse; same Search.gs code as the server)
+var LOCAL_ACTIONS = {
+  search: function (b, d) { return searchBundle_(b, d.q, d.limit, d.f); }, categories: function (b) { return categories_(b); },
+  browse: function (b, d) { return browse_(b, d.filter); }, cabinetStyles: function (b) { return cabinetStyles_(b); },
+  cabinetShelf: function (b, d) { return cabinetShelf_(b, String(d.style || ''), String(d.shelf || 'wall')); },
+  settingItems: function (b) { return settingItems_(b); }, cabinetCodes: function (b) { return cabinetCodes_(b); },
+  containers: function (b) { return containersSummary_(b); } };
+var localData = null, dataP = null, dataChecked = 0;
+var CAN_LOCAL = (function () { try { new RegExp('(?<=[0-9])(?=[A-Z])'); return typeof DecompressionStream === 'function' && !!window.indexedDB && typeof searchBundle_ === 'function'; } catch (e) { return false; } })();
+function idb(mode, fn) { return new Promise(function (res, rej) { var o = indexedDB.open('esFloorData', 1);
+  o.onupgradeneeded = function () { o.result.createObjectStore('kv'); };
+  o.onerror = function () { rej(o.error); };
+  o.onsuccess = function () { var db = o.result, tx = db.transaction('kv', mode), st = tx.objectStore('kv'), r = fn(st);
+    tx.oncomplete = function () { db.close(); res(r && 'result' in r ? r.result : undefined); }; tx.onerror = tx.onabort = function () { db.close(); rej(tx.error); }; }; }); }
+/** Search index: built once per data version on the phone (same buildIndex_ as the server), then kept in IndexedDB too. */
+function warmIndex(b) { setTimeout(function () { try { if (b.index) { getIndex_(b); incomingIndex_(b); return; }
+  var t = performance.now(); b.index = getIndex_(b); incomingIndex_(b); window.__indexMs = Math.round(performance.now() - t);
+  idb('readwrite', function (st) { st.put({ version: b.version, index: b.index }, 'index'); }).catch(function () {}); } catch (e) {} }, 30); }
+function useData(b) { localData = b; warmIndex(b); $('qHint').textContent = 'Typos are OK · data from ' + (b.built || '?'); }
+function gunzipB64(b64) { var bin = atob(b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text().then(JSON.parse); }
+/** Session check + data version check in ONE call. The data comes back only when the phone's copy is missing or old. */
+function checkData() {
+  dataChecked = Date.now();
+  var haveP = !CAN_LOCAL ? Promise.resolve(null) : localData ? Promise.resolve(localData.version) :
+    idb('readonly', function (st) { var r = { d: st.get('data'), x: st.get('index') }; return { result: r }; }).then(function (r) {
+      var b = r.d.result, x = r.x.result; if (b && x && x.version === b.version) b.index = x.index;
+      if (b && b.items && !localData) useData(b); return b ? b.version : ''; }).catch(function () { return ''; });
+  var p = haveP.then(function (have) { return serverApi('me', have == null ? {} : { dataHave: String(have) }); }).then(function (m) {
+    Object.assign(session, m); setHeader(m);
+    var d = m.data; if (!d) { if (m.dataBuilt) $('qHint').textContent = 'Typos are OK · data from ' + m.dataBuilt; return localData; }
+    if (d.unchanged) return localData;
+    return gunzipB64(d.gz).then(function (b) { useData(b); idb('readwrite', function (st) { st.put(b, 'data'); st.delete('index'); }).catch(function () {}); return b; });
+  }).catch(function () { return localData; });
+  if (!localData) dataP = p.then(function (b) { dataP = null; return b; });
+  return p;
+}
+function wipeLocalData() { localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
+document.addEventListener('visibilitychange', function () { if (!document.hidden && session && Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
+
+function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
+function signedOut() { wipeLocalData(); session = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); }
 
 // ---------------- navigation
 function go(p) {
@@ -350,7 +406,7 @@ document.addEventListener('click', function (e) { var b = e.target.closest('[dat
 function enterApp() {
   if (session.mustChangePin) { show('pinchange'); return; }
   show('app'); setHeader(session);
-  api('me').then(function (m) { Object.assign(session, m); setHeader(m); if (m.dataBuilt) $('qHint').textContent = 'Typos are OK · data from ' + m.dataBuilt; }).catch(function () {});
+  checkData();
   updateBadge();
   document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
@@ -425,18 +481,45 @@ function runSearch(qq, remember) {
   qxShow();
   var q = $('q').value.trim(), my = ++seq;
   clearTimeout(rememberTimer);
-  if (q.length < 2) { $('results').innerHTML = ''; $('meta').classList.add('hidden'); $('dym').innerHTML = ''; renderRecent(); return; }
+  if (q.length < 2) { $('results').innerHTML = ''; $('meta').classList.add('hidden'); $('dym').innerHTML = ''; $('sfilt').innerHTML = ''; sQ = ''; sF = {}; renderRecent(); return; }
   $('recent').innerHTML = ''; sessionStorage.setItem('esRedLastQ', q);
   if (remember) rememberQ(q); else rememberTimer = setTimeout(function () { if ($('q').value.trim() === q) rememberQ(q); }, 2500);   // typed and kept = remembered
+  if (q !== sQ) { sQ = q; sF = {}; }                                             // new words: filters start clear
   $('results').innerHTML = '<div class="spinner"></div>';
-  api('search', { q: q }).then(function (r) { if (my !== seq) return;
+  searchPage(q, my, 0);
+}
+/** Search filters: category chips (+ Tile/Flooring sizes), In stock, SF / Fremont shelf. Counts cover every match. */
+var sQ = '', sF = {}, sLast = null;
+function searchPage(q, my, offset) {
+  var f = Object.assign({}, sF, { offset: offset });
+  return api('search', { q: q, f: f }).then(function (r) { if (my !== seq) return;
+    sLast = r;
     $('dym').innerHTML = r.suggestions && r.suggestions.length ? '<div class="dym">Did you mean ' + r.suggestions.map(function (s) { return '<button onclick="runSearch(\'' + esc(s).replace(/'/g, '') + '\', true)">' + esc(s) + '</button>'; }).join('') + '</div>' : '';
-    var m = $('meta'); m.classList.remove('hidden');
-    m.innerHTML = '<span>' + (r.exact ? (r.exact > r.shown ? 'Top ' + r.shown + ' of ' + r.exact + ' matches' : r.exact + ' match' + (r.exact === 1 ? '' : 'es')) : r.shown ? '' : 'No match') + '</span>';
-    $('results').innerHTML = (r.closest ? '<div class="closest">Nothing matches every word. Closest items:</div>' : '') +
-      (r.items.length ? r.items.map(card).join('') : '<div class="card empty">Nothing close to “' + esc(r.q) + '”. Try fewer words.</div>');
+    renderSearchFilters(r);
+    var n = r.filtered ? r.listExact || r.listTotal : r.exact, m = $('meta'); m.classList.remove('hidden');
+    m.innerHTML = '<span>' + (n ? n.toLocaleString() + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>';
+    var html = r.items.map(card).join('') + (r.more ? '<button class="btn" id="sMore" style="background:#fff;color:#111;border:1px solid var(--line-strong)">Load more (' + (r.listTotal - r.offset - r.shown).toLocaleString() + ' left)</button>' : '');
+    if (offset) { var mb = $('sMore'); if (mb) mb.remove(); $('results').insertAdjacentHTML('beforeend', html); }
+    else $('results').innerHTML = (r.closest && !r.filtered ? '<div class="closest">Nothing matches every word. Closest items:</div>' : '') +
+      (r.items.length ? html : '<div class="card empty">' + (r.filtered ? 'Nothing here with these filters. Tap a chip again to clear it.' : 'Nothing close to “' + esc(r.q) + '”. Try fewer words.') + '</div>');
+    if ($('sMore')) $('sMore').onclick = function () { this.disabled = true; this.textContent = 'Loading…'; searchPage(q, my, r.offset + r.shown); };
   }).catch(function (er) { if (my === seq) $('results').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
+function renderSearchFilters(r) {
+  var fc = r.facets; if (!fc || !(r.exact || r.total)) { $('sfilt').innerHTML = ''; return; }
+  var chip = function (k, v, label, n) { return '<button data-sk="' + k + '" data-sv="' + esc(v) + '" class="' + (String(sF[k] || '') === String(v) ? 'on' : '') + '">' + esc(label) + (n != null ? '<small>' + n.toLocaleString() + '</small>' : '') + '</button>'; };
+  var top = chip('inStock', 'true', 'In stock', fc.stock) + chip('store', 'SF', 'SF shelf', fc.sf) + chip('store', 'FRE', 'Fremont shelf', fc.fre);
+  var cl = fc.cats.filter(function (c) { return c[0] !== sF.cat; }); if (sF.cat) cl.unshift([sF.cat, (fc.cats.filter(function (c) { return c[0] === sF.cat; })[0] || [0, 0])[1]]);   // tapped chip first, never disappears
+  var cats = cl.length > 1 || sF.cat ? '<div class="schips">' + cl.map(function (c) { return chip('cat', c[0], c[0], c[1]); }).join('') + '</div>' : '';
+  var sizes = (sF.cat === 'Tile' || sF.cat === 'Flooring') && fc.sizes.length > 1 ? '<div class="schips sub">' + fc.sizes.map(function (z) { return chip('size', z[0], z[0], z[1]); }).join('') + '</div>' : '';
+  $('sfilt').innerHTML = cats + sizes + '<div class="schips sub tog">' + top + '</div>';
+}
+$('sfilt').addEventListener('click', function (e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
+  var k = b.dataset.sk, v = k === 'inStock' ? true : b.dataset.sv;
+  if (String(sF[k] || '') === String(v)) delete sF[k]; else sF[k] = v;                        // tap again = clear
+  if (k === 'cat') delete sF.size;
+  var my = ++seq; $('results').style.opacity = '.5';
+  searchPage(sQ, my, 0).then(function () { $('results').style.opacity = ''; }); });
 
 // ---------------- browse
 var browseState = {};
@@ -873,7 +956,7 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
 $('stAdd').onclick = function () { api('adminSetUser', { name: $('stName').value, pin: $('stPin').value, account: $('stAcct').value, role: $('stRole').value }).then(function (r) {
   msg($('stMsg'), (r.reset ? 'PIN reset for ' : 'Added ') + r.name + '. Give them the temporary PIN in person.', true); $('stPin').value = ''; loadUsers(); }).catch(function (er) { msg($('stMsg'), er.message); }); };
 
-if (session) enterApp(); else show('signin');
+if (session) enterApp(); else { show('signin'); warmUp(); }
 </script>
 </body>
 </html>
