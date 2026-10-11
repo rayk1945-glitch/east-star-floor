@@ -46,7 +46,28 @@
   .msg { border-radius:10px; padding:10px 12px; font-size:14px; margin-top:12px; }
   .msg.err { background:var(--err-bg); color:var(--err-fg); }
   .msg.ok { background:var(--ok-bg); color:var(--ok-fg); }
-  .searchbar { position:relative; }
+  .searchbar { position:sticky; top:var(--hh, 88px); z-index:5; background:var(--bg, #f4f5f7); padding:6px 0; margin:-6px 0 0; }
+  .searchbar svg { top:21px !important; }
+  .qx { position:absolute; right:6px; top:10px; width:40px; height:40px; border:0; border-radius:999px; background:#e6e9ee; color:#374151; font-size:20px; line-height:1; cursor:pointer; }
+  .searchbar input { padding-right:52px; }
+  input[type=search]::-webkit-search-cancel-button { -webkit-appearance:none; }
+  .recent { margin-top:6px; } .recent .sec-h { margin-bottom:2px; }
+  .rq { display:flex; align-items:center; gap:4px; border-bottom:1px solid var(--line); }
+  .rq .t { flex:1; min-width:0; text-align:left; background:none; border:0; font:inherit; font-size:15.5px; padding:11px 2px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rq .t:before { content:'↺'; color:#9aa1ab; margin-right:8px; }
+  .rq .ic { background:none; border:0; width:40px; height:40px; font-size:16px; color:#6b7280; cursor:pointer; border-radius:999px; }
+  .hrow { padding:11px 0; border-bottom:1px solid var(--line); }
+  .hrow .h1 { display:flex; gap:8px; align-items:center; } .hrow .h1 b { flex:1; min-width:0; font-size:15px; word-break:break-word; }
+  .hrow .h2 { font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .kind { font-size:11px; font-weight:800; letter-spacing:.04em; border-radius:6px; padding:2px 6px; background:#e8eefc; color:#1e3a8a; }
+  .kind.plan { background:#f3e8ff; color:#5b21b6; } .kind.draft { background:#fef3c7; color:#92400e; }
+  .hrow .actions { margin-top:8px; } .hrow .actions button { min-height:36px; font-size:13.5px; }
+  .revbar { background:#fff7e6; border:1px solid #f5d38a; color:#7a4b00; border-radius:10px; padding:9px 12px; font-size:14px; margin:0 0 10px; display:flex; gap:8px; align-items:center; }
+  .revbar span { flex:1; } .hfilters .twocol > div { min-width:0; }
+  .hfilters input[type=date] { min-height:42px; width:100%; min-width:0; max-width:100%; box-sizing:border-box; -webkit-appearance:none; appearance:none; }
+  .keepbox { display:flex; gap:10px; align-items:center; border:1px solid var(--line-strong); border-radius:10px; padding:8px; margin-top:6px; font-size:14px; }
+  .keepbox img { width:64px; height:64px; object-fit:cover; border-radius:6px; background:#eee; }
+  .missing { color:var(--err-fg); font-weight:700; }
   .searchbar input { padding-left:40px; font-size:17px; min-height:50px; border-radius:12px; }
   .searchbar svg { position:absolute; left:12px; top:15px; width:20px; height:20px; color:#6b7280; }
   .hint { font-size:13px; color:var(--muted); margin:8px 2px 0; }
@@ -181,15 +202,17 @@
     <!-- SEARCH -->
     <div class="page on" id="p-search">
       <div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="q" type="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search: matte black faucet, 12x24 white, 15714…"></div>
+        <input id="q" type="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search: matte black faucet, 12x24 white, 15714…"><button class="qx hidden" id="qx" aria-label="Clear search">×</button></div>
       <p class="hint" id="qHint">Typos are OK. Model numbers, colors, sizes and words all work.</p>
+      <div id="recent" class="recent"></div>
       <div id="dym"></div><div id="meta" class="meta hidden"></div><div id="results"></div>
     </div>
     <!-- BROWSE -->
     <div class="page" id="p-browse"><div id="browseBody"></div></div>
     <!-- CART -->
     <div class="page" id="p-cart"><div class="card">
-      <div class="sec-h"><h2>Quick cart</h2><button class="link" id="cartClear">Clear</button></div>
+      <div id="cartRev" class="revbar hidden"></div>
+      <div class="sec-h"><h2>Quick cart</h2><span><button class="link" id="draftSave">Save draft</button> <button class="link" id="cartClear">Clear</button></span></div>
       <div id="cartLines"></div>
       <div class="seg2" id="taxSeg"><button data-t="SF" class="active">SF tax 8.625%</button><button data-t="Fremont">Fremont tax 10.25%</button></div>
       <div id="cartTotals"></div>
@@ -204,13 +227,16 @@
       <button class="btn" id="cartSend">Send cart to Red for official quote</button>
       <div id="cartMsg" class="msg hidden"></div>
     </div>
-    <div class="card"><div class="sec-h"><h2>Sent cart requests</h2><button class="link" id="cqRefresh">Refresh</button></div><div id="cqList"><div class="empty">None yet.</div></div></div>
+    <div class="card"><div class="sec-h"><h2>Cart drafts</h2></div><div id="draftList"><div class="empty">No drafts. “Save draft” keeps this cart on this phone.</div></div></div>
+    <div class="card"><div class="sec-h"><h2>Recently sent carts</h2><button class="link" data-go="history">All history ›</button></div><div id="cqList"><div class="empty">None yet.</div></div></div>
     </div>
     <!-- SEND PLAN (separate page) -->
     <div class="page" id="p-plan"><div class="card">
       <div class="crumb"><button class="back" data-go="search">‹</button>Send a kitchen plan to <span id="planBot">Red</span></div>
+      <div id="planRev" class="revbar hidden"></div>
       <p class="hint" style="margin-top:0">Goes straight to the bot for an official quote. The bot replies to Ray with the quote JPG and CSV.</p>
       <label class="f">Plan photo or PDF <span class="req">*</span></label>
+      <div id="plKeep" class="keepbox hidden"></div>
       <input id="plFile" type="file" accept="image/*,application/pdf" capture="environment">
       <img id="plPrev" class="planpreview hidden" alt="">
       <div class="twocol"><div><label class="f">Customer name <span class="req">*</span></label><input id="plName" autocapitalize="words"></div>
@@ -222,9 +248,22 @@
       <label class="f">Trim (blank = none)</label>
       <div class="trimgrid" id="plTrim"></div>
       <label class="f">Notes</label><textarea id="plNotes" rows="3" placeholder="Fridge side, hinge notes, anything unclear on the plan"></textarea>
-      <button class="btn" id="plSend">Send to <span id="planBot2">Red</span></button>
+      <button class="btn" id="plSend">Send to Red</button>
       <div id="plMsg" class="msg hidden"></div>
-    </div></div>
+    </div>
+    <div class="card"><div class="sec-h"><h2>Recently sent plans</h2><button class="link" data-go="history">All history ›</button></div><div id="plList"><div class="empty">None yet.</div></div></div>
+    </div>
+    <!-- HISTORY -->
+    <div class="page" id="p-history">
+      <div class="card hfilters">
+        <div class="sec-h"><h2>History</h2><button class="link" id="hRefresh">Refresh</button></div>
+        <div class="searchbar" style="position:relative;top:auto;padding:0;margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="top:15px!important"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="hQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Customer, phone, city or request ID"></div>
+        <div class="seg2" id="hType"><button data-t="all" class="active">All</button><button data-t="cart">Carts</button><button data-t="plan">Plans</button><button data-t="draft">Drafts</button></div>
+        <div class="twocol"><div><label class="f">From</label><input id="hFrom" type="date"></div><div><label class="f">To</label><input id="hTo" type="date"></div></div>
+      </div>
+      <div class="card"><div id="hMeta" class="hint" style="margin:0 0 4px"></div><div id="hList"><div class="spinner"></div></div></div>
+    </div>
     <!-- ADMIN (separate page) -->
     <div class="page" id="p-admin">
       <div class="card"><div class="crumb"><button class="back" data-go="search">‹</button>Admin: accounts</div>
@@ -249,6 +288,7 @@
     <button data-go="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
     <button data-go="browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Browse</button>
     <button data-go="cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h11l2-8H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>Cart<span class="badge hidden" id="cartBadge"></span></button>
+    <button data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
   </nav>
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
@@ -256,7 +296,7 @@
 <script>
 'use strict';
 // The page holds NO item data, keys or webhook URLs. Everything comes from the PIN-protected Apps Script API.
-var API_URL = 'https://script.google.com/macros/s/AKfycbzVigdW9w0_3IWSeRpRw3zS0TMhot021QlQJMSp0oTe66yazzPh-C4SeVTupE1oqHaF/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzmMaB6B78-sJABGFGZ9vpLGsCSN67lPF3hf0aGIM8AVLbsKJrdCKovVZDi6nKdXNTO/exec';   // set by set_exec_url.sh (the rayk1945 web app /exec URL)
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) API_URL = '/api';   // local test server only
 var SESSION_KEY = 'esRedSession', CART_KEY = 'esRedCart', TAX = { SF: 0.08625, Fremont: 0.1025 };
 var TRIM_KEYS = ['WSP40', 'BSP', 'TK8', 'WF3X40', 'WF3X96', 'DWP1/DWP3', 'REP', '4X8', 'OCM', 'CM2', '25.5X96', 'SM8'];
@@ -274,7 +314,7 @@ function money(n) { return n == null || n === '' || isNaN(n) ? '—' : '$' + Num
 function qty(n) { return n == null || n === '' ? '—' : Number(n).toLocaleString('en-US'); }
 function msg(el, text, ok) { el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); el.classList.toggle('hidden', !text); }
 function show(id) { ['signin', 'app', 'pinchange'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); }); }
-function signedOut() { session = null; localStorage.removeItem(SESSION_KEY); show('signin'); }
+function signedOut() { session = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); }
 
 // ---------------- navigation
 function go(p) {
@@ -282,8 +322,9 @@ function go(p) {
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   window.scrollTo(0, 0);
   if (p === 'browse' && !$('browseBody').innerHTML) browseHome();
-  if (p === 'cart') { renderCart(); loadCartRequests(); }
-  if (p === 'plan') planInit();
+  if (p === 'cart') { renderCart(); renderDrafts(); loadCartRequests(); }
+  if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
+  if (p === 'history') loadHistory();
   if (p === 'admin') adminLoad();
 }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
@@ -293,11 +334,13 @@ function enterApp() {
   show('app'); setHeader(session);
   api('me').then(function (m) { Object.assign(session, m); setHeader(m); if (m.dataBuilt) $('qHint').textContent = 'Typos are OK · data from ' + m.dataBuilt; }).catch(function () {});
   updateBadge();
+  document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
+  var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
 function setHeader(m) {
   $('acctLine').textContent = (m.name || '') + (m.accountName ? ' · ' + m.accountName : '') + (m.bot ? ' · bot ' + m.bot : '');
   $('adminBtn').classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));
-  ['planBot', 'planBot2'].forEach(function (id) { $(id).textContent = m.bot || 'Red'; });
+  $('planBot').textContent = m.bot || 'Red'; $('plSend').textContent = 'Send to ' + (m.bot || 'Red');
   $('cartSend').textContent = 'Send cart to ' + (m.bot || 'Red') + ' for official quote';
 }
 $('signinForm').addEventListener('submit', function (e) { e.preventDefault(); var b = $('signinBtn'); b.disabled = true; msg($('signinMsg'), '');
@@ -338,15 +381,38 @@ function card(it) {
 
 // ---------------- search
 var timer = null, seq = 0;
-$('q').addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(runSearch, 300); });
-$('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(timer); runSearch(); this.blur(); } });
-function runSearch(qq) {
+$('q').addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(runSearch, 300); qxShow(); });
+$('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(timer); runSearch(null, true); this.blur(); } });
+$('q').addEventListener('focus', function () { if (!this.value.trim()) renderRecent(); });
+$('qx').onclick = function () { $('q').value = ''; sessionStorage.removeItem('esRedLastQ'); runSearch(); $('q').focus(); };
+function qxShow() { $('qx').classList.toggle('hidden', !$('q').value); }
+// recent searches: last 15 per signed-in user, on this phone only
+function recentKey() { return 'esRedRecent:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
+function recentList() { try { return JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch (e) { return []; } }
+function rememberQ(q) { q = String(q || '').trim(); if (q.length < 2) return;
+  var l = recentList().filter(function (x) { return x.toLowerCase() !== q.toLowerCase(); }); l.unshift(q); localStorage.setItem(recentKey(), JSON.stringify(l.slice(0, 15))); }
+function renderRecent() {
+  var l = recentList(), show = !$('q').value.trim() && l.length;
+  $('recent').innerHTML = show ? '<div class="card"><div class="sec-h"><h2>Recent searches</h2><button class="link" id="rqClear">Clear</button></div>' +
+    l.map(function (q, i) { return '<div class="rq"><button class="t" data-rq="' + i + '">' + esc(q) + '</button><button class="ic" data-rqe="' + i + '" aria-label="Edit">✎</button><button class="ic" data-rqx="' + i + '" aria-label="Remove">×</button></div>'; }).join('') + '</div>' : '';
+}
+$('recent').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; var l = recentList();
+  if (b.id === 'rqClear') { localStorage.removeItem(recentKey()); renderRecent(); return; }
+  if (b.dataset.rq) runSearch(l[+b.dataset.rq], true);
+  else if (b.dataset.rqe) { var q = $('q'); q.value = l[+b.dataset.rqe]; qxShow(); q.focus(); q.setSelectionRange(q.value.length, q.value.length); runSearch(); }
+  else if (b.dataset.rqx) { l.splice(+b.dataset.rqx, 1); localStorage.setItem(recentKey(), JSON.stringify(l)); renderRecent(); } });
+var rememberTimer = null;
+function runSearch(qq, remember) {
   if (qq) $('q').value = qq;
+  qxShow();
   var q = $('q').value.trim(), my = ++seq;
-  if (q.length < 2) { $('results').innerHTML = ''; $('meta').classList.add('hidden'); $('dym').innerHTML = ''; return; }
+  clearTimeout(rememberTimer);
+  if (q.length < 2) { $('results').innerHTML = ''; $('meta').classList.add('hidden'); $('dym').innerHTML = ''; renderRecent(); return; }
+  $('recent').innerHTML = ''; sessionStorage.setItem('esRedLastQ', q);
+  if (remember) rememberQ(q); else rememberTimer = setTimeout(function () { if ($('q').value.trim() === q) rememberQ(q); }, 2500);   // typed and kept = remembered
   $('results').innerHTML = '<div class="spinner"></div>';
   api('search', { q: q }).then(function (r) { if (my !== seq) return;
-    $('dym').innerHTML = r.suggestions && r.suggestions.length ? '<div class="dym">Did you mean ' + r.suggestions.map(function (s) { return '<button onclick="runSearch(\'' + esc(s).replace(/'/g, '') + '\')">' + esc(s) + '</button>'; }).join('') + '</div>' : '';
+    $('dym').innerHTML = r.suggestions && r.suggestions.length ? '<div class="dym">Did you mean ' + r.suggestions.map(function (s) { return '<button onclick="runSearch(\'' + esc(s).replace(/'/g, '') + '\', true)">' + esc(s) + '</button>'; }).join('') + '</div>' : '';
     var m = $('meta'); m.classList.remove('hidden');
     m.innerHTML = '<span>' + (r.exact ? (r.exact > r.shown ? 'Top ' + r.shown + ' of ' + r.exact + ' matches' : r.exact + ' match' + (r.exact === 1 ? '' : 'es')) : r.shown ? '' : 'No match') + '</span>';
     $('results').innerHTML = (r.closest ? '<div class="closest">Nothing matches every word. Closest items:</div>' : '') +
@@ -426,7 +492,7 @@ function cabDetail(code) {
 function addCab(code) { var x = cabRows[code], s = cabCur.s;
   // parts = the exact NetSuite items the bot needs; special-order styles (White/Cream/Grey Shaker) are priced from #2083 parts
   addLine({ name: s.key + ' ' + code, desc: 'Cabinet ' + code + ' (' + x.parts.map(function (p) { return p.item; }).join(' + ') + ')', price: x.price, qty: 1,
-    parts: x.parts.map(function (p) { return p.item; }), special: /^#|^ESV88/.test(s.key) ? '' : s.key }); closeSheet(); }
+    parts: x.parts.map(function (p) { return p.item; }), special: /^#|^ESV88/.test(s.key) ? '' : s.key, cab: { key: s.key, code: code } }); closeSheet(); }
 
 // ---------------- cart
 function cart() { try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch (e) { return []; } }
@@ -438,14 +504,51 @@ var taxStore = 'SF';
 $('taxSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; taxStore = b.dataset.t; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); renderCart(); });
 function renderCart() {
   var c = cart();
-  $('cartLines').innerHTML = c.length ? c.map(function (l, i) { return '<div class="cartline"><div class="n"><b>' + esc(l.name) + '</b><span>' + money(l.price) + ' each</span></div>' +
+  $('cartLines').innerHTML = c.length ? c.map(function (l, i) { return '<div class="cartline"><div class="n"><b>' + esc(l.name) + '</b><span>' + (l.missing ? '<span class="missing">no longer in the item list: remove it</span>' : money(l.price) + ' each') + '</span></div>' +
     '<div class="stepper"><button onclick="setQty(' + i + ',-1)">−</button><input inputmode="numeric" value="' + l.qty + '" onchange="setQty(' + i + ',0,this.value)"><button onclick="setQty(' + i + ',1)">+</button></div>' +
     '<div class="amt">' + money(l.price * l.qty) + '</div></div>'; }).join('') : '<div class="empty">Cart is empty. Add items from Search or Browse.</div>';
   var sub = c.reduce(function (a, l) { return a + l.price * l.qty; }, 0), tax = Math.round(sub * TAX[taxStore] * 100) / 100;
   $('cartTotals').innerHTML = c.length ? '<div class="kv"><span>Subtotal (retail)</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + taxStore + ' tax ' + (TAX[taxStore] * 100).toFixed(TAX[taxStore] === 0.1025 ? 2 : 3) + '%</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>' : '';
 }
 function setQty(i, d, v) { var c = cart(); var n = v != null ? parseInt(v, 10) || 0 : c[i].qty + d; if (n <= 0) c.splice(i, 1); else c[i].qty = n; saveCart(c); renderCart(); }
-$('cartClear').onclick = function () { saveCart([]); renderCart(); };
+$('cartClear').onclick = function () { if (cart().length && !confirm('Clear the cart? (Save draft first if you want to keep it.)')) return; resetCartForm(); saveCart([]); renderCart(); };
+function cartForm() { return { name: $('cqName').value, phone: $('cqPhone').value, city: $('cqCity').value, disc: $('cqDisc').value, notes: $('cqNotes').value }; }
+function setCartForm(f) { f = f || {}; $('cqName').value = f.name || ''; $('cqPhone').value = f.phone || ''; $('cqCity').value = f.city || ''; $('cqDisc').value = f.disc == null ? '' : f.disc; $('cqNotes').value = f.notes || ''; }
+function setTax(t) { taxStore = t === 'Fremont' ? 'Fremont' : 'SF'; [].forEach.call($('taxSeg').children, function (x) { x.classList.toggle('active', x.dataset.t === taxStore); }); }
+// Edit mode: the next send is a NEW request that carries revised_from = the request being edited
+var cartRev = null, curDraft = null, sentSig = null;
+function cartSig() { return JSON.stringify([cart(), cartForm(), taxStore]); }
+/** Before replacing the cart: unsent work is saved as a draft (after a yes); a cart that was just sent as-is is simply replaced. */
+function okToReplaceCart() { if (!cart().length || cartSig() === sentSig) return true;
+  if (!confirm('Replace the current cart? It will be saved as a draft first.')) return false; saveDraft(true); return true; }
+function setCartRev(rid) { cartRev = rid || null;
+  $('cartRev').innerHTML = cartRev ? '<span>Editing <b>' + esc(cartRev) + '</b>. Sending makes a new request marked “revised from ' + esc(cartRev) + '”.</span><button class="link" id="cartRevX">Stop editing</button>' : '';
+  $('cartRev').classList.toggle('hidden', !cartRev); if (cartRev) $('cartRevX').onclick = function () { setCartRev(null); }; }
+function resetCartForm() { setCartForm({}); setCartRev(null); curDraft = null; msg($('cartMsg'), ''); }
+// ---- drafts (this phone, per user)
+function draftKey() { return 'esRedDrafts:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
+function drafts() { try { return JSON.parse(localStorage.getItem(draftKey()) || '[]'); } catch (e) { return []; } }
+function saveDrafts(d) { localStorage.setItem(draftKey(), JSON.stringify(d.slice(0, 30))); }
+function saveDraft(quiet) {
+  var c = cart(); if (!c.length) { if (!quiet) msg($('cartMsg'), 'The cart is empty. Nothing to save.'); return null; }
+  var d = drafts(), f = cartForm(), id = curDraft || ('D' + Date.now());
+  var rec = { id: id, saved: Date.now(), lines: c, form: f, tax: taxStore, rev: cartRev };
+  d = d.filter(function (x) { return x.id !== id; }); d.unshift(rec); saveDrafts(d); curDraft = id;
+  if (!quiet) { msg($('cartMsg'), 'Draft saved on this phone' + (f.name ? ' for ' + f.name : '') + '.', true); renderDrafts(); }
+  return rec;
+}
+$('draftSave').onclick = function () { saveDraft(false); };
+function draftRowHtml(x) { var n = x.lines.length, t = new Date(x.saved);
+  return '<div class="hrow"><div class="h1"><span class="kind draft">DRAFT</span><b>' + esc(x.form.name || 'No customer yet') + ' · ' + n + ' line' + (n === 1 ? '' : 's') + '</b></div>' +
+    '<div class="h2">Saved ' + esc(t.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + (x.rev ? ' · editing ' + esc(x.rev) : '') + (x.id === curDraft ? ' · open now' : '') + '</div>' +
+    '<div class="actions"><button class="primary" data-dopen="' + x.id + '">Open</button><button data-ddel="' + x.id + '">Delete</button></div></div>'; }
+function renderDrafts() { var d = drafts(); $('draftList').innerHTML = d.length ? d.map(draftRowHtml).join('') : '<div class="empty">No drafts. “Save draft” keeps this cart on this phone.</div>'; }
+function openDraft(id) { var x = drafts().filter(function (d) { return d.id === id; })[0]; if (!x) return;
+  if (curDraft !== id && !okToReplaceCart()) return;
+  saveCart(x.lines); setCartForm(x.form); setTax(x.tax); setCartRev(x.rev); curDraft = id; go('cart'); toast('Draft opened'); }
+function deleteDraft(id) { if (!confirm('Delete this draft?')) return; saveDrafts(drafts().filter(function (d) { return d.id !== id; })); if (curDraft === id) curDraft = null; renderDrafts(); if ($('p-history').classList.contains('on')) loadHistory(); }
+document.addEventListener('click', function (e) { var b = e.target.closest('[data-dopen],[data-ddel]'); if (!b) return;
+  if (b.dataset.dopen) openDraft(b.dataset.dopen); else deleteDraft(b.dataset.ddel); });
 /** Cart lines -> [{item, qty}] with exact item names (a cabinet line becomes its door/box/glass parts). */
 function cartItems() {
   var out = [], special = [];
@@ -463,27 +566,104 @@ $('cartSend').onclick = function () {
   var ci = cartItems(), notes = $('cqNotes').value.trim();
   if (ci.special.length) notes = (notes ? notes + '\n' : '') + ci.special.join('\n');
   var b = this; b.disabled = true; msg($('cartMsg'), 'Sending…', true);
+  if (c.some(function (l) { return l.missing; })) { msg($('cartMsg'), 'Remove the lines marked “no longer in the item list” first.'); b.disabled = false; return; }
   api('cartQuote', { cart: { customer_name: $('cqName').value, customer_phone: $('cqPhone').value, job_city: $('cqCity').value,
-    tax_store: taxStore, discount_pct: $('cqDisc').value, notes: notes, items: ci.items } })
+    tax_store: taxStore, discount_pct: $('cqDisc').value, notes: notes, items: ci.items, revised_from: cartRev || '',
+    lines: c.map(function (l) { return { name: l.name, qty: l.qty, parts: l.parts, special: l.special, cab: l.cab }; }) } })
     .then(function (r) {
-      msg($('cartMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + ' (' + r.lines + ' items).' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Tap Re-send below.', r.sent);
+      var rv = r.revised_from ? ' (revised from ' + r.revised_from + ')' : '';
+      msg($('cartMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + rv + ', ' + r.lines + ' items.' : 'Saved as ' + r.request_id + rv + ' but the bot did not answer (' + r.status + '). Tap Re-send below.', r.sent);
+      if (curDraft) { saveDrafts(drafts().filter(function (d) { return d.id !== curDraft; })); curDraft = null; renderDrafts(); }   // a sent draft is done
+      sentSig = cartSig();
+      setCartRev(null);
       loadCartRequests();
     }).catch(function (er) { msg($('cartMsg'), er.message); }).then(function () { b.disabled = false; });
 };
-function loadCartRequests() {
-  api('cartRequests', { n: 15 }).then(function (rs) {
-    $('cqList').innerHTML = rs.length ? rs.map(function (r) { var ok = /^sent/.test(r.status);
-      return '<div class="cartline"><div class="n"><b>' + esc(r.customer) + ' · ' + r.lines + ' items</b><span>' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + (r.sends > 1 ? ' · sent ' + r.sends + '×' : '') + '</span></div>' +
-        '<span class="' + (ok ? 'pill-ok' : 'pill-no') + '">' + esc(ok ? 'sent' : r.status) + '</span>' +
-        '<button class="link" data-rid="' + esc(r.request_id) + '">Re-send</button></div>'; }).join('') : '<div class="empty">None yet.</div>';
-  }).catch(function (er) { $('cqList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+function loadCartRequests() { loadRecent('cart', 'cqList', 5); }
+
+// ---------------- history (cart + plan requests): Open / Edit / Clone / Re-send
+function histRowHtml(r) { var ok = /^sent/.test(r.status);
+  return '<div class="hrow"><div class="h1"><span class="kind ' + r.kind + '">' + (r.kind === 'cart' ? 'CART' : 'PLAN') + '</span><b>' + esc(r.customer) + ' · ' + esc(r.summary) + '</b>' +
+    '<span class="' + (ok ? 'pill-ok' : 'pill-no') + '">' + esc(ok ? 'sent' : r.status || '?') + '</span></div>' +
+    '<div class="h2">' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + (r.city ? ' · ' + esc(r.city) : '') + (r.sends > 1 ? ' · sent ' + r.sends + '×' : '') +
+    (r.revised_from ? '<br>Revised from ' + esc(r.revised_from) : '') + (session.role === 'admin' && r.account !== session.account ? ' · account ' + esc(r.account) : '') + '</div>' +
+    '<div class="actions"><button data-hact="open" data-rid="' + esc(r.request_id) + '">Open</button><button data-hact="edit" data-rid="' + esc(r.request_id) + '">Edit</button>' +
+    '<button data-hact="clone" data-rid="' + esc(r.request_id) + '">Clone</button><button data-hact="resend" data-rid="' + esc(r.request_id) + '">Re-send</button></div></div>'; }
+function loadRecent(kind, el, n) {
+  api('history', { filter: { type: kind, n: n } }).then(function (r) {
+    $(el).innerHTML = r.rows.length ? r.rows.map(histRowHtml).join('') : '<div class="empty">None yet.</div>';
+  }).catch(function (er) { $(el).innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
-$('cqRefresh').onclick = loadCartRequests;
-$('cqList').addEventListener('click', function (e) { var b = e.target.closest('button[data-rid]'); if (!b) return;
-  if (!confirm('Send request ' + b.dataset.rid + ' to ' + (session.bot || 'Red') + ' again?')) return;
-  b.disabled = true; api('cartResend', { request_id: b.dataset.rid }).then(function (r) {
-    msg($('cartMsg'), r.sent ? 'Re-sent ' + r.request_id + '.' : 'Re-send failed (' + r.status + ').', r.sent); loadCartRequests(); })
-    .catch(function (er) { msg($('cartMsg'), er.message); b.disabled = false; }); });
+var hType = 'all', hTimer = null, hSeq = 0;
+$('hType').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; hType = b.dataset.t; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); loadHistory(); });
+$('hQ').addEventListener('input', function () { clearTimeout(hTimer); hTimer = setTimeout(loadHistory, 300); });
+$('hFrom').onchange = $('hTo').onchange = loadHistory; $('hRefresh').onclick = loadHistory;
+function loadHistory() {
+  var q = $('hQ').value.trim().toLowerCase(), my = ++hSeq;
+  var ds = drafts().filter(function (x) { var day = new Date(x.saved).toLocaleDateString('en-CA');
+    return (!q || [x.form.name, x.form.phone, x.form.city, x.rev].join(' ').toLowerCase().indexOf(q) >= 0) && (!$('hFrom').value || day >= $('hFrom').value) && (!$('hTo').value || day <= $('hTo').value); });
+  var dHtml = (hType === 'all' || hType === 'draft') && ds.length ? ds.map(draftRowHtml).join('') : '';
+  if (hType === 'draft') { $('hMeta').textContent = ds.length + ' draft' + (ds.length === 1 ? '' : 's') + ' on this phone'; $('hList').innerHTML = dHtml || '<div class="empty">No drafts.</div>'; return; }
+  $('hList').innerHTML = dHtml + '<div class="spinner"></div>';
+  api('history', { filter: { type: hType, q: q, from: $('hFrom').value, to: $('hTo').value, n: 80 } }).then(function (r) { if (my !== hSeq) return;
+    $('hMeta').textContent = r.total + ' request' + (r.total === 1 ? '' : 's') + (r.total > r.rows.length ? ', showing newest ' + r.rows.length : '') + (dHtml ? ' · ' + ds.length + ' draft' + (ds.length === 1 ? '' : 's') : '');
+    $('hList').innerHTML = dHtml + (r.rows.length ? r.rows.map(histRowHtml).join('') : '<div class="empty">Nothing found' + (q ? ' for “' + esc(q) + '”' : '') + '.</div>');
+  }).catch(function (er) { if (my === hSeq) $('hList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+}
+document.addEventListener('click', function (e) { var b = e.target.closest('button[data-hact]'); if (!b) return;
+  var rid = b.dataset.rid, act = b.dataset.hact;
+  if (act === 'open') openRequest(rid);
+  else if (act === 'edit' || act === 'clone') loadRequestIntoForm(rid, act === 'clone', b);
+  else if (act === 'resend') { if (!confirm('Send ' + rid + ' to ' + (session.bot || 'Red') + ' again (same request ID)?')) return;
+    b.disabled = true; api('requestResend', { request_id: rid }).then(function (r) { toast(r.sent ? 'Re-sent ' + r.request_id : 'Re-send failed: ' + r.status); refreshLists(); })
+      .catch(function (er) { toast(er.message); b.disabled = false; }); } });
+function refreshLists() { if ($('p-history').classList.contains('on')) loadHistory(); if ($('p-cart').classList.contains('on')) loadCartRequests(); if ($('p-plan').classList.contains('on')) loadRecent('plan', 'plList', 5); }
+function kv(k, v) { return v === '' || v == null ? '' : '<div class="kv"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>'; }
+function openRequest(rid) {
+  openSheet('<div class="spinner"></div>');
+  api('requestGet', { request_id: rid }).then(function (g) { var p = g.payload, r = g.row, cartK = r.kind === 'cart';
+    var body = '<h3>' + (cartK ? 'Cart request' : 'Plan request') + '</h3><div style="font-size:13px;color:var(--muted)">' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + '</div>' +
+      kv('Customer', p.customer_name) + kv('Phone', p.customer_phone) + kv('Job city', p.job_city) + kv('Style', p.style) +
+      kv('Discount', p.discount_pct == null ? 'default' : p.discount_pct + '%') + kv('Tax', p.tax_store) + kv('Revised from', p.revised_from) +
+      kv('Status', r.status + (r.sends > 1 ? ' (sent ' + r.sends + '×)' : ''));
+    if (cartK) { var sub = g.lines.reduce(function (a, l) { return a + l.price * l.qty; }, 0);
+      body += '<div class="sec-h" style="margin-top:12px"><h2>Items</h2></div>' + g.lines.map(function (l) { return '<div class="kv"><span>' + l.qty + ' × ' + esc(l.name) + (l.missing ? ' <span class="missing">(gone)</span>' : '') + '</span><b>' + (l.missing ? '' : money(l.price * l.qty)) + '</b></div>'; }).join('') +
+        '<div class="kv"><span>Retail today (before tax)</span><b>' + money(sub) + '</b></div>'; }
+    else { var t = Object.keys(p.trim || {}).filter(function (k) { return p.trim[k] !== '' && p.trim[k] != null; });
+      body += '<div class="sec-h" style="margin-top:12px"><h2>Trim</h2></div>' + (t.length ? t.map(function (k) { return kv(k, p.trim[k]); }).join('') : '<div class="hint">None</div>') + '<div id="opThumb"></div>'; }
+    if (p.notes) body += '<div class="sec-h" style="margin-top:12px"><h2>Notes</h2></div><div style="white-space:pre-wrap;font-size:14px">' + esc(p.notes) + '</div>';
+    body += '<div class="actions"><button data-hact="edit" data-rid="' + esc(rid) + '">Edit</button><button data-hact="clone" data-rid="' + esc(rid) + '">Clone</button><button data-hact="resend" data-rid="' + esc(rid) + '">Re-send</button></div>';
+    $('sheetBody').innerHTML = body;
+    if (!cartK && g.has_file) api('planThumb', { request_id: rid }).then(function (t) { if (t.thumb && $('opThumb')) $('opThumb').innerHTML = '<img src="' + t.thumb + '" style="max-width:100%;border-radius:8px;margin-top:10px" alt="plan">'; }).catch(function () {});
+  }).catch(function (er) { $('sheetBody').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+}
+var SPECIAL_RE = /^\d+ x .+ \(special order .+, priced from #2083 parts\)$/;
+/** Edit = same customer, sends as a new request with revised_from. Clone = same items/trim/style, blank customer, no link. */
+function loadRequestIntoForm(rid, clone, btn) {
+  if (btn) btn.disabled = true;
+  api('requestGet', { request_id: rid }).then(function (g) { var p = g.payload; closeSheet();
+    var cust = clone ? {} : { name: p.customer_name, phone: p.customer_phone, city: p.job_city };
+    var notes = String(p.notes || '').split('\n').filter(function (l) { return !SPECIAL_RE.test(l.trim()); }).join('\n');
+    if (g.row.kind === 'cart') {
+      if (!okToReplaceCart()) return;
+      saveCart(g.lines.map(function (l) { var o = { name: l.name, desc: l.desc, price: l.price, qty: l.qty }; if (l.parts) o.parts = l.parts; if (l.special) o.special = l.special; if (l.cab) o.cab = l.cab; if (l.missing) o.missing = true; return o; }));
+      setCartForm({ name: cust.name, phone: cust.phone, city: cust.city, disc: p.discount_pct == null ? '' : p.discount_pct, notes: notes });
+      setTax(p.tax_store); curDraft = null; setCartRev(clone ? null : rid); msg($('cartMsg'), '');
+      go('cart'); toast(clone ? 'Copied into a new cart' : 'Loaded ' + rid + ' for editing');
+      if (clone) $('cqName').focus();
+    } else {
+      go('plan');
+      planInit().then(function () {
+        $('plName').value = cust.name || ''; $('plPhone').value = cust.phone || ''; $('plCity').value = cust.city || '';
+        if (p.style && ![].some.call($('plStyle').options, function (o) { return o.value === p.style; })) $('plStyle').insertAdjacentHTML('beforeend', '<option>' + esc(p.style) + '</option>');
+        $('plStyle').value = p.style || ''; $('plDisc').value = p.discount_pct == null ? '' : p.discount_pct; $('plTax').value = p.tax_store === 'Fremont' ? 'Fremont' : 'SF';
+        $('plTrim').querySelectorAll('input').forEach(function (i) { var v = (p.trim || {})[i.dataset.k]; i.value = v === '' || v == null ? '' : v; });
+        $('plNotes').value = notes; setPlanRev(clone ? null : rid); setPlanKeep(g.has_file ? rid : null); msg($('plMsg'), '');
+        toast(clone ? 'Copied into a new plan form' : 'Loaded ' + rid + ' for editing'); if (clone) $('plName').focus();
+      });
+    }
+  }).catch(function (er) { toast(er.message); }).then(function () { if (btn) btn.disabled = false; });
+}
 function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600); }
 
 // ---------------- tile calculator
@@ -536,20 +716,36 @@ var tcState = null;
 
 // ---------------- send plan to the bot (separate page)
 var planFile = null;
+var stylesP = null;
 function planInit() {
   if (!$('plTrim').innerHTML) $('plTrim').innerHTML = TRIM_KEYS.map(function (k) { return '<div><label>' + k + '</label><input inputmode="numeric" data-k="' + k + '"></div>'; }).join('');
-  if (!$('plStyle').options.length) api('cabinetStyles').then(function (ss) { $('plStyle').innerHTML = '<option value="">Pick style…</option>' + ss.map(function (s) { return '<option>' + esc(s.key) + '</option>'; }).join('') + '<option>Other (see notes)</option>'; });
+  if (!stylesP) stylesP = api('cabinetStyles').then(function (ss) { $('plStyle').innerHTML = '<option value="">Pick style…</option>' + ss.map(function (s) { return '<option>' + esc(s.key) + '</option>'; }).join('') + '<option>Other (see notes)</option>'; })
+    .catch(function (er) { stylesP = null; throw er; });
+  return stylesP;
 }
+var planRev = null, planKeep = null;
+function setPlanRev(rid) { planRev = rid || null;
+  $('planRev').innerHTML = planRev ? '<span>Editing <b>' + esc(planRev) + '</b>. Sending makes a new request marked “revised from ' + esc(planRev) + '”.</span><button class="link" id="planRevX">Stop editing</button>' : '';
+  $('planRev').classList.toggle('hidden', !planRev); if (planRev) $('planRevX').onclick = function () { setPlanRev(null); }; }
+function clearPlanFile() { planFile = null; $('plFile').value = ''; $('plPrev').classList.add('hidden'); $('plPrev').removeAttribute('src'); }
+function setPlanKeep(rid) { planKeep = rid || null; var k = $('plKeep'); if (planKeep) clearPlanFile();
+  k.classList.toggle('hidden', !planKeep); if (!planKeep) { k.innerHTML = ''; return; }
+  k.innerHTML = '<img id="plKeepImg" alt=""><span style="flex:1">Using the plan photo from <b>' + esc(planKeep) + '</b>. Pick a file below to replace it.</span><button class="link" id="plKeepX">Remove</button>';
+  $('plKeepX').onclick = function () { setPlanKeep(null); };
+  api('planThumb', { request_id: planKeep }).then(function (t) { if (t.thumb && $('plKeepImg')) $('plKeepImg').src = t.thumb; }).catch(function () {}); }
 $('plFile').onchange = function () { var f = this.files[0]; if (!f) return;
   if (f.size > 10 * 1024 * 1024) { msg($('plMsg'), 'That file is over 10 MB. Take the photo again at a lower size.'); return; }
   var rd = new FileReader(); rd.onload = function () { planFile = { data: rd.result, mimeType: f.type || 'image/jpeg', name: f.name };
-    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; }; rd.readAsDataURL(f); };
+    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); }; rd.readAsDataURL(f); };
 $('plSend').onclick = function () {
   var trim = {}; $('plTrim').querySelectorAll('input').forEach(function (i) { trim[i.dataset.k] = i.value.trim(); });
   var b = this; b.disabled = true; msg($('plMsg'), 'Sending…', true);
   api('planRequest', { plan: { file: planFile, customer_name: $('plName').value, customer_phone: $('plPhone').value, job_city: $('plCity').value,
-    style: $('plStyle').value, discount_pct: $('plDisc').value, tax_store: $('plTax').value, trim: trim, notes: $('plNotes').value } })
-    .then(function (r) { msg($('plMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + '.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Ray can see it in the Plan requests log.', r.sent); })
+    style: $('plStyle').value, discount_pct: $('plDisc').value, tax_store: $('plTax').value, trim: trim, notes: $('plNotes').value,
+    revised_from: planRev || '', reuse_file_from: planFile ? '' : (planKeep || '') } })
+    .then(function (r) { var rv = r.revised_from ? ' (revised from ' + r.revised_from + ')' : '';
+      msg($('plMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + rv + '.' : 'Saved as ' + r.request_id + rv + ' but the bot did not answer (' + r.status + '). Re-send it below or from History.', r.sent);
+      setPlanRev(null); clearPlanFile(); setPlanKeep(null); loadRecent('plan', 'plList', 5); })
     .catch(function (er) { msg($('plMsg'), er.message); }).then(function () { b.disabled = false; });
 };
 
