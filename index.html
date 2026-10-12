@@ -160,6 +160,8 @@
   .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
+  .clbtns { display:flex; gap:8px; margin-top:8px; } .clbtns .btn { flex:1; margin-top:0; } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
+  .shbtn.on { border-color:#1A8BC9; color:#0b5f8f; background:#eef7fc; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
   .shrow { display:flex; gap:12px; align-items:center; padding:11px 4px; border-bottom:1px solid var(--line); font-size:15px; cursor:pointer; } .shrow input { width:22px; height:22px; min-height:0; flex-shrink:0; }
   .shrow .s { display:block; font-size:12px; color:var(--muted); } .shrow.team { background:#f7f8fa; border-radius:10px; padding:11px 8px; }
@@ -377,7 +379,7 @@
       <div class="card"><h2 style="margin:0 0 4px;font-size:16px">Add a login</h2>
         <p class="hint">Temporary PIN; they set their own at first sign-in. Same name again = reset PIN.</p>
         <div class="twocol"><div><label class="f">Name</label><input id="stName"></div><div><label class="f">Temporary PIN</label><input id="stPin" inputmode="numeric"></div></div>
-        <div class="twocol"><div><label class="f">Account</label><select id="stAcct"></select></div><div><label class="f">Role</label><select id="stRole"><option value="staff">staff</option><option value="account_admin">account admin</option></select></div></div>
+        <div class="twocol"><div><label class="f">Account</label><select id="stAcct"></select></div><div><label class="f">Role</label><select id="stRole"><option value="staff">staff</option><option value="account_admin">account admin</option><option value="admin" id="stRoleAdmin" class="hidden" hidden>admin (all accounts, like Ray)</option></select></div></div>
         <button class="btn" id="stAdd">Add / reset login</button><div id="stMsg" class="msg hidden"></div>
         </div>
     </div>
@@ -502,6 +504,7 @@ function enterApp() {
 function setHeader(m) {
   $('acctLine').textContent = (m.name || '') + (m.accountName ? ' · ' + m.accountName : '') + (m.bot ? ' · bot ' + m.bot : '');
   $('adminBtn').classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));
+  var ra = $('stRoleAdmin'); if (ra) { ra.hidden = m.role !== 'admin'; ra.disabled = m.role !== 'admin'; }
   $('planBot').textContent = m.bot || 'Red'; $('plSend').textContent = 'Send to ' + (m.bot || 'Red');
 }
 $('signinForm').addEventListener('submit', function (e) { e.preventDefault(); var b = $('signinBtn'); b.disabled = true; msg($('signinMsg'), '');
@@ -789,6 +792,27 @@ function shareText(c) {
   if (!c.mine) return 'Owner: <b>' + esc(c.owner) + '</b>' + (c.shared ? ' · shared with ' + (c.team ? 'the team' + (w.length ? ' + ' : '') : '') + w.join(', ') : ' · private');
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
+/** "Share with client": a read-only, no-login link to this project (client.html?c=TOKEN). The server sends no prices,
+ *  stock, shelves, contact info or voice notes for it. Make / copy / text it, replace it, or stop it. */
+function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t; }
+function openClientLink(c) {
+  var t = c.clientToken, u = t ? clientUrl(t) : '';
+  openSheet('<h3>Share with client</h3><div class="hint" style="margin:0 0 10px">A read-only page of <b>' + esc(projLabel(c)) + '</b> for your client: all notes, items, qty, item notes and photos, plus our store addresses. <b>No prices, totals, stock or shelf locations.</b> No sign-in needed: anyone with the link can see it.</div>' +
+    (t ? '<input id="clUrl" readonly value="' + esc(u) + '" style="font-size:13px">' +
+      '<div class="clbtns"><button class="btn" id="clCopy">Copy link</button>' + (navigator.share ? '<button class="btn sec" id="clShare">Share… (text it)</button>' : '') + '</div>' +
+      '<div class="clrow"><a class="link" id="clOpen" href="' + esc(u) + '" target="_blank" rel="noopener">Preview</a><span style="flex:1"></span><button class="link" id="clNew">New link</button><button class="link" id="clStop" style="color:#7f1d1d">Stop client link</button></div>'
+      : '<button class="btn" id="clMake">Make client link</button>') + '<div id="clMsg" class="msg hidden"></div>');
+  function run(op, b) { if (b) b.disabled = true;
+    return api('clientLink', { id: c.id, op: op }).then(function (r) { c.clientToken = r.clientToken || ''; if (custOpen === c) renderOverview(); openClientLink(c); return r; })
+      .catch(function (er) { if (b) b.disabled = false; msg($('clMsg'), er.message); }); }
+  if ($('clMake')) $('clMake').onclick = function () { run('make', this).then(function (r) { if (r && r.clientToken) toast('Client link ready'); }); };
+  if ($('clCopy')) $('clCopy').onclick = function () { var b = this;
+    (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).catch(function () { var i = $('clUrl'); i.select(); document.execCommand('copy'); })
+      .then(function () { b.textContent = 'Copied ✓'; toast('Client link copied'); }); };
+  if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: 'East Star · ' + (c.name || projLabel(c)), text: 'Your project at East Star Building Supply:', url: u }).catch(function () {}); };
+  if ($('clNew')) $('clNew').onclick = function () { if (confirm('Make a new link? The old link stops working right away.')) run('new', this).then(function (r) { if (r) toast('New client link (old one stopped)'); }); };
+  if ($('clStop')) $('clStop').onclick = function () { if (confirm('Stop the client link? Anyone who has it can no longer open this project.')) run('stop', this).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); };
+}
 function openShare(c) {
   openSheet('<h3>Share ' + esc(projLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this project with all its notes, and can add items, edit and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
   api('shareTargets', {}).then(function (ts) { if (!$('shList')) return;
@@ -828,7 +852,7 @@ function renderOverview() {
       '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
-      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '</div></div>' +
+      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
     '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
@@ -841,6 +865,7 @@ function renderOverview() {
   [['cdName', 'name'], ['cdPhone', 'phone'], ['cdCity', 'city']].forEach(function (f) { var el = $(f[0]);
     el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); el.addEventListener('blur', flushInfo); });
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
+  $('cdClient').onclick = function () { flushInfo(); flushNote(); openClientLink(c); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); flushInfo(); };
   $('cdNewNote').onclick = function () { var b = this; b.disabled = true; flushNote().then(function () { return api('noteSave', { id: c.id }); })
     .then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderOverview(); scrollToNote(r.note.id); toast('New note: ' + r.note.title + ' (adding here)'); })
@@ -1406,7 +1431,7 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
     $('rpGo').onclick = function () { this.disabled = true; var g = this; api('adminSetUser', { name: u.name, pin: $('rpPin').value, account: u.account, role: u.role })
       .then(function () { closeSheet(); msg($('stListMsg'), 'PIN reset for ' + u.name + '. Give them the temporary PIN in person.', true); loadUsers(); }).catch(function (er) { msg($('rpMsg'), er.message); g.disabled = false; }); }; }
 });
-$('stAdd').onclick = function () { api('adminSetUser', { name: $('stName').value, pin: $('stPin').value, account: $('stAcct').value, role: $('stRole').value }).then(function (r) {
+$('stAdd').onclick = function () { if ($('stRole').value === 'admin' && !confirm('Make ' + $('stName').value + ' a full admin? They can see every project, change webhooks and manage every login.')) return; api('adminSetUser', { name: $('stName').value, pin: $('stPin').value, account: $('stAcct').value, role: $('stRole').value }).then(function (r) {
   msg($('stMsg'), (r.reset ? 'PIN reset for ' : 'Added ') + r.name + '. Give them the temporary PIN in person.', true); $('stPin').value = ''; loadUsers(); }).catch(function (er) { msg($('stMsg'), er.message); }); };
 
 if (session) enterApp(); else { show('signin'); warmUp(); }
