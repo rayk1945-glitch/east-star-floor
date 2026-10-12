@@ -93,10 +93,10 @@
   .item .price small { display:block; font-size:11px; font-weight:600; color:var(--muted); text-align:right; }
   .item .desc { font-size:13.5px; color:#374151; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; }
   .item .desc.open { -webkit-line-clamp:unset; display:block; }
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
-  .stat { background:#f3f4f6; border-radius:10px; padding:6px 4px; text-align:center; }
-  .stat b { display:block; font-size:16px; font-variant-numeric:tabular-nums; }
-  .stat span { font-size:10.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:6px; }
+  .stat { background:#f3f4f6; border-radius:8px; padding:3px 2px; text-align:center; line-height:1.15; }
+  .stat b { display:block; font-size:13.5px; font-variant-numeric:tabular-nums; }
+  .stat span { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   .stat.good { background:var(--ok-bg); color:var(--ok-fg); } .stat.bad { background:var(--err-bg); color:var(--err-fg); }
   .stat.inc { background:var(--info-bg); color:var(--info-fg); }
   .shelf { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -426,8 +426,8 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<script src="search.js?v=20261012e"></script>
-<script src="i18n.js?v=20261012e"></script>
+<script src="search.js?v=20261012f"></script>
+<script src="i18n.js?v=20261012f"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -471,7 +471,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261012e';
+var PAGE_VER = '20261012f';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -491,6 +491,8 @@ function idb(mode, fn) { return new Promise(function (res, rej) { var o = indexe
 function warmIndex(b) { setTimeout(function () { try { if (b.index) { getIndex_(b); incomingIndex_(b); return; }
   var t = performance.now(); b.index = getIndex_(b); incomingIndex_(b); window.__indexMs = Math.round(performance.now() - t);
   idb('readwrite', function (st) { st.put({ version: b.version, index: b.index }, 'index'); }).catch(function () {}); } catch (e) {} }, 30); }
+/* Stock by store: [[label, qty]] (sync/build_data.py) or {label: qty} from an older builder; both render. */
+function locList(l) { if (!l) return []; if (Array.isArray(l)) return l; return Object.keys(l).filter(function (k) { return Number(l[k]); }).map(function (k) { return [k, l[k]]; }); }
 function useData(b) { localData = b; warmIndex(b); $('qHint').textContent = 'Typos are OK · data from ' + (b.built || '?'); }
 function gunzipB64(b64) { var bin = atob(b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text().then(JSON.parse); }
@@ -660,7 +662,7 @@ function card(it) {
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
-    '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + ((it.loc || []).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + it.loc.map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
+    '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (locList(it.loc).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + locList(it.loc).map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
 }
