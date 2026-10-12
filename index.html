@@ -12,6 +12,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="East Star">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="East Star">
 <style>
   :root { --bg:#f4f5f7; --card:#fff; --text:#111827; --muted:#5b6472; --line:#dfe3e8; --line-strong:#c9cfd6;
     --accent:#1f2a37; --focus:rgba(51,65,85,.28); --ok-bg:#e8f5ed; --ok-fg:#14532d; --err-bg:#fdecec; --err-fg:#7f1d1d;
@@ -170,7 +173,9 @@
   .proj .phead { padding:0 2px 10px; border-bottom:1px solid var(--line); margin-bottom:10px; } .proj .nhead { margin:0 0 4px; }
   .proj .pinfo { margin:10px 0 2px; } .proj .shline { margin-top:6px; }
   .proj .ngroup { box-shadow:none; border:1px solid var(--line-strong); margin-bottom:8px; padding:12px; } .proj .ngroup.open { border:2px solid #1f2937; }
-  .proj .addnote { margin:0; min-height:46px; } .proj #cdSaveAll { margin:10px 0 0; } .proj #cdSaveMsg { margin-top:4px; }
+  .proj .addnote { margin:0; min-height:46px; } .proj .pvoice { margin:0 0 8px; } .proj .vbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .proj .vbar .recbtn { min-height:40px; padding:0 14px; font-size:14px; }
+  .proj .vtog { margin-left:auto; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; }
+  .proj #cdVoice { margin-top:8px; } .proj #cdQuote { margin-top:10px; } .proj #cdSaveAll { margin:10px 0 0; } .proj #cdSaveMsg { margin-top:4px; }
   .addnote { display:block; width:100%; margin:0 0 12px; min-height:50px; border:2px dashed #94a3b8; border-radius:14px; background:#fff; font:inherit; font-size:16px; font-weight:700; color:#1f2937; cursor:pointer; }
   .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
@@ -244,6 +249,29 @@
   .acctcard { border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:10px; }
   .pill-ok { background:var(--ok-bg); color:var(--ok-fg); border-radius:999px; padding:2px 8px; font-size:12px; font-weight:700; }
   .pill-no { background:var(--err-bg); color:var(--err-fg); border-radius:999px; padding:2px 8px; font-size:12px; font-weight:700; }
+  /* ---- denser layout ("more real estate"): one slim header row that hides on scroll down, full-width cards on phones,
+     smaller bottom nav. Tap targets stay >= 40px. */
+  header { padding:4px 10px; padding-top:calc(4px + env(safe-area-inset-top)); transition:transform .2s ease; will-change:transform; }
+  body.hdhide header { transform:translateY(-100%); } body.hdhide .searchbar { top:0; } .searchbar { transition:top .2s ease; }
+  .toprow { margin-bottom:0; min-height:40px; gap:6px; } h1 { font-size:18px; white-space:nowrap; } h1 small { font-size:12px; margin-left:4px; }
+  .toplinks button { min-height:40px; padding:0 11px; font-size:12.5px; }
+  .acct { margin:0 0 10px; }
+  main { padding:6px 8px calc(var(--nh, 50px) + 16px); }
+  .card { padding:10px 12px; margin-bottom:6px; }
+  .proj { padding:10px 10px 8px; margin-bottom:6px; } .proj .phead { padding:0 0 8px; margin-bottom:8px; } .proj .ngroup { padding:10px; margin-bottom:6px; }
+  nav.bottom { padding:0 4px env(safe-area-inset-bottom); } nav.bottom button { min-height:46px; font-size:11px; padding:3px 0 2px; } nav.bottom button svg { width:21px; height:21px; margin-bottom:1px; }
+  body { padding-bottom:calc(48px + env(safe-area-inset-bottom)); }
+  @media (max-width:640px) {
+    main { padding-left:0; padding-right:0; }
+    .card, .proj { border-radius:0; }
+    .page > :not(.card):not(.proj):not(#results):not(#cuDetail), #results > :not(.card), #cuDetail > :not(.card):not(.proj) { margin-left:8px; margin-right:8px; max-width:calc(100% - 16px); }
+  }
+  /* one-time "Add to Home Screen" hint */
+  #a2hs { position:fixed; left:8px; right:8px; bottom:calc(var(--nh, 50px) + 8px); z-index:30; background:#1f2937; color:#fff; border-radius:14px; padding:10px 8px 10px 14px;
+    display:flex; align-items:center; gap:8px; font-size:14px; line-height:1.35; box-shadow:0 8px 24px rgba(0,0,0,.25); max-width:624px; margin:0 auto; }
+  #a2hs .t { flex:1; min-width:0; } #a2hs b { font-weight:700; }
+  #a2hs button { min-height:40px; border:0; border-radius:999px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+  #a2hs .go { background:#fff; color:#1f2937; padding:0 14px; } #a2hs .x { background:none; color:#cbd5e1; min-width:40px; font-size:20px; }
 </style>
 </head>
 <body>
@@ -267,7 +295,6 @@
   <header><div class="head-in">
     <div class="toprow"><h1>East Star <small>Red</small></h1>
       <div class="toplinks"><button class="plan" data-go="plan">Send plan to Red</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="outBtn">Sign out</button></div></div>
-    <div class="acct" id="acctLine"></div>
   </div></header>
   <main>
     <!-- SEARCH -->
@@ -330,6 +357,7 @@
     <!-- ADMIN (separate page) -->
     <div class="page" id="p-admin">
       <div class="card"><div class="crumb"><button class="back" data-go="search">‹</button>Admin: accounts</div>
+        <div class="acct" id="acctLine"></div>
         <p class="hint" style="margin-top:0">One account per bot. Webhook URL + key are write-only: they are stored on the server and never shown again.</p>
         <div id="acctList"></div>
         <details style="margin-top:12px"><summary style="font-weight:700;cursor:pointer">Add an account</summary>
@@ -463,7 +491,7 @@ function enterApp() {
   show('app'); setHeader(session);
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
-  sizeChrome();
+  sizeChrome(); setTimeout(a2hsShow, 1500);
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
 function setHeader(m) {
@@ -582,6 +610,29 @@ function sizeChrome() {
   if (n && n.offsetHeight) document.documentElement.style.setProperty('--nh', n.offsetHeight + 'px');
 }
 window.addEventListener('resize', sizeChrome);
+// Header hides while scrolling down, comes back on any scroll up (and at the top).
+(function () { var last = 0, acc = 0;
+  window.addEventListener('scroll', function () { var y = Math.max(0, window.scrollY), d = y - last; last = y;
+    if (y < 60 || ($('sheet') && $('sheet').classList.contains('on'))) { acc = 0; document.body.classList.remove('hdhide'); return; }
+    acc = (acc > 0) === (d > 0) ? acc + d : d;
+    if (acc > 24) document.body.classList.add('hdhide'); else if (acc < -12) document.body.classList.remove('hdhide'); }, { passive: true }); })();
+// One-time "Add to Home Screen for full screen" hint (phones only, not when already installed). Android: the real install prompt.
+var a2hsEvt = null, A2HS_KEY = 'esA2hsSeen';
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); a2hsEvt = e; if ($('a2hs')) a2hsShow(); });
+window.addEventListener('appinstalled', function () { try { localStorage.setItem(A2HS_KEY, '1'); } catch (e) {} if ($('a2hs')) $('a2hs').remove(); });
+function a2hsInstalled() { return (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) || navigator.standalone === true; }
+function a2hsShow() { var ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
+  try { if (localStorage.getItem(A2HS_KEY)) return; } catch (e) { return; }
+  if (a2hsInstalled() || !(ios || android || a2hsEvt)) return;
+  var d = $('a2hs') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'a2hs' }));
+  d.innerHTML = '<div class="t">' + (a2hsEvt ? '<b>Install East Star</b> for full screen, like an app.'
+      : ios ? '<b>Full screen:</b> tap Share <span aria-hidden="true">⎙</span> then <b>Add to Home Screen</b>.'
+      : '<b>Full screen:</b> tap ⋮ then <b>Add to Home screen</b> (or Install app).') + '</div>' +
+    (a2hsEvt ? '<button class="go" id="a2hsGo">Install</button>' : '') + '<button class="x" id="a2hsX" aria-label="Dismiss">✕</button>';
+  var done = function () { try { localStorage.setItem(A2HS_KEY, '1'); } catch (e) {} d.remove(); };
+  $('a2hsX').onclick = done;
+  if ($('a2hsGo')) $('a2hsGo').onclick = function () { var ev = a2hsEvt; a2hsEvt = null; done(); ev.prompt(); };
+}
 
 // ---------------- price hours. The SERVER decides (it leaves prices out of the phone data and every reply outside price
 // hours); the page only shows the state and drops a priced copy the moment the window ends.
@@ -773,10 +824,11 @@ function renderOverview() {
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
       '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '</div></div>' +
+    '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
+      '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
-      '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div></div>' +
-    '<div class="card"><div class="sec-h"><h2>Voice notes</h2></div><div id="cdVoice"></div>' +
-      '<div style="margin-top:10px"><button class="recbtn" id="cdRec">● Record</button> <span id="cdRecT" class="hint"></span></div><div id="cdLive" class="live hidden"></div></div>' +
+      '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div>' +
+      '<button class="btn sec" id="cdQuote">Quote this note</button><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
   $('cdBack').onclick = function () { flushInfo(); flushNote(); loadCustList(); };
   $('ndNew').onclick = function () { this.disabled = true; flushInfo(); flushNote(); newCustomerOpen(); };
@@ -788,8 +840,9 @@ function renderOverview() {
   $('cdNewNote').onclick = function () { var b = this; b.disabled = true; flushNote().then(function () { return api('noteSave', { id: c.id }); })
     .then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderOverview(); scrollToNote(r.note.id); toast('New note: ' + r.note.title + ' (adding here)'); })
     .catch(function (er) { toast(er.message); b.disabled = false; }); };
-  $('cdSaveAll').onclick = saveProject;
+  $('cdSaveAll').onclick = saveProject; $('cdQuote').onclick = quoteCust;
   $('cdRec').onclick = toggleRec;
+  $('cdVoiceT').onclick = function () { voiceOpen = !voiceOpen; renderVoice(); };
   if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?')) return;
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); };
   renderNoteCards(); renderVoice();
@@ -807,21 +860,18 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
         '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
-      (NOTE_AUTOSAVE ? '' : '<button class="btn sec hidden" id="nSave">Save note</button>') +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
       '<div id="cdItems"></div><div id="cdTotals"></div>' +
       '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
       '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
-      '<button class="btn" id="cdQuote">Quote this note</button><div id="cdMsg" class="msg hidden"></div>' +
       '<div style="text-align:center;margin-top:10px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div></div>';
   }).join('') : '<div class="ngroup"><div class="empty" style="padding:14px">No notes yet. Tap + Add note.</div></div>';
+  quoteBtn();
   var n = curNote(); if (!n) return;
   if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + projLabel(c) + ' · ' + n.title); };
-  $('nTitle').addEventListener('input', queueNote); $('nText').addEventListener('input', queueNote);
-  if (NOTE_AUTOSAVE) { $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote); }
-  else $('nSave').onclick = function () { flushNote().then(function () { if ($('nSave') && !noteDirty) $('nSave').classList.add('hidden'); }); };
+  $('nTitle').addEventListener('input', function () { queueNote(); quoteBtn(); }); $('nText').addEventListener('input', queueNote);
+  $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote);
   $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
-  $('cdQuote').onclick = quoteCust;
   $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
     api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
   renderPicked(); renderNotePhotos();
@@ -876,11 +926,9 @@ function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdNa
     return api('customerSave', { customer: body }).then(function (r) { c.label = r.label; c.num = r.num;
       if (curCust && curCust.id === r.id && curCust.name !== r.label) { curCust.name = r.label; saveCur(); }
       if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = projLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); } }); }); }
-/** Note title/text autosave (debounced + on leaving the box). Set false to save only with the "Save note" button. */
-var NOTE_AUTOSAVE = true;
+/** Note title/text autosave (debounced + on leaving the box); "Save project" saves everything at once. */
 var noteT = null, noteDirty = false;
 function queueNote() { var n0 = curNote(); if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; } noteDirty = true; clearTimeout(noteT);
-  if (!NOTE_AUTOSAVE) { $('nSaved').textContent = 'Not saved yet'; if ($('nSave')) $('nSave').classList.remove('hidden'); return; }
   $('nSaved').textContent = 'Editing…'; noteT = setTimeout(flushNote, 900); }
 function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
   noteDirty = false; var c = custOpen; n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; $('nSaved').textContent = 'Saving…';
@@ -954,8 +1002,13 @@ function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = n
       cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); res({ data: cv.toDataURL('image/jpeg', 0.82), mimeType: 'image/jpeg' }); };
     img.src = rd.result; }; rd.readAsDataURL(file); }); }
 /** Quote this note: the existing cart_quote webhook flow (same payload + optional note_title), filled from this customer + note. */
+/** The one "Quote this note" button (under Save project) quotes the OPEN note: "Quote Note 2" / "Quote Kitchen". */
+var quoteFor = null;
+function quoteBtn() { var b = $('cdQuote'); if (!b) return; var n = curNote(), t = n ? (($('nTitle') && $('nTitle').value.trim()) || n.title) : '';
+  b.textContent = n ? 'Quote ' + t : 'Quote this note (open a note first)'; b.disabled = !n;
+  if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; msg($('cdMsg'), ''); } }
 function quoteCust() {
-  var c = custOpen, n = curNote(), b = $('cdQuote'), it = n.items || [];
+  var c = custOpen, n = curNote(), b = $('cdQuote'); if (!n) { quoteBtn(); return; } var it = n.items || [];
   if (!it.length) { msg($('cdMsg'), 'No items in this note yet. Add items from Search first.'); return; }
   b.disabled = true; msg($('cdMsg'), 'Sending…', true);
   flushNote().then(function () {
@@ -963,7 +1016,7 @@ function quoteCust() {
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
       items: it.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
   }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to Ray.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
-    .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; });
+    .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; quoteBtn(); });
 }
 function planFromCust() { var c = custOpen, n = curNote(); flushNote();
   go('plan'); planInit().then(function () { setPlanRev(null); setPlanKeep(null); clearReader(); msg($('plMsg'), '');
@@ -971,11 +1024,14 @@ function planFromCust() { var c = custOpen, n = curNote(); flushNote();
     if (!$('plNotes').value.trim()) $('plNotes').value = n ? (n.title + (n.text ? ': ' + n.text : '')) : ''; toast('Plan form filled for ' + custLabel(c)); }); }
 // voice notes (MediaRecorder, same approach as Customer Notes; live transcript where the browser offers it)
 var rec = null;
+var voiceOpen = false;   // voice list starts collapsed: just the Record button + "Voice notes (N) ▾"
 function renderVoice() { var c = custOpen, vs = c.voice || [];
+  if ($('cdVoiceT')) { $('cdVoiceT').classList.toggle('hidden', !vs.length); $('cdVoiceT').textContent = 'Voice notes (' + vs.length + ') ' + (voiceOpen ? '▴' : '▾');
+    $('cdVoiceT').setAttribute('aria-expanded', voiceOpen); $('cdVoice').classList.toggle('hidden', !voiceOpen || !vs.length); }
   $('cdVoice').innerHTML = vs.length ? vs.map(function (v) { var t = new Date(v.at);
     return '<div class="vrow" data-vid="' + esc(v.fileId) + '"><div class="h"><button class="phbtn" data-vplay="1">▶ Play</button><b>' + (v.dur ? Math.floor(v.dur / 60) + ':' + ('0' + v.dur % 60).slice(-2) : 'clip') + '</b><span style="flex:1">' +
       esc(t.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' · ' + esc(v.by) + '</span><button class="link" data-vdel="1">Remove</button></div>' +
-      '<textarea rows="1" data-vtext="1" placeholder="Transcript / summary (optional)">' + esc(v.transcript) + '</textarea></div>'; }).join('') : '<div class="hint" style="margin:0">No voice notes. Tap Record and talk (up to 3 minutes).</div>'; }
+      '<textarea rows="1" data-vtext="1" placeholder="Transcript / summary (optional)">' + esc(v.transcript) + '</textarea></div>'; }).join('') : ''; }
 document.addEventListener('click', function (e) { var t = e.target; if (!t.closest('#cdVoice')) return; var row = t.closest('[data-vid]'); if (!row) return; var f = row.dataset.vid, c = custOpen;
   if (t.closest('[data-vplay]')) { var b = t.closest('[data-vplay]'); if (row.querySelector('audio')) { row.querySelector('audio').play(); return; } b.textContent = 'Loading…';
     (fileCache[f] ? Promise.resolve({ data: fileCache[f] }) : api('customerFile', { id: c.id, fileId: f })).then(function (r) { fileCache[f] = r.data; b.textContent = '▶ Play';
@@ -999,7 +1055,7 @@ function toggleRec() { if (rec) { rec.stop(); return; }
     tick = setInterval(function () { var s = Math.round((Date.now() - t0) / 1000); if ($('cdRecT')) $('cdRecT').textContent = 'Recording ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); if (s >= 180) mr.stop(); }, 500);
     mr.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
     mr.onstop = function () { clearInterval(tick); rec = null; stream.getTracks().forEach(function (t) { t.stop(); }); if (sr) try { sr.stop(); } catch (er) {}
-      if ($('cdRec')) { $('cdRec').classList.remove('on'); $('cdRec').textContent = '● Record'; $('cdRecT').textContent = 'Saving…'; }
+      if ($('cdRec')) { $('cdRec').classList.remove('on'); $('cdRec').textContent = '● Record voice note'; $('cdRecT').textContent = 'Saving…'; }
       var blob = new Blob(chunks, { type: (mr.mimeType || mime || 'audio/webm') }), dur = Math.round((Date.now() - t0) / 1000), rd = new FileReader();
       rd.onload = function () { api('customerFileAdd', { id: c.id, kind: 'voice', file: { data: rd.result, mimeType: blob.type.split(';')[0] }, dur: dur, transcript: (text + interim).trim() })
         .then(function (r) { fileCache[r.fileId] = rd.result; if (custOpen && custOpen.id === c.id) { custOpen.voice = (custOpen.voice || []).concat([r.voice]); renderVoice(); }
