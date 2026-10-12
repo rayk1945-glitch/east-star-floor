@@ -13,7 +13,7 @@
   .wrap { max-width:760px; margin:0 auto; padding:0 0 24px; }
   .lang { position:absolute; top:12px; right:12px; border:1px solid var(--line); background:#fff; border-radius:999px; min-height:36px; padding:0 12px; font:inherit; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; }
   header { position:relative; background:#fff; border-bottom:1px solid var(--line); padding:18px 16px 14px; text-align:center; }
-  header svg { width:200px; height:auto; display:block; margin:0 auto; }
+  header .logo { width:min(220px,64vw); height:auto; display:block; margin:0 auto; }
   h1 { font-size:22px; margin:14px 0 2px; }
   .sub { color:var(--muted); font-size:13px; }
   .note { background:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin:12px 0; padding:14px 16px; }
@@ -66,18 +66,14 @@
   header { border-bottom:3px solid var(--accent); } a { color:var(--accent); } .lang { color:var(--navy); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body>
 <div class="wrap">
   <header>
     <button class="lang" data-lang-toggle="1" type="button">中文</button>
-    <svg viewBox="-4 -3 270 126" role="img" aria-label="East Star Building Supply">
-      <path d="M0 31V0H136V118H0V87" fill="none" stroke="#303030" stroke-width="2.2"/>
-      <text x="-1" y="77" font-size="30" font-weight="200" fill="#303030" textLength="97" lengthAdjust="spacing" font-family="Helvetica Neue, Arial, sans-serif">EAST</text>
-      <text x="154" y="47" font-size="32.5" font-weight="700" fill="#1A8BC9" textLength="104" lengthAdjust="spacingAndGlyphs" font-family="Helvetica Neue, Arial, sans-serif">STAR</text>
-      <text x="154" y="65" font-size="7.2" font-weight="500" fill="#9A9A9A" textLength="106" lengthAdjust="spacing" font-family="Helvetica Neue, Arial, sans-serif">BUILDING SUPPLY</text>
-      <text x="153" y="91" font-size="20.6" fill="#1A8BC9" textLength="106" lengthAdjust="spacingAndGlyphs">劍鋒高級建材</text>
-    </svg>
+    <img src="logo.png" alt="East Star Building Supply 劍鋒高級建材" class="logo" width="640" height="272">
     <h1 id="title">&nbsp;</h1>
     <div class="sub" id="sub"></div>
   </header>

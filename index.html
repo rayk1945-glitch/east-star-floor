@@ -8,6 +8,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -309,11 +310,17 @@
   /* warehouse role: search + stock only (the server also refuses everything else and never sends prices) */
   body.wh #custBar, body.wh .toplinks .plan, body.wh #adminBtn, body.wh #bnav [data-go="cust"], body.wh #bnav [data-go="history"],
   body.wh [onclick^="addItem"], body.wh #tcAdd, body.wh #priceBar { display:none !important; }
+  .signin-logo{display:block;width:min(260px,72%);height:auto;margin:0 auto 14px}
+  .hd-logo{height:34px;width:auto;vertical-align:middle;margin-right:6px}
+  .hd-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media (max-width:560px){.hd-logo{height:26px} .toprow{flex-wrap:wrap;row-gap:4px} .toprow h1{flex:1 0 100%;display:flex;align-items:center} .toplinks{flex:1 1 100%;overflow-x:auto;justify-content:flex-end}}
+  .toprow h1 .hd-logo{flex-shrink:0}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <section id="signin" class="hidden"><main style="padding-top:40px"><div class="card">
+  <img src="logo.png" alt="East Star Building Supply 劍鋒高級建材" class="signin-logo" width="640" height="272">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h1 class="notr" style="line-height:1.25">East Star Building Supply<br><span style="font-size:.85em">劍鋒高級建材</span></h1><button class="langbtn big" data-lang-toggle="1" type="button">中文</button></div>
   <p class="hint" style="margin-top:4px">Showroom staff: stock, prices, calculators, projects. Ask admin for a login.</p>
   <form id="signinForm" autocomplete="on">
@@ -333,7 +340,7 @@
 
 <section id="app" class="hidden">
   <header><div class="head-in">
-    <div class="toprow"><h1>East Star <small id="hdName" class="notr"></small></h1>
+    <div class="toprow"><h1><img src="logo.png" alt="East Star" class="hd-logo" width="640" height="272"><span class="hd-txt">East Star</span> <small id="hdName" class="notr"></small></h1>
       <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
   </div></header>
   <main>
@@ -360,14 +367,6 @@
       <div id="plKeep" class="keepbox hidden"></div>
       <input id="plFile" type="file" accept="image/*,application/pdf" capture="environment">
       <img id="plPrev" class="planpreview hidden" alt="">
-      <div id="plReader" class="reader hidden">
-        <div class="rh"><b>Cabinet codes on the plan</b><button class="link" id="crRead">Read again</button></div>
-        <div class="rstat" id="crStat"></div>
-        <div id="crRows"></div>
-        <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="link" id="crAdd">+ Add row</button><span style="flex:1"></span>
-          <label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:600"><input type="checkbox" id="crUse" checked style="width:auto;min-height:0"> Send this list</label></div>
-        <p class="note" style="margin:6px 0 0">Read by the computer from the photo: check every code and quantity against the plan. <span class="fl check">check</span> = not in our item list, <span class="fl odd">odd</span> = the reader guessed or the label looks cut off.</p>
-      </div>
       <div class="twocol"><div><label class="f">Name <span class="req">*</span></label><input id="plName" autocapitalize="words"></div>
         <div><label class="f">Phone</label><input id="plPhone" type="tel" inputmode="tel"></div></div>
       <div class="twocol"><div><label class="f">Job city</label><input id="plCity" autocapitalize="words" placeholder="e.g. Hercules"></div>
@@ -1444,92 +1443,20 @@ function clearPlanFile() { planFile = null; $('plFile').value = ''; $('plPrev').
 function setPlanKeep(rid) { planKeep = rid || null; var k = $('plKeep'); if (planKeep) clearPlanFile();
   k.classList.toggle('hidden', !planKeep); if (!planKeep) { k.innerHTML = ''; return; }
   k.innerHTML = '<img id="plKeepImg" alt=""><span style="flex:1">Using the plan photo from <b>' + esc(planKeep) + '</b>. Pick a file below to replace it.</span><button class="link" id="plKeepX">Remove</button>';
-  $('plReader').classList.remove('hidden'); if (!crList.length) { $('crStat').innerHTML = 'Tap “Read again” to read cabinet codes from this photo.'; renderReader(); }
   $('plKeepX').onclick = function () { setPlanKeep(null); clearReader(); };
   api('planThumb', { request_id: planKeep }).then(function (t) { if (t.thumb && $('plKeepImg')) $('plKeepImg').src = t.thumb; }).catch(function () {}); }
-// ---- plan code reader: OCR on the server, editable list here, sent as cabinet_list
-var cabCodes = null, crList = [], crSeq = 0;
-function loadCabCodes() { if (cabCodes) return Promise.resolve(cabCodes); return api('cabinetCodes').then(function (l) { cabCodes = {}; l.forEach(function (c) { cabCodes[c] = 1; }); return cabCodes; }); }
-function knownCode(c) { c = String(c || '').toUpperCase().replace(/\s+/g, ''); if (!cabCodes) return true;
-  return !!(cabCodes[c] || cabCodes[c.replace(/(\d)[LR]$/, '$1')] || (/^\d+(\.\d)?X\d+$/.test(c) && cabCodes[c + 'X6'])); }
-function crFlag(r) { return !knownCode(r.code) ? 'check' : (r.flag === 'odd' ? 'odd' : ''); }
-function renderReader() {
-  $('crRows').innerHTML = crList.map(function (r, i) { var f = crFlag(r);
-    return '<div class="crow"><input class="code" data-i="' + i + '" data-f="code" value="' + esc(r.code) + '" autocapitalize="characters" autocomplete="off" spellcheck="false">' +
-      '<input data-i="' + i + '" data-f="qty" type="number" inputmode="numeric" min="1" value="' + r.qty + '">' +
-      '<span class="fl ' + (f || 'ok') + '">' + (f || 'ok') + '</span><button class="x" data-del="' + i + '" aria-label="Remove">×</button>' +
-      (r.note ? '<div class="nt">' + esc(r.note) + '</div>' : '') + '</div>'; }).join('');
-}
-$('crRows').addEventListener('input', function (e) { var t = e.target, i = +t.dataset.i; if (!crList[i]) return;
-  crList[i].edited = true;
-  if (t.dataset.f === 'code') { crList[i].code = t.value.toUpperCase().replace(/\s+/g, ''); crList[i].flag = ''; crList[i].note = '';
-    var f = crFlag(crList[i]), pill = t.parentNode.querySelector('.fl'); pill.className = 'fl ' + (f || 'ok'); pill.textContent = f || 'ok';
-    var nt = t.parentNode.querySelector('.nt'); if (nt) nt.remove(); }
-  else crList[i].qty = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); });
-$('crRows').addEventListener('click', function (e) { var b = e.target.closest('[data-del]'); if (!b) return; crList.splice(+b.dataset.del, 1); if (crList[0]) crList[0].edited = true; else crList.edited = true; renderReader(); });
-$('crAdd').onclick = function () { $('plReader').classList.remove('hidden'); crList.push({ code: '', qty: 1, flag: '', note: '', edited: true }); renderReader();
-  var ins = $('crRows').querySelectorAll('input.code'); if (ins.length) ins[ins.length - 1].focus(); };
-function setReader(list, stat) { crList = (list || []).map(function (r) { return { code: r.code, qty: r.qty || 1, flag: r.flag || '', note: r.note || '' }; });
-  $('plReader').classList.remove('hidden'); $('crStat').innerHTML = stat || ''; renderReader(); }
-function clearReader() { crList = []; crSeq++; crBusy = false; clearTimeout(crRetryTimer); ocrKey = ''; $('plReader').classList.add('hidden'); $('crRows').innerHTML = ''; $('crStat').textContent = ''; $('crUse').checked = true; }
-/** Small copy for OCR: JPEG, long side ~2000 px (small screenshots enlarged, big photos reduced), kept under ~900 KB. PDFs only if < 1 MB. */
-var OCR_MAX = 900 * 1024;
-function b64Bytes(d) { var i = d.indexOf(','); return Math.floor((d.length - i - 1) * 3 / 4); }
-function ocrCopy(file) {
-  if (file.ocr) return Promise.resolve(file.ocr);                       // one copy per picked photo
-  if (file.mimeType === 'application/pdf') return Promise.resolve(b64Bytes(file.data) < 1000 * 1024 ? (file.ocr = { data: file.data, mimeType: 'application/pdf' }) : null);
-  return new Promise(function (res) { var img = new Image();
-    img.onload = function () {
-      var L = Math.max(img.width, img.height), side = 2000, out = null;
-      for (var tries = 0; tries < 6 && !out; tries++) {
-        var k = Math.min(2, side / L), c = document.createElement('canvas');
-        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-        for (var q = 0.85; q >= 0.55 && !out; q -= 0.1) { var d = c.toDataURL('image/jpeg', q); if (b64Bytes(d) <= OCR_MAX) out = { data: d, mimeType: 'image/jpeg', w: c.width, h: c.height }; }
-        side = Math.round(side * 0.8);
-      }
-      res(file.ocr = out); };
-    img.onerror = function () { res(null); }; img.src = file.data; });
-}
-var crBusy = false, crRetryTimer = null, ocrKey = '';
-/** Read codes from the picked (or kept) photo. ONE server read at a time; the server caches OCR text per photo, force = re-OCR. */
-function readPlan(force, isRetry) {
-  if (crBusy) return;
-  clearTimeout(crRetryTimer);
-  var my = ++crSeq; crBusy = true;
-  $('plReader').classList.remove('hidden'); $('crRows').innerHTML = '<div class="spinner"></div>';
-  $('crStat').textContent = isRetry ? 'Trying again…' : 'Reading cabinet codes from the plan…';
-  var req = planFile ? ocrCopy(planFile).then(function (f) { if (!f) throw new Error(planFile.mimeType === 'application/pdf' ? 'This PDF is too big to read (over 1 MB). A screenshot of the plan works better.' : 'This photo type cannot be read here (try a JPG/PNG screenshot).'); return { file: f }; })
-    : planKeep ? Promise.resolve({ request_id: planKeep }) : Promise.reject(new Error('Pick the plan photo first.'));
-  Promise.all([req, loadCabCodes().catch(function () {})]).then(function (a) { var q = a[0]; if (force) q.force = true; return api('planRead', q); }).then(function (r) {
-    if (my !== crSeq) return; crBusy = false;
-    if (!r.ok && r.rate_limited && !isRetry) {
-      setReader([], 'Google is busy, trying again in <b id="crCount">20</b> s…');
-      var left = 20, tick = function () { left--; if ($('crCount')) $('crCount').textContent = left; if (left > 0) crRetryTimer = setTimeout(tick, 1000); else readPlan(force, true); };
-      crRetryTimer = setTimeout(tick, 1000); return;
-    }
-    if (!r.ok) { setReader([], '<span class="missing">' + esc(r.rate_limited ? 'Google is still busy reading photos.' : (r.error || 'Could not read the plan.')) + '</span> You can still send the photo alone, or add the codes yourself.'); return; }
-    ocrKey = r.ocr_key || '';
-    var again = r.cached ? ' <button class="link" id="crFresh">Read fresh</button>' : '';
-    if (!r.codes.length) { setReader([], 'No cabinet codes found on this photo. You can still send the photo alone, or add the codes yourself.' + again); }
-    else { var n = r.codes.reduce(function (a, c) { return a + c.qty; }, 0), bad = r.codes.filter(function (c) { return c.flag; }).length;
-      setReader(r.codes, 'Found <b>' + n + '</b> cabinet' + (n === 1 ? '' : 's') + ' (' + r.codes.length + ' codes)' + (bad ? ', <b>' + bad + '</b> to check' : '') + '. Fix anything wrong, then send.' + again); }
-    if ($('crFresh')) $('crFresh').onclick = function () { if (crEdited() && !confirm('Read the photo again from scratch? Your edits to the list will be replaced.')) return; readPlan(true); };
-  }).catch(function (er) { if (my !== crSeq) return; crBusy = false; setReader([], '<span class="missing">' + esc(er.message) + '</span> You can still send the photo alone.'); });
-}
-function crEdited() { return !!crList.edited || crList.some(function (r) { return r.edited; }); }
-$('crRead').onclick = function () { if (crEdited() && !confirm('Read the codes again? Your edits to the list will be replaced.')) return; readPlan(false); };
+function clearReader() {}   // plan code reader removed (2026-10-12): photos are sent without a code list
 $('plFile').onchange = function () { var f = this.files[0]; if (!f) return;
   if (f.size > 10 * 1024 * 1024) { msg($('plMsg'), 'That file is over 10 MB. Take the photo again at a lower size.'); return; }
   var rd = new FileReader(); rd.onload = function () { planFile = { data: rd.result, mimeType: f.type || 'image/jpeg', name: f.name };
-    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); clearReader(); readPlan(); }; rd.readAsDataURL(f); };
+    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); }; rd.readAsDataURL(f); };
 $('plSend').onclick = function () {
   var trim = {}; $('plTrim').querySelectorAll('input').forEach(function (i) { trim[i.dataset.k] = i.value.trim(); });
   var b = this; b.disabled = true; msg($('plMsg'), 'Sending…', true);
   api('planRequest', { plan: { file: planFile, customer_name: $('plName').value, customer_phone: $('plPhone').value, job_city: $('plCity').value,
     style: $('plStyle').value, discount_pct: $('plDisc').value, tax_store: $('plTax').value, trim: trim, notes: $('plNotes').value,
-    revised_from: planRev || '', reuse_file_from: planFile ? '' : (planKeep || ''), ocr_key: planFile && /^h:/.test(ocrKey) ? ocrKey : '',
-    cabinet_list: $('crUse').checked ? crList.filter(function (r) { return r.code; }).map(function (r) { return { code: r.code, qty: r.qty, flag: crFlag(r) }; }) : [] } })
+    revised_from: planRev || '', reuse_file_from: planFile ? '' : (planKeep || ''), ocr_key: '',
+    cabinet_list: [] } })
     .then(function (r) { var rv = r.revised_from ? ' (revised from ' + r.revised_from + ')' : '';
       msg($('plMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + rv + '.' : 'Saved as ' + r.request_id + rv + ' but the bot did not answer (' + r.status + '). Re-send it below or from History.', r.sent);
       setPlanRev(null); clearPlanFile(); setPlanKeep(null); loadRecent('plan', 'plList', 5); })
