@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>East Star Red</title>
+<title>East Star Building Supply 劍鋒高級建材</title>
 <meta name="theme-color" content="#f4f5f7">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
@@ -115,6 +115,7 @@
   body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   .toplinks { display:flex; gap:4px; }
   .toplinks button { border:1px solid var(--line-strong); background:#fff; border-radius:999px; font:inherit; font-size:12.5px; font-weight:600; padding:5px 10px; color:#1f2937; cursor:pointer; }
+  .toplinks button.langbtn, .langbtn { padding:0 9px; font-weight:700; } .langbtn.big { border:1px solid var(--line-strong); background:#fff; border-radius:999px; min-height:40px; padding:0 14px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
   .toplinks button.plan { background:#7f1d1d; color:#fff; border-color:#7f1d1d; }
   .acct { font-size:12px; color:var(--muted); margin-top:-6px; margin-bottom:6px; }
   nav.bottom { position:fixed; left:0; right:0; bottom:0; z-index:20; background:rgba(255,255,255,.97); border-top:1px solid var(--line);
@@ -161,6 +162,7 @@
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
   .clbtns { display:flex; gap:8px; margin-top:8px; } .clbtns .btn { flex:1; margin-top:0; } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
+  .sendto { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .sendto select { flex:1; min-width:0; min-height:40px; font-size:14px; }
   .shbtn.on { border-color:#1A8BC9; color:#0b5f8f; background:#eef7fc; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
   .shrow { display:flex; gap:12px; align-items:center; padding:11px 4px; border-bottom:1px solid var(--line); font-size:15px; cursor:pointer; } .shrow input { width:22px; height:22px; min-height:0; flex-shrink:0; }
@@ -279,12 +281,35 @@
   #a2hs .t { flex:1; min-width:0; } #a2hs b { font-weight:700; }
   #a2hs button { min-height:40px; border:0; border-radius:999px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
   #a2hs .go { background:#fff; color:#1f2937; padding:0 14px; } #a2hs .x { background:none; color:#cbd5e1; min-width:40px; font-size:20px; }
+#signin{position:fixed;inset:0;overflow:auto;background:linear-gradient(rgba(255,255,255,.8),rgba(255,255,255,.8)),url(signin-bg.jpg) center/cover no-repeat}
+#signin.hidden{display:none}
+
+  /* ---- East Star brand (eaststarusa.com): blue #0078bd / hover #005d9a, navy #15334b, red accent #c92330,
+     light #f6f8fa, lines #d9e4ec, muted #526776, Montserrat, pill buttons. ---- */
+  :root { --bg:#f6f8fa; --text:#15334b; --muted:#526776; --line:#d9e4ec; --line-strong:#c3d3df; --accent:#0078bd; --brand-dark:#005d9a;
+    --navy:#15334b; --red:#c92330; --focus:rgba(0,120,189,.28); --info-bg:#e6f2fa; --info-fg:#005d9a; }
+  body { font-family:Montserrat,-apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; letter-spacing:-.005em; }
+  h1, h2, h3 { color:var(--navy); }
+  header { background:rgba(255,255,255,.96); border-bottom:2px solid var(--accent); }
+  .btn { background:var(--accent); font-weight:600; letter-spacing:.01em; }
+  .btn:active, .btn:hover { background:var(--brand-dark); }
+  .btn.sec { color:var(--accent); border-color:var(--accent); background:#fff; }
+  .link { color:var(--accent); }
+  .chip { background:#e6f2fa; color:#005d9a; }
+  .toplinks button { border-color:var(--line-strong); color:var(--navy); }
+  .toplinks button.plan { background:var(--red); border-color:var(--red); color:#fff; }
+  #bnav button.active { color:var(--accent); }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+  #signin .card { border-top:4px solid var(--accent); }
+  .toplinks button { white-space:nowrap; } .toplinks button.plan { max-width:46vw; overflow:hidden; text-overflow:ellipsis; }
+  .toprow h1 { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <section id="signin" class="hidden"><main style="padding-top:40px"><div class="card">
-  <h1>East Star Red</h1>
-  <p class="hint" style="margin-top:4px">Showroom floor: stock, prices, tile calculator, projects. Staff only. Ask Ray for a login.</p>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h1 class="notr" style="line-height:1.25">East Star Building Supply<br><span style="font-size:.85em">劍鋒高級建材</span></h1><button class="langbtn big" data-lang-toggle="1" type="button">中文</button></div>
+  <p class="hint" style="margin-top:4px">Showroom staff: stock, prices, calculators, projects. Ask admin for a login.</p>
   <form id="signinForm" autocomplete="on">
     <label class="f" for="inName">Name</label><input id="inName" name="username" autocomplete="username" autocapitalize="words" required>
     <label class="f" for="inPin">PIN</label><input id="inPin" name="password" type="password" inputmode="numeric" pattern="\d*" autocomplete="current-password" required>
@@ -300,8 +325,8 @@
 
 <section id="app" class="hidden">
   <header><div class="head-in">
-    <div class="toprow"><h1>East Star <small>Red</small></h1>
-      <div class="toplinks"><button class="plan" data-go="plan">Send plan to Red</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="outBtn">Sign out</button></div></div>
+    <div class="toprow"><h1>East Star <small id="hdName" class="notr"></small></h1>
+      <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
   </div></header>
   <main>
     <!-- SEARCH -->
@@ -320,7 +345,7 @@
     </div>
     <!-- SEND PLAN (separate page) -->
     <div class="page" id="p-plan"><div class="card">
-      <div class="crumb"><button class="back" data-go="search">‹</button>Send a kitchen plan to <span id="planBot">Red</span></div>
+      <div class="crumb"><button class="back" data-go="search">‹</button>Send a kitchen plan to <span id="planBot">the bot</span></div>
       <div id="planRev" class="revbar hidden"></div>
       <p class="hint" style="margin-top:0">Goes straight to the bot for an official quote. The bot replies to Ray with the quote JPG and CSV.</p>
       <label class="f">Plan photo or PDF <span class="req">*</span></label>
@@ -344,7 +369,7 @@
       <label class="f">Trim (blank = none)</label>
       <div class="trimgrid" id="plTrim"></div>
       <label class="f">Notes</label><textarea id="plNotes" rows="3" placeholder="Fridge side, hinge notes, anything unclear on the plan"></textarea>
-      <button class="btn" id="plSend">Send to Red</button>
+      <button class="btn" id="plSend">Send</button>
       <div id="plMsg" class="msg hidden"></div>
     </div>
     <div class="card"><div class="sec-h"><h2>Recently sent plans</h2><button class="link" data-go="history">All history ›</button></div><div id="plList"><div class="empty">None yet.</div></div></div>
@@ -393,6 +418,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js"></script>
+<script src="i18n.js"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a PIN sign-in it downloads the item data once per
@@ -490,7 +516,7 @@ function go(p, quiet) {
   if (p === 'admin') adminLoad();
 }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (!b) return;
-  if (b.dataset.go === 'plan' && b.closest('.toplinks') && custOpen && $('p-cust').classList.contains('on')) { planFromCust(); return; }   // header "Send plan to Red" from a project: prefilled
+  if (b.dataset.go === 'plan' && b.closest('.toplinks') && custOpen && $('p-cust').classList.contains('on')) { planFromCust(); return; }   // header "Send plan to <bot>" from a project: prefilled
   go(b.dataset.go); });
 
 function enterApp() {
@@ -505,7 +531,10 @@ function setHeader(m) {
   $('acctLine').textContent = (m.name || '') + (m.accountName ? ' · ' + m.accountName : '') + (m.bot ? ' · bot ' + m.bot : '');
   $('adminBtn').classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));
   var ra = $('stRoleAdmin'); if (ra) { ra.hidden = m.role !== 'admin'; ra.disabled = m.role !== 'admin'; }
-  $('planBot').textContent = m.bot || 'Red'; $('plSend').textContent = 'Send to ' + (m.bot || 'Red');
+  var hn = $('hdName'); if (hn) hn.textContent = m.name || '';
+  $('planBot').textContent = m.bot || 'the bot'; $('plSend').textContent = m.bot ? 'Send to ' + m.bot : 'Send';
+  if (m.bot && session && session.bot !== m.bot) { session.bot = m.bot; try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {} }   // "Send to" may point this login at another bot
+  var pb = document.querySelector('.toplinks .plan'); if (pb) pb.textContent = m.bot ? 'Send plan to ' + m.bot : 'Send plan';
 }
 $('signinForm').addEventListener('submit', function (e) { e.preventDefault(); var b = $('signinBtn'); b.disabled = true; msg($('signinMsg'), '');
   api('signin', { name: $('inName').value, pin: $('inPin').value }).then(function (s) { session = s; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); $('inPin').value = ''; enterApp(); })
@@ -515,12 +544,31 @@ $('pcBtn').onclick = function () { api('changePin', { oldPin: $('pcOld').value, 
 
 // ---------------- sheet
 function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
-function closeSheet() { $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
+function closeSheet() { if (window.lineFlush) { var f = lineFlush; lineFlush = null; f(); } $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
 // ---------------- item cards (search)
 var shown = {};          // name -> item (for buttons)
-function perSqft(it) { return it.tile && it.tile.sqftPc && it.price ? it.price / it.tile.sqftPc : null; }
+function perSqft(it) { var fb = floorOf(it); if (fb) return fb.sf && it.price ? it.price / fb.sf : null; if (it.cat === 'Flooring') return null; return it.tile && it.tile.sqftPc && it.price ? it.price / it.tile.sqftPc : null; }
+// ---------------- flooring: sold by the BOX. sq ft per box from the description ("23.4 SF/BOX", "31.09 SQ.FT/BOX",
+// "SQFT/CTN", "19.30 SQ.FT/1", "(12PC) (19.73 SQ. FT)"), else pcs/box x sq ft/pc. Always editable in the calculator;
+// a staff fix is remembered on this phone (esFloorSf:<item>).
+var FLOOR_SF_RE = /(\d+(?:\.\d+)?)\s*(?:SQ\.?\s*FT\.?|SQFT|SF|S\.F\.?|FT2)\s*(?:\/|PER)\s*(?:BOX|BX|CTN|CARTON|CASE|CS|1\b)/i;
+var FLOOR_SF2_RE = /(\d+(?:\.\d+)?)\s*(?:SQ\.?\s*FT\.?|SQFT)(?!\s*(?:\/|PER)\s*(?:PC|PCS|PIECE|PALLET|PL\b))/i, FLOOR_BOXY_RE = /PCS?\s*\/\s*(?:BOX|CTN)|\(\s*\d+\s*PCS?\s*\)/i;
+var FLOOR_ACC_RE = /STAIR|NOSE|NOSING|REDUCER|MOULDING|MOLDING|QUARTER|THRESHOLD|T-MOLD|END CAP|TRIM|UNDERLAY|GLUE|ADHESIVE|\bKIT\b|CLEANER|PANEL|楼梯|线/i;
+var FLOOR_WORD_RE = /FLOOR|SPC|VINYL|WPC|LAMINATE|ENGINEERED|HARDWOOD|LVP/i;
+/** {sf: parsed sq ft per box or null, src: 'desc' | 'pcs' | ''} for a flooring item sold by the box; null if not flooring. */
+function floorParse(cat, desc, tile) {
+  if (cat !== 'Flooring') return null; desc = String(desc || '');
+  if (FLOOR_ACC_RE.test(desc)) return null;
+  var m = desc.match(FLOOR_SF_RE) || (FLOOR_BOXY_RE.test(desc) && desc.match(FLOOR_SF2_RE));
+  if (m && +m[1] > 0) return { sf: +m[1], src: 'desc' };
+  if (tile && tile.pcsBox && tile.sqftPc) return { sf: +(tile.pcsBox * tile.sqftPc).toFixed(2), src: 'pcs' };
+  return FLOOR_WORD_RE.test(desc) ? { sf: null, src: '' } : null;
+}
+function floorOf(it) { if (!it) return null; var f = floorParse(it.cat, it.desc, it.tile); if (!f) return null;
+  try { var own = parseFloat(localStorage.getItem('esFloorSf:' + it.name)); if (own > 0) return { sf: own, src: 'staff' }; } catch (e) {} return f; }
+function isFloorRow(r) { return !!(r && floorOf(itemFromRow(r))); }
 function card(it) {
   shown[it.name] = it;
   var oh = Number(it.onHand), byC = {};
@@ -530,16 +578,16 @@ function card(it) {
   var ps = perSqft(it), disc = /discontinu/i.test(it.desc) ? ' <span class="chip" style="background:#fdecec;color:#7f1d1d">discontinued</span>' : '';
   var nm = encodeURIComponent(it.name);
   return '<div class="card item"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
-    '<div style="flex:1;min-width:0"><div class="top"><div class="name">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
-    '<small>' + (it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
-    '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
-    '<div class="desc" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
+    '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
+    '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
+    '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
+    '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
     '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
     '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
-    '<div class="actions">' + (it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
+    '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
 }
 
@@ -720,7 +768,7 @@ function pickCustomer(c) {
   if (ns.length === 1) { pickDone(c, ns[0]); return; }
   if (!ns.length) { api('noteSave', { id: c.id }).then(function (r) { pickDone(c, r.note); }).catch(function (er) { toast(er.message); }); return; }
   $('sheetBody').innerHTML = '<h3>' + esc(projLabel(c)) + ': which note?</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this note.</div>' +
-    ns.map(function (n) { return '<button class="crow2" data-pnote="' + esc(n.id) + '"><b>' + esc(n.title) + '</b>' + (isCurNote(c.id, n.id) ? '<span class="cur">adding here</span>' : '') +
+    ns.map(function (n) { return '<button class="crow2" data-pnote="' + esc(n.id) + '"><b class="notr">' + esc(n.title) + '</b>' + (isCurNote(c.id, n.id) ? '<span class="cur">adding here</span>' : '') +
       '<span class="s">' + n.count + ' item' + (n.count === 1 ? '' : 's') + (n.photos ? ' · ' + n.photos + ' photo' + (n.photos === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) : '') + '</span></button>'; }).join('') +
     '<button class="newc" id="pkNewNote">+ New note</button>';
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-pnote]'); if (b) { $('sheetBody').onclick = null; pickDone(c, ns.filter(function (n) { return n.id === b.dataset.pnote; })[0]); } };
@@ -794,7 +842,7 @@ function shareText(c) {
 }
 /** "Share with client": a read-only, no-login link to this project (client.html?c=TOKEN). The server sends no prices,
  *  stock, shelves, contact info or voice notes for it. Make / copy / text it, replace it, or stop it. */
-function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t; }
+function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t + (window.I18N && I18N.lang() === 'zh' ? '&l=zh' : ''); }   // &l=zh: the client page starts in Chinese when shared from 中文
 function openClientLink(c) {
   var t = c.clientToken, u = t ? clientUrl(t) : '';
   openSheet('<h3>Share with client</h3><div class="hint" style="margin:0 0 10px">A read-only page of <b>' + esc(projLabel(c)) + '</b> for your client: all notes, items, qty, item notes and photos, plus our store addresses. <b>No prices, totals, stock or shelf locations.</b> No sign-in needed: anyone with the link can see it.</div>' +
@@ -883,7 +931,7 @@ function noteSummary(n) { var cnt = (n.items || []).length, ph = (n.photos || []
 /** All note groups. Only the open one has the editing ids (nTitle, cdItems, nPhotos, cdQuote...). */
 function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNotes')) return;
   $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
-    if (n.id !== noteOpenId) return '<div class="card ngroup" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b>' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div>' +
+    if (n.id !== noteOpenId) return '<div class="card ngroup" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div>' +
       '<span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
     return '<div class="card ngroup open" data-ng="' + esc(n.id) + '">' +
       '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
@@ -974,11 +1022,11 @@ function renderPicked() {
   $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
   $('cdItems').innerHTML = it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
     return '<div class="pline" data-lid="' + esc(l.id) + '"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
-      '<div class="n"><b><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span>' + esc(l.desc || (r ? r[1] : '')) + '</span>' +
+      '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(l.desc || (r ? r[1] : '')) + '</span>' +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
       '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
-      (isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div>';
+      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div>';
   }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>';
   renderTotals();
 }
@@ -1011,6 +1059,7 @@ var qtyT = {};
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return; var t = e.target, l = lineOf(t); if (!l) return;
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]');
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
+  if (t.closest('[data-lfc]')) { var r1 = itemRow(l.name); if (isFloorRow(r1)) floorCalcFor(itemFromRow(r1), { c: custOpen, n: curNote(), line: l }); return; }
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
     clearTimeout(qtyT[l.id]); qtyT[l.id] = setTimeout(function () { setLine(l, { qty: l.qty }); }, 500); }
@@ -1086,7 +1135,7 @@ function quoteCust() {
     var notes = [String(n.text || '').trim()].concat(it.filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + l.note.trim(); })).filter(Boolean).join('\n');
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
       items: it.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
-  }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to Ray.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
+  }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to Ray.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
     .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; quoteBtn(); });
 }
 function planFromCust() { var c = custOpen, n = curNote(); flushNote();
@@ -1141,10 +1190,10 @@ function toggleRec() { if (rec) { rec.stop(); return; }
 function histRowHtml(r) { var ok = /^sent/.test(r.status);
   return '<div class="hrow"><div class="h1"><span class="kind ' + r.kind + '">' + (r.kind === 'cart' ? 'CART' : 'PLAN') + '</span><b>' + esc(r.customer) + ' · ' + esc(r.summary) + '</b>' +
     '<span class="' + (ok ? 'pill-ok' : 'pill-no') + '">' + esc(ok ? 'sent' : r.status || '?') + '</span></div>' +
-    '<div class="h2">' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + (r.city ? ' · ' + esc(r.city) : '') + (r.sends > 1 ? ' · sent ' + r.sends + '×' : '') +
+    '<div class="h2">' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + (r.city ? ' · ' + esc(r.city) : '') + (r.sends > 1 ? ' · sent ' + r.sends + '×' : '') + (r.bot ? ' · → ' + esc(r.bot) : '') +
     (r.revised_from ? '<br>Revised from ' + esc(r.revised_from) : '') + (session.role === 'admin' && r.account !== session.account ? ' · account ' + esc(r.account) : '') + '</div>' +
-    '<div class="actions">' + histActs(r.kind, r.request_id, true) + '</div></div>'; }
-function histActs(kind, rid, open) { var a = function (k, t) { return '<button data-hact="' + k + '" data-rid="' + esc(rid) + '">' + t + '</button>'; };
+    '<div class="actions">' + histActs(r.kind, r.request_id, true, r.bot) + '</div></div>'; }
+function histActs(kind, rid, open, bot) { var a = function (k, t) { return '<button data-hact="' + k + '" data-rid="' + esc(rid) + '"' + (bot ? ' data-bot="' + esc(bot) + '"' : '') + '>' + t + '</button>'; };
   return (open ? a('open', 'Open') : '') + (kind === 'cart' ? a('tocust', 'Copy as project') : a('edit', 'Edit') + a('clone', 'Clone')) + a('resend', 'Re-send'); }
 function loadRecent(kind, el, n) {
   api('history', { filter: { type: kind, n: n } }).then(function (r) {
@@ -1169,7 +1218,7 @@ document.addEventListener('click', function (e) { var b = e.target.closest('butt
   if (act === 'open') openRequest(rid);
   else if (act === 'tocust') cartToCustomer(rid, b);
   else if (act === 'edit' || act === 'clone') loadRequestIntoForm(rid, act === 'clone', b);
-  else if (act === 'resend') { if (!confirm('Send ' + rid + ' to ' + (session.bot || 'Red') + ' again (same request ID)?')) return;
+  else if (act === 'resend') { if (!confirm('Send ' + rid + ' to ' + (b.dataset.bot || session.bot || 'the bot') + ' again (same request ID)?')) return;
     b.disabled = true; api('requestResend', { request_id: rid }).then(function (r) { toast(r.sent ? 'Re-sent ' + r.request_id : 'Re-send failed: ' + r.status); refreshLists(); })
       .catch(function (er) { toast(er.message); b.disabled = false; }); } });
 function refreshLists() { if ($('p-history').classList.contains('on')) loadHistory(); if ($('p-plan').classList.contains('on')) loadRecent('plan', 'plList', 5); }
@@ -1233,11 +1282,11 @@ function toast(t) { var d = document.createElement('div'); d.textContent = t; d.
 
 // ---------------- tile calculator (tile math only: area, waste %, pieces / boxes, coverage, tile cost). Opens from a tile
 // card on Search (adds a line to the current note) or from a tile LINE inside a note (sets that line's qty + sq ft note).
-function tileCalc(name) { tileCalcFor(shown[name], null); }
-function itemFromRow(r) { return { name: r[0], desc: r[1] || '', price: priceState.prices ? r[2] : null, tile: r[11], photo: r[13] || '' }; }
+function tileCalc(name) { if (shown[name] && shown[name].cat === 'Flooring') return floorOf(shown[name]) ? floorCalc(name) : void 0; tileCalcFor(shown[name], null); }
+function itemFromRow(r) { return { name: r[0], desc: r[1] || '', price: priceState.prices ? r[2] : null, tile: r[11], photo: r[13] || '', cat: r[7] || '' }; }
 /** A tile line = an item with tile sizes the math can use (sq ft per piece). Only those get the calculator. */
-function isTileRow(r) { return !!(r && r[11] && r[11].sqftPc > 0); }
-var CALC_NOTE_RE = /\s*(?:·\s*)?\d+(?:\.\d+)?\s*sq ft(?:\s*\+\s*\d+(?:\.\d+)?%)?\s*(?:·\s*)?/i;
+function isTileRow(r) { return !!(r && r[7] !== 'Flooring' && r[11] && r[11].sqftPc > 0); }  // tile = pieces; flooring never uses it
+var CALC_NOTE_RE = /\s*(?:·\s*)?\d+(?:\.\d+)?\s*sq ft(?:\s*\+\s*\d+(?:\.\d+)?%)?(?:\s*·\s*\d+\s*boxes)?\s*(?:·\s*)?/i;
 /** target: null = the current "Adding to" note (Search tile card: adds a line);
  *  {c, n, line} = a tile line inside a note: "Set this line" SETS that line's qty and note ("120 sq ft + 10%"). */
 function tileCalcFor(it, target) {
@@ -1247,34 +1296,76 @@ function tileCalcFor(it, target) {
     (it.price != null ? '<div class="kv"><span>Price</span><b>' + money(it.price) + '/pc · ' + money(perSqft(it)) + '/sq ft' + (t.pcsBox ? ' · ' + money(it.price * t.pcsBox) + '/box' : '') + '</b></div>' : '') +
     '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 100) + '"></div>' +
     '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 10) + '" min="0" max="50"></div></div>' +
-    '<div class="calcres" id="tcRes"></div><button class="btn" id="tcAdd">' + (ln ? 'Set this line' : 'Add tile to note') + '</button>' +
-    (ln ? '<div class="note" style="margin-top:6px">Now ' + ln.qty + ' pcs' + (ln.note ? ' · “' + esc(ln.note) + '”' : '') + '. Sets the qty and the sq ft note of this line.</div>' : ''));
+    '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">Changes fill this line\'s qty (pieces) right away.</div>' : '') +
+    '<button class="btn" id="tcAdd">' + (ln ? 'Done' : 'Add tile to note') + '</button>');
   var calc = function () {
     var A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0)), waste = 1 + wp / 100;
     var pcs = Math.ceil(A * waste / t.sqftPc), boxes = t.pcsBox ? Math.ceil(pcs / t.pcsBox) : null;
-    var buy = t.sellByPiece || !t.pcsBox ? pcs : boxes * t.pcsBox, cost = it.price != null ? buy * it.price : null;
-    tcState = { buy: buy, boxes: boxes, cost: cost, it: it, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') };
-    $('tcRes').innerHTML = '<div class="big">' + (boxes != null ? boxes + ' boxes' : pcs + ' pcs') + '</div>' +
-      '<div class="kv"><span>Pieces</span><b>' + buy.toLocaleString() + (boxes != null && !t.sellByPiece ? ' (' + boxes + ' × ' + t.pcsBox + ')' : '') + '</b></div>' +
-      '<div class="kv"><span>Covers</span><b>' + (buy * t.sqftPc).toFixed(1) + ' sq ft</b></div>' +
+    var buy = t.pcsBox ? boxes * t.pcsBox : pcs /* always full boxes; qty in PIECES */, cost = it.price != null ? buy * it.price : null;
+    tcState = { buy: buy, boxes: boxes, cost: cost, it: it, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') + (boxes ? ' · ' + boxes + ' boxes' : '') };
+    $('tcRes').innerHTML = '<div class="big">' + buy.toLocaleString() + ' pcs</div>' +
+      '<div class="kv"><span>Covers</span><b>' + (buy * t.sqftPc).toFixed(1) + ' sq ft' + (boxes != null ? ' · ' + boxes + ' boxes × ' + t.pcsBox : '') + '</b></div>' +
       (cost != null ? '<div class="kv"><span>Tile cost (retail)</span><b>' + money(cost) + '</b></div>' : '');
   };
-  $('tcA').oninput = calc; $('tcWp').oninput = calc;
+  var live = function () { calc(); if (ln) liveLine(target, tcState, 'pcs'); };
+  $('tcA').oninput = live; $('tcWp').oninput = live;
   calc();
-  $('tcAdd').onclick = function () { var s = tcState; if (!s.buy) { toast('Enter the area first'); return; }
+  $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast('Enter the area first'); return; }
     closeSheet();
-    if (ln) { setTileLine(target.c, target.n, ln, s); return; }
     addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note }]); };
 }
 /** Calculator result -> THIS line: qty = pieces to buy, note = "120 sq ft + 10%" (replaces an older sq ft note, keeps other words). Autosaved. */
-function setTileLine(c, n, l, s) {
+function setTileLine(c, n, l, s, unit) {
   var rest = String(l.note || '').replace(CALC_NOTE_RE, ' ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
   l.qty = s.buy; l.note = (s.note + (rest ? ' · ' + rest : '')).slice(0, 300);
   if (custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
   setLine(l, { qty: l.qty, note: l.note });
-  toast(l.name + ': ' + s.buy + ' pcs · ' + s.note);
+}
+/** Line calculators write straight into the line as the numbers change (debounced autosave); Done / tap outside flushes. */
+var lineFlush = null, lineTimer = null;
+function liveLine(target, s, unit) {
+  var ln = target.line; if (!s.buy || (ln.qty === s.buy && String(ln.note || '').indexOf(s.note) === 0)) return;
+  clearTimeout(lineTimer);
+  lineFlush = function () { clearTimeout(lineTimer); lineFlush = null; setTileLine(target.c, target.n, ln, s, unit); };
+  lineTimer = setTimeout(function () { if (lineFlush) lineFlush(); }, 700);
+  var st = $('tcLive'); if (st) st.textContent = 'Line: ' + s.buy + ' ' + unit + ' · ' + s.note + ' (saved automatically)';
 }
 var tcState = null;
+function floorCalc(name) { floorCalcFor(shown[name], null); }
+/** Flooring calculator: area + waste % -> whole boxes, sq ft covered, total. sq ft per box is pre-filled and editable. */
+function floorCalcFor(it, target) {
+  var f = floorOf(it) || { sf: null, src: '' }, base = floorParse(it.cat, it.desc, it.tile) || {}, ln = target && target.line;
+  var prev = ln ? String(ln.note || '').match(/(\d+(?:\.\d+)?)\s*sq ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
+  var srcTxt = { desc: 'from the description', pcs: 'pcs/box × sq ft/pc', staff: 'set on this phone', '': 'not in the description: enter it' }[f.src];
+  openSheet('<h3>Flooring calculator</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(it.name) + '</span>' + (ln ? ' · line in <span class="notr">' + esc(target.n.title) + '</span>' : '') + '</div>' +
+    '<div class="calcgrid"><div><label class="f">Sq ft per box</label><input id="fcSf" type="number" inputmode="decimal" step="0.01" min="0" value="' + (f.sf || '') + '"></div>' +
+    '<div class="hint" id="fcSrc" style="align-self:end;padding-bottom:12px">' + srcTxt + '</div></div>' +
+    '<div class="kv hidden" id="fcPrice"></div>' +
+    '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 100) + '"></div>' +
+    '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 10) + '" min="0" max="50"></div></div>' +
+    '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">Changes fill this line\'s qty (boxes) right away.</div>' : '') +
+    '<button class="btn" id="tcAdd">' + (ln ? 'Done' : 'Add flooring to note') + '</button>');
+  var calc = function () {
+    var sf = parseFloat($('fcSf').value) || 0, A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0));
+    var pe = $('fcPrice'); pe.classList.toggle('hidden', it.price == null);
+    if (it.price != null) pe.innerHTML = '<span>Price</span><b>' + money(it.price) + '/box' + (sf > 0 ? ' · ' + money(it.price / sf) + '/sq ft' : '') + '</b>';
+    if (!(sf > 0)) { tcState = { buy: 0 }; $('tcRes').innerHTML = '<div class="hint">Enter the sq ft per box (on the box label or price list).</div>'; return; }
+    var boxes = A > 0 ? Math.ceil(A * (1 + wp / 100) / sf - 1e-9) : 0, cost = it.price != null ? boxes * it.price : null;
+    tcState = { buy: boxes, it: it, sf: sf, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') };
+    $('tcRes').innerHTML = '<div class="big">' + boxes + ' boxes</div>' +
+      '<div class="kv"><span>Covers</span><b>' + (boxes * sf).toFixed(1) + ' sq ft</b></div>' +
+      (cost != null ? '<div class="kv"><span>Total (retail)</span><b>' + money(cost) + '</b></div>' : '');
+  };
+  $('fcSf').oninput = function () { var v = parseFloat(this.value);
+    try { if (v > 0 && v !== base.sf) localStorage.setItem('esFloorSf:' + it.name, String(v)); else localStorage.removeItem('esFloorSf:' + it.name); } catch (e) {}
+    $('fcSrc').textContent = v > 0 && v !== base.sf ? 'set on this phone' : base.sf ? 'from the description' : 'not in the description: enter it'; live(); };
+  var live = function () { calc(); if (ln) liveLine(target, tcState, 'boxes'); };
+  $('tcA').oninput = live; $('tcWp').oninput = live;
+  calc();
+  $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(s.sf ? 'Enter the area first' : 'Enter the sq ft per box first'); return; }
+    closeSheet();
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note }]); };
+}
 
 // ---------------- send plan to the bot (separate page)
 var planFile = null;
@@ -1380,14 +1471,23 @@ $('plSend').onclick = function () {
     revised_from: planRev || '', reuse_file_from: planFile ? '' : (planKeep || ''), ocr_key: planFile && /^h:/.test(ocrKey) ? ocrKey : '',
     cabinet_list: $('crUse').checked ? crList.filter(function (r) { return r.code; }).map(function (r) { return { code: r.code, qty: r.qty, flag: crFlag(r) }; }) : [] } })
     .then(function (r) { var rv = r.revised_from ? ' (revised from ' + r.revised_from + ')' : '';
-      msg($('plMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + rv + '.' : 'Saved as ' + r.request_id + rv + ' but the bot did not answer (' + r.status + '). Re-send it below or from History.', r.sent);
+      msg($('plMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + rv + '.' : 'Saved as ' + r.request_id + rv + ' but the bot did not answer (' + r.status + '). Re-send it below or from History.', r.sent);
       setPlanRev(null); clearPlanFile(); setPlanKeep(null); loadRecent('plan', 'plList', 5); })
     .catch(function (er) { msg($('plMsg'), er.message); }).then(function () { b.disabled = false; });
 };
 
 // ---------------- admin (separate page)
+var adminAccts = [];
+/** Admin only: "Send to" picker on a staff row. Blank = the login's own account bot. */
+function sendToSel(u) { if (session.role !== 'admin' || !adminAccts.length) return '';
+  var own = adminAccts.filter(function (a) { return a.id === u.account; })[0], other = adminAccts.filter(function (a) { return a.id !== u.account; });
+  var to = adminAccts.filter(function (a) { return a.id === u.sendTo; })[0];
+  return '<div class="sendto"><span>Send plans &amp; carts to</span><select data-sendto="1" aria-label="Send to bot">' +
+    '<option value=""' + (!to ? ' selected' : '') + '>' + esc(own ? own.bot : u.account) + ' (own account)</option>' +
+    other.map(function (a) { return '<option value="' + esc(a.id) + '"' + (to && to.id === a.id ? ' selected' : '') + (a.active === false ? ' disabled' : '') + '>' + esc(a.bot) + ' · ' + esc(a.name) + (a.webhookSet ? '' : ' (no webhook yet)') + '</option>'; }).join('') +
+    '</select></div>'; }
 function adminLoad() {
-  api('adminAccounts').then(function (as) {
+  api('adminAccounts').then(function (as) { adminAccts = as; if (staffRows.length) loadUsers();
     $('stAcct').innerHTML = as.map(function (a) { return '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>'; }).join('');
     $('acctList').innerHTML = as.map(function (a) { return '<div class="acctcard"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(a.name) + '</b>' +
       (a.webhookSet ? '<span class="pill-ok">webhook set ' + esc(a.keyHint || '') + '</span>' : '<span class="pill-no">no webhook</span>') + '</div>' +
@@ -1415,9 +1515,14 @@ function loadUsers() { api('adminUsers').then(function (us) { staffRows = us;
       (u.active ? '<span class="pill-ok">Active</span>' : '<span class="pill-pause">Paused</span>') + (u.online ? '<span class="on">Signed in now</span>' : '') + '</div>' +
       '<div class="h2">' + esc(u.role === 'account_admin' ? 'account admin' : u.role) + ' · ' + esc(u.account) + ' · ' + (u.lastIn ? 'last signed in ' + esc(whenTxt(u.lastIn)) : 'never signed in') +
       (u.sessions && !u.online ? ' · signed in on ' + u.sessions + ' device' + (u.sessions === 1 ? '' : 's') + ', idle' : '') + (u.mustChangePin ? ' · temporary PIN' : '') + '</div>' +
+      sendToSel(u) +
       (locked ? '' : '<div class="actions"><button data-sa="pause">' + (u.active ? 'Pause' : 'Resume') + '</button><button data-sa="pin">Reset PIN</button><button class="danger" data-sa="del">Delete</button></div>') + '</div>'; }).join('') || '<div class="empty">No logins.</div>';
 }).catch(function (er) { msg($('stListMsg'), er.message); }); }
 $('stRefresh').onclick = loadUsers;
+$('stList').addEventListener('change', function (e) { var sel = e.target.closest('select[data-sendto]'); if (!sel) return; var u = staffRows[+sel.closest('[data-si]').dataset.si];
+  sel.disabled = true; api('adminSetSendTo', { name: u.name, to: sel.value }).then(function (r) { u.sendTo = r.sendTo;
+    msg($('stListMsg'), u.name + '’s plans and carts now go to ' + r.bot + (r.sendTo ? '' : ' (own account)') + '.', true); })
+    .catch(function (er) { msg($('stListMsg'), er.message); loadUsers(); }).then(function () { sel.disabled = false; }); });
 $('stList').addEventListener('click', function (e) { var b = e.target.closest('button[data-sa]'); if (!b) return; var u = staffRows[+b.closest('[data-si]').dataset.si], k = b.dataset.sa;
   if (k === 'pause') { if (u.active && !confirm('Pause ' + u.name + '? They are signed out now and cannot sign in until you tap Resume.')) return; b.disabled = true;
     api('adminSetActive', { name: u.name, active: !u.active }).then(function (r) { msg($('stListMsg'), r.active ? u.name + ' can sign in again.' : u.name + ' is paused' + (r.sessionsEnded ? ' and was signed out (' + r.sessionsEnded + ' device' + (r.sessionsEnded === 1 ? '' : 's') + ')' : '') + '.', true); loadUsers(); })
