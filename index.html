@@ -400,7 +400,7 @@
         <div class="acct" id="acctLine"></div>
         <p class="hint" style="margin-top:0">One account per bot. Webhook URL + key are write-only: they are stored on the server and never shown again.</p>
         <div id="acctList"></div>
-        <details style="margin-top:12px"><summary style="font-weight:700;cursor:pointer">Add an account</summary>
+        <details id="naBox" style="margin-top:12px"><summary style="font-weight:700;cursor:pointer">Add an account</summary>
           <div class="twocol"><div><label class="f">Account ID</label><input id="naId" placeholder="jason-bot"></div><div><label class="f">Bot name</label><input id="naBot"></div></div>
           <label class="f">Account name</label><input id="naName">
           <label class="f">CSV customer ID</label><input id="naCsv" placeholder="e.g. phone + name used in NetSuite">
@@ -541,6 +541,7 @@ function setHeader(m) {
   $('acctLine').textContent = (m.name || '') + (m.accountName ? ' · ' + m.accountName : '') + (m.bot ? ' · bot ' + m.bot : '');
   $('adminBtn').classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));
   document.body.classList.toggle('wh', m.role === 'warehouse');
+  var nb = $('naBox'); if (nb) nb.classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));   // add / edit accounts: admin + account admins
   var ra = $('stRoleAdmin'); if (ra) { var full = m.role === 'admin'; ra.hidden = !full; ra.disabled = !full; ra.classList.toggle('hidden', !full); if (!full && $('stRole').value === 'admin') $('stRole').value = 'staff'; }
   var hn = $('hdName'); if (hn) hn.textContent = m.name || '';
   $('planBot').textContent = m.bot || 'the bot'; $('plSend').textContent = m.bot ? 'Send to ' + m.bot : 'Send';
@@ -1551,11 +1552,11 @@ function adminLoad() {
     $('acctList').innerHTML = as.map(function (a) { return '<div class="acctcard"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(a.name) + '</b>' +
       (a.webhookSet ? '<span class="pill-ok">webhook set ' + esc(a.keyHint || '') + '</span>' : '<span class="pill-no">no webhook</span>') + '</div>' +
       '<div style="font-size:13px;color:var(--muted)">ID ' + esc(a.id) + ' · bot ' + esc(a.bot) + ' · CSV customer <b>' + esc(a.csv) + '</b>' + (a.webhookHost ? ' · ' + esc(a.webhookHost) : '') + (a.shareEmail ? '<br>Plan photos shared with ' + esc(a.shareEmail) : '') + '</div>' +
-      (session.role === 'admin' ? '<details><summary style="cursor:pointer;font-size:14px;font-weight:600;margin-top:6px">Set webhook (from the bot\'s routine panel)</summary>' +
+      (session.role === 'admin' || session.role === 'account_admin' ? '<details><summary style="cursor:pointer;font-size:14px;font-weight:600;margin-top:6px">Set webhook (from the bot\'s routine panel)</summary>' +
         '<label class="f">Webhook URL</label><input id="wu-' + esc(a.id) + '" placeholder="https://…" autocomplete="off">' +
         '<label class="f">Webhook key</label><input id="wk-' + esc(a.id) + '" type="password" autocomplete="new-password">' +
         '<button class="btn" onclick="setWebhook(\'' + esc(a.id) + '\')">Save webhook</button></details>' : '') +
-      '<div class="actions"><button onclick="pingAcct(\'' + esc(a.id) + '\')">Ping bot</button></div></div>'; }).join('');
+      (session.role === 'admin' || a.id === session.account ? '<div class="actions"><button onclick="pingAcct(\'' + esc(a.id) + '\')">Ping bot</button></div>' : '') + '</div>'; }).join('');
   }).catch(function (er) { msg($('acctMsg'), er.message); });
   loadUsers();
 }
