@@ -635,7 +635,7 @@ function card(it) {
   var inc = Object.keys(byC).map(function (k) { var c = byC[k]; return '<div class="row"><span>' + esc(k) + ' · ' + esc(c.date) + (c.partly ? '<span class="tag">partly received</span>' : '') + '</span><span>+' + qty(c.qty) + '</span></div>'; }).join('');
   var chip = function (l, v) { return v ? '<span class="chip">' + l + ' ' + esc(v) + '</span>' : '<span class="chip none">' + l + ' —</span>'; };
   var ps = perSqft(it), disc = /discontinu/i.test(it.desc) ? ' <span class="chip" style="background:#fdecec;color:#7f1d1d">discontinued</span>' : '';
-  var nm = encodeURIComponent(it.name);
+  var nm = encodeURIComponent(it.name).replace(/'/g, '%27');  // names like 2' x 9' must not break the inline onclick string
   return '<div class="card item"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
     '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
