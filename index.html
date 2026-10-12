@@ -136,6 +136,17 @@
   .srow .on:before { content:''; width:8px; height:8px; border-radius:50%; background:#16a34a; }
   .pill-pause { background:#fff4e0; color:#7a4a00; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:700; }
   .srow .actions button { min-height:36px; font-size:13.5px; } .srow .actions button.danger { color:#b42318; border-color:#f1b8b2; }
+  .infoline { display:flex; width:100%; align-items:center; gap:8px; text-align:left; background:#f7f8fa; border:1px solid var(--line); border-radius:12px; padding:9px 12px; font:inherit; font-size:14px; color:var(--text); cursor:pointer; }
+  .crumb .infoline { flex:1; min-width:0; width:auto; font-weight:500; } .crumb .back { flex-shrink:0; }
+  .infoline span:first-child { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .infoline .chev, .ncard .chev { color:#8a93a0; font-size:16px; }
+  .ncard { display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--line-strong); border-radius:12px; padding:11px 12px; margin-top:8px; font:inherit; color:inherit; cursor:pointer; }
+  .ncard .t { display:flex; align-items:center; gap:6px; } .ncard .t b { flex:1; font-size:16px; } .ncard .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .ncard .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ncard .cur, .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; }
+  .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
+  .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
+  .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
+  .nphb { display:flex; gap:8px; margin-top:8px; }
   .crow2 { display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--line); padding:11px 2px; font:inherit; cursor:pointer; color:inherit; }
   .crow2 b { font-size:15.5px; } .crow2 .s { display:block; font-size:12.5px; color:var(--muted); margin-top:1px; }
   .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; margin-left:6px; }
@@ -563,179 +574,240 @@ function rerenderPrices() { if (sQ) { var my = ++seq; searchPage(sQ, my, 0); } i
 function renderPriceBar() { var el = $('priceBar'), off = !priceState.prices;
   el.textContent = off ? (priceState.label || 'Prices shown Mon–Sat 8:30 AM–5:30 PM') : ''; el.classList.toggle('hidden', !off); }
 
-// ---------------- customers. The current customer ("Adding to") gets the items from Search; each staff member's customers
-// are private unless shared. Stored on the server (sheet "Customers", photos/voice in the app's private Drive folder).
-var curCust = null, custOpen = null, pickThen = null, fileCache = {};
+// ---------------- customers. A customer has several NOTES (e.g. "Kitchen", "Master bath"); each note is one package:
+// title, free text, picked items (qty + short note) and photos at the bottom. "Add to note" on Search goes into the
+// CURRENT note of the current customer ("Adding to: Mr. Wong · Kitchen"). Each staff member's customers are private
+// unless shared. Stored on the server (sheet "Customers", photos/voice in the app's private Drive folder).
+var curCust = null, custOpen = null, noteOpenId = null, pickThen = null, fileCache = {}, infoOpen = false;
 function curKey() { return 'esRedCur:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
-function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) || 'null'); } catch (e) { curCust = null; } renderCustBar(); }
-function setCur(c) { curCust = c ? { id: c.id, name: c.name, count: c.count != null ? c.count : (c.items || []).length } : null;
+function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) || 'null'); } catch (e) { curCust = null; } if (curCust && !curCust.noteId) curCust = null; renderCustBar(); }
+/** Current customer + note: {id, name, noteId, noteTitle, count (items in that note)}. */
+function setCur(c, n) { curCust = c && n ? { id: c.id, name: c.name, noteId: n.id, noteTitle: n.title, count: n.count != null ? n.count : (n.items || []).length } : null;
   if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); else localStorage.removeItem(curKey()); renderCustBar(); }
+function saveCur() { if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); renderCustBar(); }
 function renderCustBar() {
   var b = $('custBar'); b.classList.toggle('none', !curCust);
-  b.innerHTML = curCust ? '<span class="lbl">Adding to:</span><button class="nm" id="cbOpen">' + esc(curCust.name) + '</button><span class="lbl">·</span><button class="chg" id="cbChange">change</button>' +
+  b.innerHTML = curCust ? '<span class="lbl">Adding to:</span><button class="nm" id="cbOpen">' + esc(curCust.name) + ' · ' + esc(curCust.noteTitle) + '</button><span class="lbl">·</span><button class="chg" id="cbChange">change</button>' +
       '<span class="cnt">' + (curCust.count || 0) + ' item' + (curCust.count === 1 ? '' : 's') + '</span>'
     : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">no customer yet · pick one</button>';
   $('cbChange').onclick = function () { openPicker(null); };
-  if ($('cbOpen')) $('cbOpen').onclick = function () { go('cust'); openCust(curCust.id); };
+  if ($('cbOpen')) $('cbOpen').onclick = function () { openCust(curCust.id, null, curCust.noteId); };
   var bd = $('custBadge'); bd.textContent = curCust && curCust.count ? curCust.count : ''; bd.classList.toggle('hidden', !(curCust && curCust.count));
 }
+function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCust.noteId === nid); }
 function newCustFormHtml(pre) { return '<div class="twocol"><div><label class="f">Name <span class="req">*</span></label><input id="ncName" autocapitalize="words" placeholder="Mr. Wong"></div>' +
   '<div><label class="f">Phone</label><input id="ncPhone" type="tel" inputmode="tel"></div></div><label class="f">City / job address</label><input id="ncCity" autocapitalize="words">' +
   '<button class="btn" id="ncSave">' + (pre || 'Create customer') + '</button><div id="ncMsg" class="msg hidden"></div>'; }
 function wireNewCust(done) { $('ncSave').onclick = function () { var b = this; if (!$('ncName').value.trim()) { msg($('ncMsg'), 'Name is required.'); $('ncName').focus(); return; }
   b.disabled = true; api('customerSave', { customer: { name: $('ncName').value, phone: $('ncPhone').value, city: $('ncCity').value, tax: 'SF' } })
     .then(done).catch(function (er) { msg($('ncMsg'), er.message); b.disabled = false; }); }; }
-/** Quick picker: recent customers + search + "+ New customer". then() runs after a pick (e.g. the pending Add to note). */
+/** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
-  openSheet('<h3>' + (then ? 'Add to which customer?' : 'Adding to') + '</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this customer\'s note.</div>' +
+  openSheet('<h3>' + (then ? 'Add to which customer?' : 'Adding to') + '</h3><div class="hint" style="margin:0 0 8px">Items from Search go into one note of this customer.</div>' +
     '<input id="pkQ" type="search" placeholder="Search name or phone" autocomplete="off"><button class="newc" id="pkNew">+ New customer</button>' +
     '<div id="pkNewForm" class="hidden">' + newCustFormHtml(then ? 'Create and add' : 'Create') + '</div><div class="sec-h" style="margin-top:8px"><h2 id="pkH">Recent</h2></div><div id="pkList"><div class="spinner"></div></div>');
   var t = null; $('pkQ').oninput = function () { clearTimeout(t); var q = this.value; t = setTimeout(function () { loadPick(q); }, 250); };
   $('pkNew').onclick = function () { $('pkNewForm').classList.remove('hidden'); this.classList.add('hidden'); if ($('pkQ').value && !/\d{3}/.test($('pkQ').value)) $('ncName').value = $('pkQ').value; $('ncName').focus(); };
-  wireNewCust(pickDone); loadPick('');
+  wireNewCust(function (c) { pickDone(c, c.notes[0]); }); loadPick('');
 }
+var pickRows = {};
 function loadPick(q) { $('pkH').textContent = q ? 'Matches' : 'Recent';
-  api('customerList', { filter: { q: q, n: q ? 50 : 8 } }).then(function (l) { if (!$('pkList')) return;
+  api('customerList', { filter: { q: q, n: q ? 50 : 8 } }).then(function (l) { if (!$('pkList')) return; l.forEach(function (c) { pickRows[c.id] = c; });
     $('pkList').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'No customer matches.' : 'No customers yet. Tap + New customer.') + '</div>';
   }).catch(function (er) { if ($('pkList')) $('pkList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; }); }
-function pickDone(c) { setCur(c); closeSheet(); var t = pickThen; pickThen = null; if (t) t(); else toast('Adding to ' + c.name); if ($('p-cust').classList.contains('on') && !custOpen) loadCustList(); }
-function custRowHtml(c) { var ago = c.updated ? new Date(c.updated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-  return '<button class="crow2" data-cust="' + esc(c.id) + '" data-cname="' + esc(c.name) + '" data-ccount="' + c.count + '"><b>' + esc(c.name) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
+/** A customer was tapped in the picker: one note = take it; several = ask which; none = make "Note 1". */
+function pickCustomer(c) {
+  var ns = c.noteList || [];
+  if (ns.length === 1) { pickDone(c, ns[0]); return; }
+  if (!ns.length) { api('noteSave', { id: c.id }).then(function (r) { pickDone(c, r.note); }).catch(function (er) { toast(er.message); }); return; }
+  $('sheetBody').innerHTML = '<h3>' + esc(c.name) + ': which note?</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this note.</div>' +
+    ns.map(function (n) { return '<button class="crow2" data-pnote="' + esc(n.id) + '"><b>' + esc(n.title) + '</b>' + (isCurNote(c.id, n.id) ? '<span class="cur">adding here</span>' : '') +
+      '<span class="s">' + n.count + ' item' + (n.count === 1 ? '' : 's') + (n.photos ? ' · ' + n.photos + ' photo' + (n.photos === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) : '') + '</span></button>'; }).join('') +
+    '<button class="newc" id="pkNewNote">+ New note</button>';
+  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-pnote]'); if (b) { $('sheetBody').onclick = null; pickDone(c, ns.filter(function (n) { return n.id === b.dataset.pnote; })[0]); } };
+  $('pkNewNote').onclick = function () { this.disabled = true; $('sheetBody').onclick = null; api('noteSave', { id: c.id }).then(function (r) { pickDone(c, r.note); }).catch(function (er) { toast(er.message); }); };
+}
+function pickDone(c, n) { setCur(c, n); closeSheet(); var t = pickThen; pickThen = null; if (t) t(); else toast('Adding to ' + c.name + ' · ' + n.title);
+  if ($('p-cust').classList.contains('on')) { if (!custOpen) loadCustList(); else if (custOpen.id === c.id) renderCustDetail(); } }
+function custRowHtml(c) { var ago = c.updated ? whenTxt(c.updated) : '', nn = (c.noteList || []).length;
+  return '<button class="crow2" data-cust="' + esc(c.id) + '"><b>' + esc(c.name) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
     (c.shared ? '<span class="sh">shared' + (c.mine ? '' : ' by ' + esc(c.owner)) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : '') +
-    '<span class="s">' + esc([c.phone, c.city].filter(Boolean).join(' · ') || 'no phone') + '</span><span class="s">' + c.count + ' item' + (c.count === 1 ? '' : 's') + (ago ? ' · ' + esc(ago) + (c.updated_by ? ' by ' + esc(c.updated_by) : '') : '') + '</span></button>'; }
+    '<span class="s">' + esc([c.phone, c.city].filter(Boolean).join(' · ') || 'no phone') + '</span><span class="s">' + nn + ' note' + (nn === 1 ? '' : 's') + ' · ' + c.count + ' item' + (c.count === 1 ? '' : 's') +
+    (ago ? ' · ' + esc(ago) + (c.updated_by ? ' by ' + esc(c.updated_by) : '') : '') + '</span></button>'; }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-cust]'); if (!b) return;
-  var c = { id: b.dataset.cust, name: b.dataset.cname, count: +b.dataset.ccount || 0 };
-  if (b.closest('#pkList')) pickDone(c); else openCust(c.id); });
-/** Add to note: straight into the current customer's picked items (asks for a customer first when none is picked). */
+  if (b.closest('#pkList')) pickCustomer(pickRows[b.dataset.cust]); else openCust(b.dataset.cust); });
+/** Add to note: straight into the current note (asks for a customer + note first when none is picked). */
 function addToNote(lines) {
   lines = [].concat(lines); if (!lines.length) return;
   if (!curCust) { openPicker(function () { addToNote(lines); }); return; }
-  var c = curCust; toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name);
-  lines.reduce(function (pr, l) { return pr.then(function () { return api('customerItem', { id: c.id, op: 'add', line: l }); }); }, Promise.resolve())
-    .then(function (r) { if (curCust && curCust.id === c.id) { curCust.count = r.items.length; setCur(curCust); }
-      if (custOpen && custOpen.id === c.id) { custOpen.items = r.items; if ($('cdItems')) renderPicked(); } })
-    .catch(function (er) { toast('Not added: ' + er.message); if (/customer not found/i.test(er.message)) setCur(null); });
+  var c = curCust; toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
+  lines.reduce(function (pr, l) { return pr.then(function () { return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: l }); }); }, Promise.resolve())
+    .then(function (r) { if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
+      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) renderNoteCards(); } })
+    .catch(function (er) { toast('Not added: ' + er.message); if (/customer not found|note is gone/i.test(er.message)) setCur(null); });
 }
 function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' }); }
 function itemRow(name) { if (!localData) return null; var i = nameIndex_(localData)[name]; return i == null ? null : localData.items[i]; }
 function linePrice(l) { var r = itemRow(l.name); return priceState.prices && r && r[2] != null ? r[2] : null; }
+function noteOf(cid, nid) { return custOpen && custOpen.id === cid ? (custOpen.notes || []).filter(function (n) { return n.id === nid; })[0] : null; }
+function curNote() { return noteOf(custOpen && custOpen.id, noteOpenId); }
 
 // ---- customer list
 var cuTimer = null, cuSeq = 0;
 $('cuQ').addEventListener('input', function () { clearTimeout(cuTimer); cuTimer = setTimeout(loadCustList, 250); });
 $('cuRefresh').onclick = function () { loadCustList(); };
 $('cuNew').onclick = function () { openSheet('<h3>New customer</h3>' + newCustFormHtml());
-  wireNewCust(function (c) { closeSheet(); setCur(c); openCust(c.id, c); toast('Adding items to ' + c.name); }); $('ncName').focus(); };
+  wireNewCust(function (c) { closeSheet(); setCur(c, c.notes[0]); infoOpen = true; openCust(c.id, c); toast('Adding items to ' + c.name + ' · Note 1'); }); $('ncName').focus(); };
 function loadCustList() {
-  custOpen = null; $('cuDetail').classList.add('hidden'); $('cuList').classList.remove('hidden');
+  custOpen = null; noteOpenId = null; $('cuDetail').classList.add('hidden'); $('cuList').classList.remove('hidden');
   var q = $('cuQ').value.trim(), my = ++cuSeq;
   api('customerList', { filter: { q: q } }).then(function (l) { if (my !== cuSeq) return;
     $('cuMeta').textContent = l.length ? l.length + ' customer' + (l.length === 1 ? '' : 's') + (q ? ' matching' : '') + ' · yours, plus any shared with you' : '';
     $('cuRows').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'Nothing found for “' + esc(q) + '”.' : 'No customers yet. Tap + New customer, or Add to note from Search.') + '</div>';
   }).catch(function (er) { if (my === cuSeq) $('cuRows').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
-// ---- one customer
-function openCust(id, pre) {
+// ---- one customer: slim info line (collapsed; a brand-new customer opens expanded), note cards, voice notes
+function openCust(id, pre, noteId) {
   if (!$('p-cust').classList.contains('on')) go('cust');
   $('cuList').classList.add('hidden'); var d = $('cuDetail'); d.classList.remove('hidden'); window.scrollTo(0, 0);
-  custOpen = pre && pre.items ? pre : { id: id };
-  if (pre && pre.items) { renderCustDetail(); return; }
+  if (!pre || !pre.notes) infoOpen = false;
+  noteOpenId = noteId || null;
+  if (pre && pre.notes) { custOpen = pre; renderCustDetail(); return; }
+  custOpen = { id: id };
   d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList;
-  api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return; custOpen = c; renderCustDetail();
-    if (curCust && curCust.id === c.id && curCust.count !== c.items.length) { curCust.count = c.items.length; setCur(curCust); } })
+  api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return; custOpen = c;
+    if (noteOpenId && !curNote()) noteOpenId = null; renderCustDetail();
+    if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== c.name) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = c.name; saveCur(); } } })
     .catch(function (er) { d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
       if (curCust && curCust.id === id && /not found/i.test(er.message)) setCur(null); });
 }
-function renderCustDetail() {
-  var c = custOpen, isCur = curCust && curCust.id === c.id, canShare = c.mine || session.role === 'admin';
-  $('cuDetail').innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="cdTitle">' + esc(c.name) + '</span>' +
-      (isCur ? '<span class="pill-ok">adding here</span>' : '<button class="link" id="cdUse">Add items here</button>') + '</div>' +
-      '<div class="ownline">' + (c.mine ? 'Your customer · ' + (c.shared ? 'shared with your team' : 'private to you') : 'From ' + esc(c.owner) + (c.shared ? ' · shared' : '')) + '</div>' +
+function renderCustDetail() { if (noteOpenId && curNote()) renderNote(); else { noteOpenId = null; renderOverview(); } }
+function infoLine(c) { return [c.name, c.phone, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
+function renderOverview() {
+  var c = custOpen, canShare = c.mine || session.role === 'admin';
+  $('cuDetail').innerHTML = '<div class="card"><div class="crumb" style="margin:0"><button class="back" id="cdBack">‹</button>' +
+      '<button class="infoline' + (infoOpen ? ' open' : '') + '" id="cdInfoT" aria-expanded="' + infoOpen + '"><span>' + infoLine(c) + '</span><span class="chev">' + (infoOpen ? '▴' : '▾') + '</span></button></div>' +
+      '<div id="cdInfo"' + (infoOpen ? '' : ' class="hidden"') + '>' +
+      '<div class="ownline" style="margin-top:8px">' + (c.mine ? 'Your customer · ' + (c.shared ? 'shared with your team' : 'private to you') : 'From ' + esc(c.owner) + (c.shared ? ' · shared' : '')) + '</div>' +
       '<div class="twocol"><div><label class="f">Name</label><input id="cdName" autocapitalize="words" value="' + esc(c.name) + '"></div><div><label class="f">Phone</label><input id="cdPhone" type="tel" inputmode="tel" value="' + esc(c.phone) + '"></div></div>' +
       '<label class="f">City / job address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
-      '<label class="f" style="margin-top:4px">Notes</label><textarea id="cdNotes" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(c.notes) + '</textarea>' +
-      (canShare ? '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px;font-weight:600"><input type="checkbox" id="cdShared" style="width:auto;min-height:0"' + (c.shared ? ' checked' : '') + '> Share with my team</label>' : '') +
-      '<div class="saved" id="cdSaved"></div></div>' +
-    '<div class="card"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2 id="cdItemsH">Picked items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
-      '<div id="cdItems"></div><div id="cdTotals"></div>' +
-      '<button class="btn" id="cdQuote">Quote these items</button><button class="btn sec" id="cdPlan">Send plan to ' + esc(session.bot || 'Red') + '</button><div id="cdMsg" class="msg hidden"></div></div>' +
+      (canShare ? '<label style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:14px;font-weight:600"><input type="checkbox" id="cdShared" style="width:auto;min-height:0"' + (c.shared ? ' checked' : '') + '> Share with my team</label>' : '') +
+      '<button class="btn" id="cdInfoSave">Save</button><div class="saved" id="cdSaved"></div></div></div>' +
+    '<div class="card"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2>Notes</h2><span class="hint" style="margin:0">' + (c.notes || []).length + '</span></div>' +
+      '<div id="cdNotes"></div><button class="newc" id="cdNewNote">+ New note</button></div>' +
     '<div class="card"><div class="sec-h"><h2>Voice notes</h2></div><div id="cdVoice"></div>' +
       '<div style="margin-top:10px"><button class="recbtn" id="cdRec">● Record</button> <span id="cdRecT" class="hint"></span></div><div id="cdLive" class="live hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this customer</button></div>' : '');
-  $('cdBack').onclick = function () { flushSave(); loadCustList(); };
-  if ($('cdUse')) $('cdUse').onclick = function () { setCur(Object.assign({ count: c.items.length }, c)); renderCustDetail(); toast('Adding to ' + c.name); };
-  ['cdName', 'cdPhone', 'cdCity', 'cdNotes'].forEach(function (k) { $(k).addEventListener('input', queueSave); $(k).addEventListener('blur', flushSave); });
-  if ($('cdShared')) $('cdShared').onchange = function () { queueSave(); flushSave(); };
-  $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueSave(); flushSave(); renderTotals(); };
-  $('cdAddMore').onclick = function () { setCur(Object.assign({ count: c.items.length }, c)); go('search'); $('q').focus(); };
-  $('cdQuote').onclick = quoteCust; $('cdPlan').onclick = planFromCust; $('cdRec').onclick = toggleRec;
-  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + c.name + ' and their picked items, photos and voice notes?')) return;
+  $('cdBack').onclick = function () { (infoDirty ? saveInfo() : Promise.resolve()).then(loadCustList); };
+  $('cdInfoT').onclick = function () { infoOpen = !infoOpen; if (!infoOpen && infoDirty) { saveInfo(); return; } renderOverview(); };
+  ['cdName', 'cdPhone', 'cdCity'].forEach(function (k) { $(k).addEventListener('input', function () { infoDirty = true; $('cdSaved').textContent = ''; }); });
+  if ($('cdShared')) $('cdShared').onchange = function () { infoDirty = true; };
+  $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); infoDirty = true; c.tax = b.dataset.t; };
+  $('cdInfoSave').onclick = function () { saveInfo(); };
+  $('cdNewNote').onclick = function () { var b = this; b.disabled = true; api('noteSave', { id: c.id }).then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderNote(); toast('New note: ' + r.note.title); })
+    .catch(function (er) { toast(er.message); b.disabled = false; }); };
+  $('cdRec').onclick = toggleRec;
+  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + c.name + ' and all their notes, photos and voice notes?')) return;
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + c.name); loadCustList(); }).catch(function (er) { toast(er.message); }); };
-  renderPicked(); renderVoice();
+  renderNoteCards(); renderVoice();
 }
-// info autosave (items have their own actions, so a save here never overwrites items added from Search)
-var saveT = null, saveDirty = false;
-function queueSave() { saveDirty = true; $('cdSaved').textContent = 'Editing…'; clearTimeout(saveT); saveT = setTimeout(flushSave, 900); }
-function flushSave() { clearTimeout(saveT); if (!saveDirty || !custOpen || !$('cdName')) return Promise.resolve();
-  var c = custOpen, nm = $('cdName').value.trim(); if (!nm) { $('cdSaved').textContent = 'Name is required to save.'; return Promise.resolve(); }
-  saveDirty = false; var body = { id: c.id, name: nm, phone: $('cdPhone').value, city: $('cdCity').value, tax: c.tax, notes: $('cdNotes').value };
-  if ($('cdShared')) body.shared = $('cdShared').checked;
-  $('cdSaved').textContent = 'Saving…';
-  return api('customerSave', { customer: body }).then(function (r) { if (custOpen && custOpen.id === r.id) { ['name', 'phone', 'city', 'tax', 'notes', 'shared'].forEach(function (k) { custOpen[k] = r[k]; }); }
-    if ($('cdSaved')) $('cdSaved').textContent = 'Saved ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    if ($('cdTitle')) $('cdTitle').textContent = r.name; if (curCust && curCust.id === r.id && curCust.name !== r.name) { curCust.name = r.name; setCur(curCust); } })
-    .catch(function (er) { saveDirty = true; if ($('cdSaved')) $('cdSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; }); }
-// picked items
+function renderNoteCards() { var c = custOpen, ns = c.notes || [];
+  $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
+    return '<button class="ncard" data-nopen="' + esc(n.id) + '"><div class="t"><b>' + esc(n.title) + '</b>' + (isCurNote(c.id, n.id) ? '<span class="cur">adding here</span>' : '') + '<span class="chev">›</span></div>' +
+      '<span class="s">' + cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</span>' +
+      (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button>'; }).join('') : '<div class="empty" style="padding:14px">No notes yet.</div>';
+}
+document.addEventListener('click', function (e) { var b = e.target.closest('[data-nopen]'); if (!b || !custOpen) return; noteOpenId = b.dataset.nopen; renderNote(); window.scrollTo(0, 0); });
+var infoDirty = false;
+function saveInfo() { var c = custOpen, nm = $('cdName').value.trim(); if (!nm) { $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
+  var body = { id: c.id, name: nm, phone: $('cdPhone').value, city: $('cdCity').value, tax: c.tax }; if ($('cdShared')) body.shared = $('cdShared').checked;
+  $('cdSaved').textContent = 'Saving…'; $('cdInfoSave').disabled = true;
+  return api('customerSave', { customer: body }).then(function (r) { infoDirty = false; ['name', 'phone', 'city', 'tax', 'shared'].forEach(function (k) { c[k] = r[k]; });
+    if (curCust && curCust.id === r.id && curCust.name !== r.name) { curCust.name = r.name; saveCur(); }
+    infoOpen = false; if (custOpen === c && !noteOpenId) renderOverview(); toast('Saved'); })
+    .catch(function (er) { if ($('cdSaved')) { $('cdSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; $('cdInfoSave').disabled = false; } }); }
+// ---- one note (one package): title, text, items, photos at the bottom, its own quote / plan
+function renderNote() {
+  var c = custOpen, n = curNote(), isCur = isCurNote(c.id, n.id);
+  $('cuDetail').innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--muted);font-size:14px">' + esc(c.name) + ' · ' + esc(c.tax === 'Fremont' ? 'Fremont' : 'SF') + ' tax</span>' +
+      (isCur ? '<span class="pill-ok">adding here</span>' : '<button class="link" id="cdUse">Add items here</button>') + '</div>' +
+      '<input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' +
+      '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div></div>' +
+    '<div class="card"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
+      '<div id="cdItems"></div><div id="cdTotals"></div>' +
+      '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
+      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
+      '<button class="btn" id="cdQuote">Quote this note</button><button class="btn sec" id="cdPlan">Send plan to ' + esc(session.bot || 'Red') + '</button><div id="cdMsg" class="msg hidden"></div></div>' +
+    '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div>';
+  $('cdBack').onclick = function () { flushNote().then(function () { noteOpenId = null; if (custOpen === c) { renderOverview(); window.scrollTo(0, 0); } }); };
+  if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNote(); toast('Adding to ' + c.name + ' · ' + n.title); };
+  $('nTitle').addEventListener('input', queueNote); $('nText').addEventListener('input', queueNote);
+  $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote);
+  $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
+  $('cdQuote').onclick = quoteCust; $('cdPlan').onclick = planFromCust;
+  $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
+    api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderOverview(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
+  renderPicked(); renderNotePhotos();
+}
+var noteT = null, noteDirty = false;
+function queueNote() { noteDirty = true; $('nSaved').textContent = 'Editing…'; clearTimeout(noteT); noteT = setTimeout(flushNote, 900); }
+function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
+  noteDirty = false; var c = custOpen, title = $('nTitle').value.trim() || n.title, text = $('nText').value; $('nSaved').textContent = 'Saving…';
+  return api('noteSave', { id: c.id, noteId: n.id, title: title, text: text }).then(function (r) { Object.assign(n, { title: r.note.title, text: r.note.text, updated: r.note.updated, updated_by: r.note.updated_by });
+    if ($('nSaved') && noteOpenId === n.id) $('nSaved').textContent = 'Saved ' + whenTxt(r.note.updated);
+    if (isCurNote(c.id, n.id) && curCust.noteTitle !== n.title) { curCust.noteTitle = n.title; saveCur(); } })
+    .catch(function (er) { noteDirty = true; if ($('nSaved')) $('nSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; }); }
 function renderPicked() {
-  var c = custOpen, it = c.items || [];
-  $('cdItemsH').textContent = 'Picked items' + (it.length ? ' (' + it.length + ')' : '');
+  var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) renderNoteCards(); return; }
+  var it = n.items || [];
+  $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
   $('cdItems').innerHTML = it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
     return '<div class="pline" data-lid="' + esc(l.id) + '"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
       '<div class="n"><b><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span>' + esc(l.desc || (r ? r[1] : '')) + '</span>' +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
-      '<span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
-      '<div class="m"><input class="lnote" data-lnote="1" placeholder="Note: color, room, size…" value="' + esc(l.note) + '" maxlength="300"></div>' +
-      '<div class="ph">' + (l.photos || []).map(function (f) { return fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>'; }).join('') +
-      ((l.photos || []).length < 4 ? '<label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-lph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-lph="1"></label>' : '') + '</div></div>';
-  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (curCust && curCust.id === c.id ? '' : ' (after “Add items here”)') + '.</div>';
-  renderTotals(); loadThumbs();
+      '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div></div>';
+  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>';
+  renderTotals();
 }
-function renderTotals() { var it = custOpen.items || [], el = $('cdTotals'); if (!el) return;
-  if (!it.length) { el.innerHTML = ''; return; }
-  if (!priceState.prices) { el.innerHTML = ''; return; }
+function renderTotals() { var n = curNote(), el = $('cdTotals'); if (!el || !n) return; var it = n.items || [];
+  if (!it.length || !priceState.prices) { el.innerHTML = ''; return; }
   var sub = 0, miss = 0; it.forEach(function (l) { var p = linePrice(l); if (p == null) miss++; else sub += p * l.qty; });
   var t = TAX[custOpen.tax] || TAX.SF, tax = Math.round(sub * t * 100) / 100;
   el.innerHTML = '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + (custOpen.tax || 'SF') + ' tax ' + (t * 100).toFixed(t === 0.1025 ? 2 : 3) + '%</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>' +
     '<p class="note">Retail list prices, no discount. Discounts are applied on the official quote.</p>'; }
-function loadThumbs() { var c = custOpen; document.querySelectorAll('#cdItems .ld[data-fid]').forEach(function (s) { var f = s.dataset.fid; if (s.dataset.busy) return; s.dataset.busy = 1;
-  api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); }); }
-function lineOf(el) { var d = el.closest('[data-lid]'); return d && (custOpen.items || []).filter(function (l) { return l.id === d.dataset.lid; })[0]; }
-function setLine(l, ch) { var c = custOpen; return api('customerItem', Object.assign({ id: c.id, op: 'set', lineId: l.id }, ch)).then(function (r) { if (custOpen && custOpen.id === c.id) custOpen.items = r.items; }).catch(function (er) { toast(er.message); }); }
+function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !n) return; var ps = n.photos || [];
+  $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
+  el.innerHTML = ps.length ? ps.map(function (f) { return fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>'; }).join('') : '<span class="hint" style="margin:0">No photos yet.</span>';
+  var c = custOpen; el.querySelectorAll('.ld[data-fid]').forEach(function (s) { var f = s.dataset.fid;
+    api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
+  $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
+document.addEventListener('click', function (e) { var img = e.target.closest('#nPhotos img[data-fid]'); if (!img) return; var n = curNote(), c = custOpen, f = img.dataset.fid;
+  openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="actions"><button id="phDel">Remove photo</button></div>');
+  $('phDel').onclick = function () { this.disabled = true; api('customerFileRemove', { id: c.id, fileId: f }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
+document.addEventListener('change', function (e) { var t = e.target; if (!t.dataset.nph || !t.files[0]) return; var f = t.files[0], c = custOpen, n = curNote(); t.value = ''; if (!n) return;
+  $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); var h = $('nPhotos').querySelector('.hint'); if (h) h.remove();
+  shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
+    .then(function (r) { n.photos = r.photos; n.updated = r.note.updated; if (noteOpenId === n.id) renderNotePhotos(); toast('Photo saved to ' + n.title); })
+    .catch(function (er) { toast(er.message); var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }); });
+function lineOf(el) { var d = el.closest('[data-lid]'), n = curNote(); return d && n && (n.items || []).filter(function (l) { return l.id === d.dataset.lid; })[0]; }
+function setLine(l, ch) { var c = custOpen, n = curNote(); return api('customerItem', Object.assign({ id: c.id, noteId: n.id, op: 'set', lineId: l.id }, ch)).then(function (r) { n.items = r.items; n.updated = r.note.updated; n.updated_by = r.note.updated_by; }).catch(function (er) { toast(er.message); }); }
 var qtyT = {};
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return; var t = e.target, l = lineOf(t); if (!l) return;
-  var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), img = t.closest('img[data-fid]');
+  var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]');
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
     clearTimeout(qtyT[l.id]); qtyT[l.id] = setTimeout(function () { setLine(l, { qty: l.qty }); }, 500); }
-  else if (rm) { if (!confirm('Remove ' + l.name + (l.photos && l.photos.length ? ' and its photos' : '') + '?')) return; var c = custOpen;
-    custOpen.items = custOpen.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
-    api('customerItem', { id: c.id, op: 'remove', lineId: l.id }).then(function (r) { if (custOpen && custOpen.id === c.id) { custOpen.items = r.items; renderPicked(); } syncCount(); }).catch(function (er) { toast(er.message); }); }
-  else if (img) { var f = img.dataset.fid; openSheet('<h3>' + esc(l.name) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt="">' +
-      '<div class="actions"><button id="phDel">Remove photo</button></div>');
-    $('phDel').onclick = function () { var c = custOpen; this.disabled = true; api('customerFileRemove', { id: c.id, fileId: f }).then(function () { l.photos = l.photos.filter(function (x) { return x !== f; }); closeSheet(); renderPicked(); }).catch(function (er) { toast(er.message); }); }; }
+  else if (rm) { if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
+    n.items = n.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
+    api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).then(function (r) { n.items = r.items; if (noteOpenId === n.id) renderPicked(); syncCount(); }).catch(function (er) { toast(er.message); }); }
 });
 function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
-function syncCount() { if (curCust && custOpen && curCust.id === custOpen.id) { curCust.count = custOpen.items.length; setCur(curCust); } }
+function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
   if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); setLine(l, { qty: l.qty }); }
   else if (t.dataset.lnote) { l.note = t.value; setLine(l, { note: l.note }).then(function () { toast('Note saved'); }); }
-  else if (t.dataset.lph && t.files[0]) { var f = t.files[0], c = custOpen, ph = t.closest('.ph'); t.value = '';
-    ph.insertAdjacentHTML('afterbegin', '<span class="ld" data-up="1"></span>');
-    shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, kind: 'photo', lineId: l.id, file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
-      .then(function (r) { if (custOpen && custOpen.id === c.id) { l.photos = r.line.photos; renderPicked(); toast('Photo saved'); } })
-      .catch(function (er) { toast(er.message); var u = ph.querySelector('[data-up]'); if (u) u.remove(); }); }
 });
 /** Phone photos are shrunk before upload (longest side 1600 px, JPEG): fast on the floor's Wi-Fi, small in Drive. */
 function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = new FileReader(); rd.onerror = function () { rej(new Error('Could not read the photo.')); };
@@ -743,22 +815,22 @@ function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = n
     img.onload = function () { var k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
       cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); res({ data: cv.toDataURL('image/jpeg', 0.82), mimeType: 'image/jpeg' }); };
     img.src = rd.result; }; rd.readAsDataURL(file); }); }
-/** Quote these items: the existing cart_quote webhook flow (same payload), filled from this customer. */
+/** Quote this note: the existing cart_quote webhook flow (same payload + optional note_title), filled from this customer + note. */
 function quoteCust() {
-  var c = custOpen, b = $('cdQuote'), it = c.items || [];
-  if (!it.length) { msg($('cdMsg'), 'No picked items yet. Add items from Search first.'); return; }
+  var c = custOpen, n = curNote(), b = $('cdQuote'), it = n.items || [];
+  if (!it.length) { msg($('cdMsg'), 'No items in this note yet. Add items from Search first.'); return; }
   b.disabled = true; msg($('cdMsg'), 'Sending…', true);
-  flushSave().then(function () {
-    var notes = [String(c.notes || '').trim()].concat(it.filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + l.note.trim(); })).filter(Boolean).join('\n');
-    return api('cartQuote', { cart: { customer_name: c.name, customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes,
+  flushNote().then(function () {
+    var notes = [String(n.text || '').trim()].concat(it.filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + l.note.trim(); })).filter(Boolean).join('\n');
+    return api('cartQuote', { cart: { customer_name: c.name, customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
       items: it.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
   }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to Ray.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
     .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; });
 }
-function planFromCust() { var c = custOpen; flushSave();
+function planFromCust() { var c = custOpen, n = curNote(); flushNote();
   go('plan'); planInit().then(function () { setPlanRev(null); setPlanKeep(null); clearReader(); msg($('plMsg'), '');
     $('plName').value = c.name || ''; $('plPhone').value = c.phone || ''; $('plCity').value = c.city || ''; $('plTax').value = c.tax === 'Fremont' ? 'Fremont' : 'SF';
-    if (!$('plNotes').value.trim()) $('plNotes').value = c.notes || ''; toast('Plan form filled for ' + c.name); }); }
+    if (!$('plNotes').value.trim()) $('plNotes').value = n ? (n.title + (n.text ? ': ' + n.text : '')) : ''; toast('Plan form filled for ' + c.name); }); }
 // voice notes (MediaRecorder, same approach as Customer Notes; live transcript where the browser offers it)
 var rec = null;
 function renderVoice() { var c = custOpen, vs = c.voice || [];
@@ -840,7 +912,7 @@ function openRequest(rid) {
   openSheet('<div class="spinner"></div>');
   api('requestGet', { request_id: rid }).then(function (g) { var p = g.payload, r = g.row, cartK = r.kind === 'cart';
     var body = '<h3>' + (cartK ? 'Cart request' : 'Plan request') + '</h3><div style="font-size:13px;color:var(--muted)">' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + '</div>' +
-      kv('Customer', p.customer_name) + kv('Phone', p.customer_phone) + kv('Job city', p.job_city) + kv('Style', p.style) +
+      kv('Customer', p.customer_name) + kv('Note', p.note_title) + kv('Phone', p.customer_phone) + kv('Job city', p.job_city) + kv('Style', p.style) +
       kv('Discount', p.discount_pct == null ? 'default' : p.discount_pct + '%') + kv('Tax', p.tax_store) + kv('Revised from', p.revised_from) +
       kv('Status', r.status + (r.sends > 1 ? ' (sent ' + r.sends + '×)' : ''));
     if (cartK) { var sub = g.lines.reduce(function (a, l) { return a + l.price * l.qty; }, 0);
@@ -862,8 +934,9 @@ function cartToCustomer(rid, btn) { if (btn) btn.disabled = true;
   api('requestGet', { request_id: rid }).then(function (g) { var p = g.payload, ls = g.lines.filter(function (l) { return !l.missing && !l.cab && !(l.parts && l.parts.length); });
     var skipped = g.lines.length - ls.length;
     return api('customerSave', { customer: { name: p.customer_name || 'Customer from ' + rid, phone: p.customer_phone, city: p.job_city, tax: p.tax_store, notes: (p.notes ? p.notes + '\n' : '') + '(copied from ' + rid + ')' } }).then(function (c) {
-      return ls.reduce(function (pr, l) { var r = itemRow(l.name); return pr.then(function () { return api('customerItem', { id: c.id, op: 'add', line: { name: l.name, desc: (l.desc || (r ? r[1] : '')).slice(0, 110), qty: l.qty, photo: r && r[13] || '' } }); }); }, Promise.resolve())
-        .then(function () { closeSheet(); setCur(c); openCust(c.id); toast('New customer from ' + rid + (skipped ? ' (' + skipped + ' cabinet/old line' + (skipped === 1 ? '' : 's') + ' skipped)' : '')); }); });
+      var n1 = c.notes[0];
+      return ls.reduce(function (pr, l) { var r = itemRow(l.name); return pr.then(function () { return api('customerItem', { id: c.id, noteId: n1.id, op: 'add', line: { name: l.name, desc: (l.desc || (r ? r[1] : '')).slice(0, 110), qty: l.qty, photo: r && r[13] || '' } }); }); }, Promise.resolve())
+        .then(function () { closeSheet(); n1.count = ls.length; setCur(c, n1); openCust(c.id, null, n1.id); toast('New customer from ' + rid + (skipped ? ' (' + skipped + ' cabinet/old line' + (skipped === 1 ? '' : 's') + ' skipped)' : '')); }); });
   }).catch(function (er) { toast(er.message); }).then(function () { if (btn) btn.disabled = false; });
 }
 var SPECIAL_RE = /^\d+ x .+ \(special order .+, priced from #2083 parts\)$/;
