@@ -143,6 +143,7 @@
   .ncard .t { display:flex; align-items:center; gap:6px; } .ncard .t b { flex:1; font-size:16px; } .ncard .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
   .ncard .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ncard .cur, .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; }
+  .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
   .shrow { display:flex; gap:12px; align-items:center; padding:11px 4px; border-bottom:1px solid var(--line); font-size:15px; cursor:pointer; } .shrow input { width:22px; height:22px; min-height:0; flex-shrink:0; }
@@ -769,6 +770,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
       (NOTE_AUTOSAVE ? '' : '<button class="btn sec hidden" id="nSave">Save note</button>') +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
+      '<button class="tcbtn" id="nTile">▦ Tile calculator</button>' +
       '<div id="cdItems"></div><div id="cdTotals"></div>' +
       '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
       '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
@@ -781,6 +783,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
   if (NOTE_AUTOSAVE) { $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote); }
   else $('nSave').onclick = function () { flushNote().then(function () { if ($('nSave') && !noteDirty) $('nSave').classList.add('hidden'); }); };
   $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
+  $('nTile').onclick = function () { flushNote(); noteTileCalc(c, n); };
   $('cdQuote').onclick = quoteCust; $('cdPlan').onclick = planFromCust;
   $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
     api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
@@ -1018,50 +1021,67 @@ function loadRequestIntoForm(rid, clone, btn) {
 }
 function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600); }
 
-// ---------------- tile calculator
-var settingCache = null;
-function tileCalc(name) {
-  var it = shown[name]; var t = it.tile;
-  var thick = (it.desc.match(/x\s*(\d+(?:\.\d+)?)\s*mm/i) || [])[1]; thick = thick && +thick >= 5 && +thick <= 25 ? +thick / 25.4 : 0.375;
-  openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">' + esc(it.name) + '</div>' +
+// ---------------- tile calculator (tile math only: area, waste %, pieces / boxes, coverage, tile cost). Opens from a tile
+// card on Search (adds to the current note) or from inside a note ("Tile calculator": pick / search a tile, adds to THAT note).
+function tileCalc(name) { tileCalcFor(shown[name], null); }
+function itemFromRow(r) { return { name: r[0], desc: r[1] || '', price: priceState.prices ? r[2] : null, tile: r[11], photo: r[13] || '' }; }
+/** target: null = the current "Adding to" note; {c, n, back} = add straight into note n of customer c. */
+function tileCalcFor(it, target) {
+  var t = it.tile;
+  openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">' + esc(it.name) + (target ? ' → ' + esc(target.n.title) : '') + '</div>' +
+    (target ? '<button class="link" id="tcBack" style="margin:4px 0 2px">‹ pick another tile</button>' : '') +
     '<div class="kv"><span>Tile</span><b>' + (t.w ? (+t.w).toFixed(2).replace(/\.00$/, '') + '" × ' + (+t.h).toFixed(2).replace(/\.00$/, '') + '"' : '—') + ' · ' + t.sqftPc + ' sq ft/pc' + (t.pcsBox ? ' · ' + t.pcsBox + ' pcs/box' : '') + '</b></div>' +
-    '<div class="kv"><span>Price</span><b>' + money(it.price) + '/pc · ' + money(perSqft(it)) + '/sq ft' + (t.pcsBox ? ' · ' + money(it.price * t.pcsBox) + '/box' : '') + '</b></div>' +
+    (it.price != null ? '<div class="kv"><span>Price</span><b>' + money(it.price) + '/pc · ' + money(perSqft(it)) + '/sq ft' + (t.pcsBox ? ' · ' + money(it.price * t.pcsBox) + '/box' : '') + '</b></div>' : '') +
     '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="100"></div>' +
-    '<div><label class="f">Grout joint</label><select id="tcJ"><option value="0.0625">1/16"</option><option value="0.125" selected>1/8"</option><option value="0.1875">3/16"</option><option value="0.25">1/4"</option></select></div></div>' +
-    '<label class="tg" style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:600"><input type="checkbox" id="tcW" checked style="width:auto;min-height:0"> Add 10% waste</label>' +
-    '<div class="calcres" id="tcRes"></div><button class="btn" id="tcAdd">Add tile + setting to note</button>');
+    '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="10" min="0" max="50"></div></div>' +
+    '<div class="calcres" id="tcRes"></div><button class="btn" id="tcAdd">' + (target ? 'Add to this note' : 'Add tile to note') + '</button>');
   var calc = function () {
-    var A = parseFloat($('tcA').value) || 0, waste = $('tcW').checked ? 1.1 : 1, J = parseFloat($('tcJ').value);
+    var A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0)), waste = 1 + wp / 100;
     var pcs = Math.ceil(A * waste / t.sqftPc), boxes = t.pcsBox ? Math.ceil(pcs / t.pcsBox) : null;
-    var buy = t.sellByPiece || !t.pcsBox ? pcs : boxes * t.pcsBox, cost = buy * it.price;
-    var L = t.w || 12, W = t.h || 12, maxSide = Math.max(L, W), glass = /GLASS/i.test(it.desc);
-    var thin = glass ? { name: 'SM-GTMW7-4', per: 20, label: 'glass tile mortar 7 lb bag (20 sq ft/bag per label)' }
-      : maxSide >= 15 ? { name: 'SM-THIN-SET-PLMW30', per: 27, label: 'large-format mortar 30 lb bag (~27 sq ft/bag, 1/2" notch)' }
-      : { name: 'SM-THIN-SET-V', per: maxSide >= 8 ? 50 : 90, label: 'VersaBond (assumed 50 lb bag, ~' + (maxSide >= 8 ? 50 : 90) + ' sq ft/bag)' };
-    var bags = Math.ceil(A / thin.per);
-    var groutLb = A * 144 * (L + W) / (L * W) * J * thick * 0.065 * 1.1;
-    var sanded = J >= 0.125 && !/POLISH|GLASS|LAPP/i.test(it.desc);
-    var gBag = sanded ? 25 : 10, gBags = Math.max(1, Math.ceil(groutLb / gBag));
-    var thinIt = (settingCache || []).filter(function (x) { return x.name === thin.name; })[0];
-    var gItems = (settingCache || []).filter(function (x) { return sanded ? /^SM-PLUS SANDED/.test(x.name) : /^SM-(NON-SANDEDGRT|NON-SANDED GRT|NONSANDED)/.test(x.name); });
-    tcState = { buy: buy, boxes: boxes, cost: cost, thinIt: thinIt, bags: bags, gItems: gItems, gBags: gBags, it: it };
+    var buy = t.sellByPiece || !t.pcsBox ? pcs : boxes * t.pcsBox, cost = it.price != null ? buy * it.price : null;
+    tcState = { buy: buy, boxes: boxes, cost: cost, it: it, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') };
     $('tcRes').innerHTML = '<div class="big">' + (boxes != null ? boxes + ' boxes' : pcs + ' pcs') + '</div>' +
       '<div class="kv"><span>Pieces</span><b>' + buy.toLocaleString() + (boxes != null && !t.sellByPiece ? ' (' + boxes + ' × ' + t.pcsBox + ')' : '') + '</b></div>' +
       '<div class="kv"><span>Covers</span><b>' + (buy * t.sqftPc).toFixed(1) + ' sq ft</b></div>' +
-      '<div class="kv"><span>Tile cost (retail)</span><b>' + money(cost) + '</b></div>' +
-      '<div class="kv"><span>Thinset: ' + esc(thin.name) + '</span><b>' + bags + ' bag' + (bags > 1 ? 's' : '') + (thinIt ? ' · ' + money(thinIt.price * bags) : '') + '</b></div>' +
-      '<div class="kv"><span>Grout: ' + (sanded ? 'sanded (Polyblend Plus 25 lb)' : 'non-sanded (assumed 10 lb bag)') + '</span><b>' + gBags + ' bag' + (gBags > 1 ? 's' : '') + ' · ~' + groutLb.toFixed(1) + ' lb</b></div>' +
-      '<select id="tcG" style="margin-top:6px">' + gItems.map(function (g) { return '<option value="' + esc(g.name) + '">' + esc(g.desc.replace(/^.*GROUT\s*/i, '')) + ' · ' + money(g.price) + (Number(g.onHand) > 0 ? '' : ' (out)') + '</option>'; }).join('') + '</select>' +
-      '<p class="note">' + esc(thin.label) + '. Grout estimate uses tile size, joint and ' + (thick * 25.4).toFixed(1) + ' mm thickness. Estimates only: confirm bag sizes and trowel with the setter.</p>';
+      (cost != null ? '<div class="kv"><span>Tile cost (retail)</span><b>' + money(cost) + '</b></div>' : '');
   };
-  $('tcA').oninput = calc; $('tcJ').onchange = calc; $('tcW').onchange = calc;
-  if (!settingCache) api('settingItems').then(function (s) { settingCache = s; calc(); }); else calc();
+  $('tcA').oninput = calc; $('tcWp').oninput = calc;
   calc();
-  $('tcAdd').onclick = function () { var s = tcState, ls = [{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '' }];
-    if (s.thinIt) ls.push({ name: s.thinIt.name, desc: s.thinIt.desc.slice(0, 110), qty: s.bags });
-    var g = (settingCache || []).filter(function (x) { return x.name === ($('tcG') || {}).value; })[0];
-    if (g) ls.push({ name: g.name, desc: g.desc.slice(0, 110), qty: s.gBags });
-    closeSheet(); addToNote(ls); };
+  if ($('tcBack')) $('tcBack').onclick = function () { noteTileCalc(target.c, target.n); };
+  $('tcAdd').onclick = function () { var s = tcState; if (!s.buy) { toast('Enter the area first'); return; }
+    var line = { name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note };
+    closeSheet(); if (target) addToThisNote(target.c, target.n, line); else addToNote([line]); };
+}
+/** Inside a note: pick a tile (tiles already in the note first, or search tile), then the calculator. */
+function noteTileCalc(c, n) {
+  var mine = [], seen = {};
+  (n.items || []).forEach(function (l) { var r = itemRow(l.name); if (r && r[11] && r[11].sqftPc && !seen[l.name]) { seen[l.name] = 1; mine.push(itemFromRow(r)); } });
+  openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">Adds to ' + esc(c.name) + ' · ' + esc(n.title) + '</div>' +
+    '<input id="tnQ" type="search" placeholder="Search tile: name, color, size" autocomplete="off" style="margin-top:8px">' +
+    (mine.length ? '<div class="sec-h" style="margin-top:8px"><h2>In this note</h2></div><div id="tnMine">' + mine.map(tileRowHtml).join('') + '</div>' : '') +
+    '<div class="sec-h" style="margin-top:8px"><h2 id="tnH">' + (mine.length ? 'Other tile' : 'Type to find a tile') + '</h2></div><div id="tnList"></div>');
+  var rows = {}; mine.forEach(function (x) { rows[x.name] = x; });
+  var tm = null, sq = 0;
+  $('tnQ').oninput = function () { clearTimeout(tm); var q = this.value.trim(), my = ++sq; tm = setTimeout(function () {
+    if (q.replace(/[^a-z0-9]/gi, '').length < 2) { $('tnList').innerHTML = ''; $('tnH').textContent = mine.length ? 'Other tile' : 'Type to find a tile'; return; }
+    $('tnList').innerHTML = '<div class="spinner"></div>';
+    api('search', { q: q, f: {} }).then(function (r) { if (my !== sq || !$('tnList')) return;
+      var ts = r.items.filter(function (x) { return x.tile && x.tile.sqftPc; }); ts.forEach(function (x) { rows[x.name] = x; });
+      $('tnH').textContent = ts.length ? ts.length + ' tile' + (ts.length === 1 ? '' : 's') : 'No tile matches';
+      $('tnList').innerHTML = ts.map(tileRowHtml).join(''); }).catch(function (er) { if ($('tnList')) $('tnList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; }); }, 250); };
+  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-tpick]'); if (!b) return; $('sheetBody').onclick = null; tileCalcFor(rows[b.dataset.tpick], { c: c, n: n }); };
+  if (!mine.length) $('tnQ').focus();
+}
+function tileRowHtml(x) { return '<button class="crow2" data-tpick="' + esc(x.name) + '"><b>' + esc(x.name) + '</b><span class="s">' + esc(x.desc.slice(0, 80)) + '</span>' +
+  '<span class="s">' + (x.tile.w ? (+x.tile.w).toFixed(2).replace(/\.00$/, '') + '" × ' + (+x.tile.h).toFixed(2).replace(/\.00$/, '') + '" · ' : '') + x.tile.sqftPc + ' sq ft/pc' + (x.price != null ? ' · ' + money(x.price) + '/pc' : '') + '</span></button>'; }
+/** Add one line straight into a given note (not necessarily the "Adding to" one). */
+function addToThisNote(c, n, line) {
+  toast('Added ' + line.name + ' → ' + n.title);
+  api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: line }).then(function (r) {
+    n.items = r.items; n.updated = r.note.updated; n.updated_by = r.note.updated_by;
+    if (isCurNote(c.id, n.id)) { curCust.count = r.items.length; saveCur(); }
+    if (custOpen === c) { if (noteOpenId === n.id && $('cdItems')) renderPicked(); else renderNoteCards(); } })
+    .catch(function (er) { toast('Not added: ' + er.message); });
 }
 var tcState = null;
 
