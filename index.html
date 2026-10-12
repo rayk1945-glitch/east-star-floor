@@ -900,7 +900,7 @@ function renderOverview() {
       '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
-      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
+      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
     '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
