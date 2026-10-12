@@ -21,7 +21,7 @@
     'Recent searches': '最近搜索', 'Recent': '最近', 'Clear': '清除', 'Did you mean': '你是不是要找', 'No match': '没有结果', 'Nothing found': '没有找到',
     'No exact match, showing close matches': '没有完全匹配，显示相近结果', 'No match with these filters': '这些筛选条件下没有结果',
     'Nothing here with these filters. Tap a chip again to clear it.': '这些筛选条件下没有结果。再点一次标签即可取消。',
-    'In stock': '有货', 'SF shelf': 'SF 货架', 'Fremont shelf': 'Fremont 货架', 'FRE shelf': 'FRE 货架',
+    'In stock': '有货', 'SF shelf': 'SF 货架', 'Fremont shelf': 'Fremont 货架', 'FRE shelf': 'FRE 货架', 'Stock by store': '各店库存',
     'On hand': '现货', 'On order': '已订购', 'Incoming': '在途', 'After ctnrs': '到柜后', 'retail': '零售价', 'per piece': '每片', 'Price': '价格',
     'Add to note': '加入笔记', 'Tile calculator': '瓷砖计算器', '▦ Tile calculator': '▦ 瓷砖计算器', 'discontinued': '已停产', 'partly received': '部分到货',
     'Adding to:': '添加到：', 'Adding to': '添加到', 'pick a project': '选择项目', 'change': '更换', '+ New project': '+ 新项目', 'New project with the next number': '用下一个编号新建项目',

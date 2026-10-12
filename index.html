@@ -102,6 +102,8 @@
   .shelf { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   .chip { font-size:12.5px; font-weight:600; border-radius:999px; padding:3px 10px; background:#eef0f3; color:#374151; }
   .chip.none { color:#8a93a0; font-weight:500; }
+  .locstock .chip.good { background:#e7f6ec; color:#14532d; } .locstock .chip.bad { background:#fdecec; color:#7f1d1d; }
+  .loclbl { font-size:12px; color:var(--muted); align-self:center; }
   .incoming { margin-top:8px; border-top:1px dashed var(--line); padding-top:8px; font-size:13px; }
   .incoming .row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; }
   .incoming .row span:last-child { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -424,8 +426,8 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<script src="search.js"></script>
-<script src="i18n.js?v=20261012c"></script>
+<script src="search.js?v=20261012d"></script>
+<script src="i18n.js?v=20261012d"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -645,7 +647,7 @@ function card(it) {
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
-    '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
+    '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + ((it.loc || []).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + it.loc.map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
 }

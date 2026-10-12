@@ -3,7 +3,7 @@
  * file runs in Apps Script, the local test server and the Node index builder (sync/build_index.js).
  *
  * Bundle (built by Red's sync step):
- *   items:    [name, description, price, onHand, onOrder, sfShelf, freShelf]
+ *   items:    [name, description, price, onHand, onOrder, sfShelf, freShelf, ..., photo(13), locStock(14)]
  *   incoming: [itemCode, qty, shipment, container, date, status]
  *   synonyms: {tokens:{}, phrases:{}}   (from synonyms.json)
  *   index:    prebuilt by buildIndex_() at sync time so a request does not have to tokenise 23k items
@@ -193,7 +193,7 @@ function itemOut_(r, inc, why) {
   var lines = inc[normCode_(r[0])] || [];
   var total = lines.reduce(function (a, l) { return a + (Number(l.qty) || 0); }, 0);
   return { name: r[0], desc: r[1], price: r[2], onHand: r[3], onOrder: r[4], sf: r[5], fre: r[6], incoming: lines, incomingTotal: total,
-           cat: r[7] || '', brand: r[8] || '', finishes: r[9] || [], size: r[10] || '', tile: r[11] || null, photo: r[13] || '', match: why || '' };
+           cat: r[7] || '', brand: r[8] || '', finishes: r[9] || [], size: r[10] || '', tile: r[11] || null, photo: r[13] || '', loc: r[14] || [], match: why || '' };
 }
 
 var INCOMING_INDEX_ = null, INCOMING_VER_ = null;
