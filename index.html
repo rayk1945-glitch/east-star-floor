@@ -425,7 +425,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js"></script>
-<script src="i18n.js?v=20261012b"></script>
+<script src="i18n.js?v=20261012c"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -1506,7 +1506,7 @@ function loadUsers() { api('adminUsers').then(function (us) { staffRows = us;
       (u.sessions && !u.online ? ' · signed in on ' + u.sessions + ' device' + (u.sessions === 1 ? '' : 's') + ', idle' : '') + (u.mustChangePin ? ' · temporary password' : '') + (u.passkeys ? ' · fingerprint / Face ID on ' + u.passkeys + ' device' + (u.passkeys === 1 ? '' : 's') : '') + '</div>' +
       sendToSel(u) +
       '<div class="actions">' + (locked ? '' : '<button data-sa="pause">' + (u.active ? 'Pause' : 'Resume') + '</button><button data-sa="pin">Reset password</button>') +
-      (canEdit ? '<button data-sa="ren">Rename</button>' : '') + (canEdit && u.passkeys ? '<button data-sa="pk">Remove saved devices</button>' : '') +
+      (session.role === 'admin' ? '<button data-sa="role">Change role</button>' : '') + (canEdit ? '<button data-sa="ren">Rename</button>' : '') + (canEdit && u.passkeys ? '<button data-sa="pk">Remove saved devices</button>' : '') +
       (locked ? '' : '<button class="danger" data-sa="del">Delete</button>') + '</div></div>'; }).join('') || '<div class="empty">No logins.</div>';
 }).catch(function (er) { msg($('stListMsg'), er.message); }); }
 $('stRefresh').onclick = loadUsers;
@@ -1533,6 +1533,13 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
       .then(function (r) { closeSheet(); msg($('stListMsg'), r.renamed ? 'Renamed ' + u.name + ' to ' + r.name + '. They sign in as ' + r.name + ' now.' : 'Name not changed.', true);
         if (u.me) { session.name = r.name; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); setHeader(session); } loadUsers(); })
       .catch(function (er) { msg($('rnMsg'), er.message); g.disabled = false; }); }; }
+  else if (k === 'role') { var RL = { admin: 'Full admin', account_admin: 'Account admin', staff: 'Staff', warehouse: 'Warehouse' };
+    openSheet('<h3>Change role for ' + esc(u.name) + '</h3><p class="hint">Full admin: everything, every account. Account admin: their own account and its staff. Staff: search, prices, projects. Warehouse: search and stock only, never prices. It takes effect on their next tap; they stay signed in.</p>' +
+      '<label class="f">Role</label><select id="rlSel">' + Object.keys(RL).map(function (r) { return '<option value="' + r + '"' + (r === u.role ? ' selected' : '') + '>' + RL[r] + '</option>'; }).join('') + '</select><button class="btn" id="rlGo">Change role</button><div id="rlMsg" class="msg hidden"></div>');
+    $('rlGo').onclick = function () { var r = $('rlSel').value, g = this; if (r === u.role) { closeSheet(); return; }
+      if (!confirm('Change ' + u.name + ' from ' + RL[u.role] + ' to ' + RL[r] + '?' + (r === 'admin' ? '\n\nA full admin can see every project, change webhooks and manage every login.' : '') + (u.me ? '\n\nThis is your own login. You lose full admin right away.' : ''))) return;
+      g.disabled = true; api('adminSetRole', { id: u.id, role: r }).then(function (x) { closeSheet(); msg($('stListMsg'), x.name + ' is now ' + RL[x.role] + '.', true);
+        if (x.me) { location.reload(); return; } loadUsers(); }).catch(function (er) { msg($('rlMsg'), er.message); g.disabled = false; }); }; }
   else if (k === 'pk') { if (!confirm('Remove fingerprint / Face ID for ' + u.name + ' on all ' + u.passkeys + ' saved device' + (u.passkeys === 1 ? '' : 's') + '?\n\nThey sign in with their password and can turn it on again.')) return; b.disabled = true;
     api('adminRemovePasskeys', { id: u.id }).then(function (r) { msg($('stListMsg'), 'Removed ' + r.removed + ' saved device' + (r.removed === 1 ? '' : 's') + ' for ' + r.name + '.', true); loadUsers(); })
       .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
