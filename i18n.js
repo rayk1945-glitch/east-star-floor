@@ -55,7 +55,7 @@
     'No prices, totals, stock or shelf locations.': '不含任何价格、总价、库存或货架位置。', 'No sign-in needed: anyone with the link can see it.': '无需登录：有链接的人都能看到。',
     'Make a new link? The old link stops working right away.': '生成新链接？旧链接会立即失效。', 'Stop the client link? Anyone who has it can no longer open this project.': '停用客户链接？有这个链接的人将无法再打开这个项目。',
     // tile calculator
-    'Area (sq ft)': '面积（平方英尺）', 'Waste %': '损耗 %', 'Pieces': '片数', 'Covers': '覆盖', 'Tile cost (retail)': '瓷砖费用（零售价）', 'Enter the area first': '请先输入面积', 'Add tile to note': '把瓷砖加入笔记',
+    'Area (sq ft)': '面积（平方英尺）', 'Waste %': '损耗 %', 'Pieces': '片数', 'Covers': '覆盖', 'Boxes (reference)': '箱数（参考）', 'Tile cost (retail)': '瓷砖费用（零售价）', 'Enter the area first': '请先输入面积', 'Add tile to note': '把瓷砖加入笔记',
     'Set this line': '设定这一行',
     'Showroom staff: stock, prices, calculators, projects. Ask admin for a login.': '展厅员工：库存、价格、计算器、项目。请向管理员索取登录。', 'Ask admin for a login.': '请向管理员索取登录。',
     'Send plan': '发送设计图', 'the bot': '机器人', 'East Star Building Supply': '劍鋒高級建材',
@@ -131,7 +131,7 @@
     [/^Voice notes \((\d+)\)/, '语音笔记（$1）'], [/^Recording /, '录音中 '], [/^Load more \((\d+) left\)/, '加载更多（还有 $1 个）'],
     [/^(\d+) matches?\b/, '$1 个结果'], [/^(\d+) close matches?\b/, '$1 个相近结果'], [/(\d+) requests?\b/g, '$1 个请求'], [/, showing newest (\d+)/, '，显示最新 $1 个'],
     [/\b(\d+) items?\b/g, '$1 件商品'], [/\b(\d+) photos?\b/g, '$1 张照片'], [/\b(\d+) notes?\b/g, '$1 个笔记'], [/\b(\d+) projects?\b/g, '$1 个项目'], [/\b(\d+) boxes\b/g, '$1 箱'],
-    [/\b(\d+) pcs\/box\b/g, '$1 片/箱'], [/\b(\d+) pcs\b/g, '$1 片'], [/ codes\)/g, ' 个代码）'], [/ cab codes/g, ' 个柜子代码'],
+    [/\b([\d.]+) box(?:es)? of (\d+) pcs\b/g, '$1 箱（每箱 $2 片）'], [/\b(\d+) pcs\/box\b/g, '$1 片/箱'], [/\b(\d[\d,]*) pc\b/g, '$1 片'], [/\b(\d+) pcs\b/g, '$1 片'], [/ codes\)/g, ' 个代码）'], [/ cab codes/g, ' 个柜子代码'],
     [/\b(\d+) boxes\b/g, '$1 箱'], [/ sq ft \(([\d.]+) \+ ([\d.]+)% waste\)/, ' 平方英尺（$1 + $2% 损耗）'], [/\bsq ft\b/g, '平方英尺'], [/\/box\b/g, '/箱'], [/\/pc\b/g, '/片'],
     [/^Line: (\d+) (boxes|pcs) · (.+) \(saved automatically\)$/, '这一行：$1 $2 · $3（已自动保存）'], [/\b(\d[\d,]*) pcs\b/g, '$1 片'],
     [/^Now (\d+) (boxes|pcs)/, '目前 $1 $2'], [/\. Sets the qty \(boxes\) and the sq ft note of this line\./, '。会设定这一行的数量（箱）和平方英尺备注。'], [/ · line in /, ' · 所在笔记 '],
