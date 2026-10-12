@@ -11,7 +11,8 @@
  * Matching: case/space/dash/#/slash/dot-insensitive ("2068w3040" == "2068-w3040" == "w3040 2068"),
  * token exact > prefix > substring, typo tolerance (edit distance 1 for 4-6 letters, 2 for 7+, plus
  * trigram similarity), synonyms. Ranking: words matched first, then score (name beats description,
- * exact > prefix > fuzzy), small boost for items in stock. Never empty when anything is close:
+ * exact > prefix > fuzzy), small boost for items in stock. EXACT FIRST: when any item contains every typed word, only
+ * those are listed; typo / close matches only when nothing is exact (fallback). Never empty when anything is close:
  * partial matches are returned as "closest", with "Did you mean" suggestions for corrected words.
  */
 
@@ -189,22 +190,23 @@ function searchBundle_(bundle, q, limit, f) {
   var items = bundle.items || [], idx = getIndex_(bundle), inc = incomingIndex_(bundle);
   var terms = parseQuery_(q, bundle.synonyms).slice(0, 8);
   var qNorm = normCode_(q), N = items.length, T = terms.length;
-  var tokCache = {}, best = {};                        // best[token] = best vocab correction for Did you mean
+  var tokCache = {}, dirCache = {}, best = {};         // best[token] = best vocab correction for Did you mean
 
   /** token -> Float32Array of per-item scores (name 1.0, description 0.55) */
   function tokenScores(t) {
     if (tokCache[t]) return tokCache[t];
-    var sc = new Float32Array(N), top = null, i, k;
+    var sc = new Float32Array(N), dir = new Uint8Array(N), top = null, i, k;   // dir[i] = the word really appears (no typo fix)
+    dirCache[t] = dir;
     if (t.length === 1) {                                // single letters: exact name tokens only
-      var e = idx.nv.indexOf(t); if (e >= 0) idx.np[e].forEach(function (id) { sc[id] = 100; });
+      var e = idx.nv.indexOf(t); if (e >= 0) idx.np[e].forEach(function (id) { sc[id] = 100; dir[id] = 1; });
       return (tokCache[t] = sc);
     }
     var nm = vocabMatches_(t, idx.nv, false), dm = vocabMatches_(t, idx.dv, false);
     var hasDirect = nm.concat(dm).some(function (m) { return m.kind === 'exact' || m.kind === 'prefix'; });
     if (!hasDirect) { nm = vocabMatches_(t, idx.nv, true); dm = vocabMatches_(t, idx.dv, true); }
-    for (i = 0; i < nm.length; i++) { var s = nm[i].s, ps = idx.np[nm[i].i]; for (k = 0; k < ps.length; k++) if (s > sc[ps[k]]) sc[ps[k]] = s; }
-    for (i = 0; i < dm.length; i++) { var s2 = dm[i].s * 0.55, ps2 = idx.dp[dm[i].i]; for (k = 0; k < ps2.length; k++) if (s2 > sc[ps2[k]]) sc[ps2[k]] = s2; }
-    if (t.length >= 3) for (i = 0; i < N; i++) if (sc[i] < 70 && idx.nn[i].indexOf(t) >= 0) sc[i] = 70;   // across separators: REFPN, 2068W3040
+    for (i = 0; i < nm.length; i++) { var s = nm[i].s, ps = idx.np[nm[i].i], dn = nm[i].kind !== 'fuzzy'; for (k = 0; k < ps.length; k++) { if (s > sc[ps[k]]) sc[ps[k]] = s; if (dn) dir[ps[k]] = 1; } }
+    for (i = 0; i < dm.length; i++) { var s2 = dm[i].s * 0.55, ps2 = idx.dp[dm[i].i], dd = dm[i].kind !== 'fuzzy'; for (k = 0; k < ps2.length; k++) { if (s2 > sc[ps2[k]]) sc[ps2[k]] = s2; if (dd) dir[ps2[k]] = 1; } }
+    if (t.length >= 3) for (i = 0; i < N; i++) if (idx.nn[i].indexOf(t) >= 0) { dir[i] = 1; if (sc[i] < 70) sc[i] = 70; }   // across separators: REFPN, 2068W3040
     // best correction (for Did you mean) when the token has no exact/prefix hit anywhere
     var direct = nm.concat(dm).some(function (m) { return m.kind === 'exact' || m.kind === 'prefix'; });
     if (!direct) {
@@ -219,18 +221,23 @@ function searchBundle_(bundle, q, limit, f) {
     return (tokCache[t] = sc);
   }
 
-  var total = new Float32Array(N), cover = new Uint8Array(N), nameCover = new Uint8Array(N);
+  var total = new Float32Array(N), cover = new Uint8Array(N), nameCover = new Uint8Array(N), strictCover = new Uint8Array(N);
   terms.forEach(function (term) {
-    var termBest = new Float32Array(N);
+    var termBest = new Float32Array(N), termDir = new Uint8Array(N);
     term.alts.forEach(function (alt, ai) {
-      var arrs = alt.map(tokenScores);
+      var arrs = alt.map(tokenScores), dirs = alt.map(function (t) { return dirCache[t]; });
       for (var i = 0; i < N; i++) {
         var mn = 1e9; for (var a = 0; a < arrs.length; a++) { var v = arrs[a][i]; if (v < mn) mn = v; if (!v) break; }
         if (mn > 0 && mn < 1e9) { var s = ai === 0 ? mn : mn * 0.93; if (s > termBest[i]) termBest[i] = s; }
+        if (!termDir[i]) { var all = true; for (a = 0; a < dirs.length && all; a++) all = !!dirs[a][i]; if (all) termDir[i] = 1; }
       }
     });
-    for (var i = 0; i < N; i++) if (termBest[i] > 0) { total[i] += termBest[i]; cover[i]++; if (termBest[i] >= 60) nameCover[i]++; }
+    for (var i = 0; i < N; i++) { if (termBest[i] > 0) { total[i] += termBest[i]; cover[i]++; if (termBest[i] >= 60) nameCover[i]++; } if (termDir[i]) strictCover[i]++; }
   });
+  // Exact first: an item is an EXACT match when every typed word (or its synonym) appears in its code, name or description
+  // as typed (whole word, start of a word, or inside the code). If there is at least one, ONLY exact matches are listed;
+  // typo / close matches are the fallback when nothing is exact (strict: 0, fallback: true).
+  var strictN = 0; for (var si = 0; si < N; si++) if (strictCover[si] === T) strictN++;
 
   var catWant = {}, sizeNums = [];
   tokenize_(q).forEach(function (w) { var c = CATEGORY_WORDS_[w]; if (c) catWant[c] = 1; if (/^\d{2}$/.test(w)) sizeNums.push(w); });
@@ -238,7 +245,7 @@ function searchBundle_(bundle, q, limit, f) {
   for (var i = 0; i < N; i++) if (cover[i] > maxCover) maxCover = cover[i];
   var minCover = Math.max(1, T >= 3 ? maxCover - 1 : maxCover);
   for (i = 0; i < N; i++) {
-    if (!cover[i] || cover[i] < minCover) continue;
+    if (strictN ? strictCover[i] !== T : (!cover[i] || cover[i] < minCover)) continue;
     var nn = idx.nn[i], s = total[i] / T;
     if (nn === qNorm) s += 200;
     else if (qNorm.length >= 3 && nn.lastIndexOf(qNorm, 0) === 0) s += 60;
@@ -256,7 +263,7 @@ function searchBundle_(bundle, q, limit, f) {
   cands.sort(function (a, b) { return b[0] - a[0] || b[1] - a[1] || a[2] - b[2]; });
   var exactCount = cands.filter(function (c) { return c[0] === T; }).length;
   // ---- filters + facets (over the whole match set, not just the first page)
-  var set = exactCount ? cands.filter(function (c) { return c[0] === T; }) : cands;
+  var set = cands;                                     // exact set, or (fallback) every close match that is listed
   var store = f.store === 'SF' ? 5 : f.store === 'FRE' ? 6 : 0, sizeOn = f.cat === 'Tile' || f.cat === 'Flooring';
   var pass = function (r, skip) {
     return (skip === 'cat' || !f.cat || r[7] === f.cat) && (skip === 'stock' || !f.inStock || Number(r[3]) > 0) &&
@@ -281,8 +288,8 @@ function searchBundle_(bundle, q, limit, f) {
   // Did you mean: replace each fuzzy-only token with its best correction.
   var suggestions = [], words = tokenize_(q);
   var fixed = words.map(function (w) { return best[w] || w; });
-  if (fixed.join(' ') !== words.join(' ')) suggestions.push(fixed.join(' ').toLowerCase());
-  if (!exactCount && T > 1) {                          // also offer dropping the weakest word
+  if (!strictN && fixed.join(' ') !== words.join(' ')) suggestions.push(fixed.join(' ').toLowerCase());
+  if (!strictN && !exactCount && T > 1) {                          // also offer dropping the weakest word
     terms.forEach(function (t, j) { var rest = terms.filter(function (x, k) { return k !== j; }).map(function (x) { return x.label; }).join(' ').toLowerCase(); if (suggestions.indexOf(rest) < 0 && suggestions.length < 3) suggestions.push(rest); });
   }
 
@@ -296,7 +303,7 @@ function searchBundle_(bundle, q, limit, f) {
   var listExact = filtered ? list.filter(function (c) { return c[0] === T; }).length : exactCount;
   return { q: q, total: cands.length, exact: exactCount, shown: out.length, items: out.concat(extra.slice(0, 5)),
            facets: facets, filtered: !!filtered, listTotal: list.length, listExact: listExact, offset: offset, more: offset + out.length < list.length,
-           closest: exactCount === 0 && out.length > 0, suggestions: suggestions.slice(0, 3),
+           closest: exactCount === 0 && out.length > 0, strict: strictN, fallback: !strictN && cands.length > 0, suggestions: suggestions.slice(0, 3),
            terms: terms.map(function (t) { return t.label; }), dataVersion: bundle.version, dataBuilt: bundle.built };
 }
 

@@ -143,6 +143,13 @@
   .ncard .t { display:flex; align-items:center; gap:6px; } .ncard .t b { flex:1; font-size:16px; } .ncard .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
   .ncard .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ncard .cur, .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; }
+  .ngroup .nghead { display:block; width:100%; text-align:left; background:none; border:0; padding:0; font:inherit; color:inherit; cursor:pointer; }
+  .ngroup .nghead .t { display:flex; align-items:center; gap:6px; } .ngroup .nghead .t b { flex:1; font-size:17px; }
+  .ngroup .nghead .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; } .ngroup .nghead .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ngroup .chev { color:#8a93a0; font-size:16px; } .ngroup .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; white-space:nowrap; }
+  .ngroup.open { border:2px solid #1f2937; } .ngtop { display:flex; align-items:center; gap:8px; } .ngtop .ntitle { flex:1; min-width:0; }
+  .ngclose { border:0; background:#e6e9ee; border-radius:999px; width:34px; height:34px; font-size:15px; color:#475569; cursor:pointer; flex-shrink:0; }
+  .addnote { display:block; width:100%; margin:0 0 12px; min-height:50px; border:2px dashed #94a3b8; border-radius:14px; background:#fff; font:inherit; font-size:16px; font-weight:700; color:#1f2937; cursor:pointer; }
   .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
   .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
@@ -518,11 +525,12 @@ function searchPage(q, my, offset) {
     sLast = r;
     $('dym').innerHTML = r.suggestions && r.suggestions.length ? '<div class="dym">Did you mean ' + r.suggestions.map(function (s) { return '<button onclick="runSearch(\'' + esc(s).replace(/'/g, '') + '\', true)">' + esc(s) + '</button>'; }).join('') + '</div>' : '';
     renderSearchFilters(r);
-    var n = r.filtered ? r.listExact || r.listTotal : r.exact, m = $('meta'); m.classList.remove('hidden');
-    m.innerHTML = '<span>' + (n ? n.toLocaleString() + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>';
+    var close = r.fallback;                              // nothing exact: these are typo / close matches
+    var n = close ? (r.filtered ? r.listTotal : r.total) : r.filtered ? r.listExact || r.listTotal : r.exact, m = $('meta'); m.classList.remove('hidden');
+    m.innerHTML = '<span>' + (n ? n.toLocaleString() + (close ? ' close' : '') + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>';
     var html = r.items.map(card).join('') + (r.more ? '<button class="btn" id="sMore" style="background:#fff;color:#111;border:1px solid var(--line-strong)">Load more (' + (r.listTotal - r.offset - r.shown).toLocaleString() + ' left)</button>' : '');
     if (offset) { var mb = $('sMore'); if (mb) mb.remove(); $('results').insertAdjacentHTML('beforeend', html); }
-    else $('results').innerHTML = (r.closest && !r.filtered ? '<div class="closest">Nothing matches every word. Closest items:</div>' : '') +
+    else $('results').innerHTML = (close && r.items.length ? '<div class="closest" id="noExact">No exact match, showing close matches</div>' : '') +
       (r.items.length ? html : '<div class="card empty">' + (r.filtered ? 'Nothing here with these filters. Tap a chip again to clear it.' : 'Nothing close to “' + esc(r.q) + '”. Try fewer words.') + '</div>');
     if ($('sMore')) $('sMore').onclick = function () { this.disabled = true; this.textContent = 'Loading…'; searchPage(q, my, r.offset + r.shown); };
   }).catch(function (er) { if (my === seq) $('results').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
@@ -644,7 +652,7 @@ function addToNote(lines) {
   var c = curCust; toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
   lines.reduce(function (pr, l) { return pr.then(function () { return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: l }); }); }, Promise.resolve())
     .then(function (r) { if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
-      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) renderNoteCards(); } })
+      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); } } })
     .catch(function (er) { toast('Not added: ' + er.message); if (/customer not found|note is gone/i.test(er.message)) setCur(null); });
 }
 function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' }); }
@@ -672,20 +680,26 @@ function openCust(id, pre, noteId) {
   if (!$('p-cust').classList.contains('on')) go('cust');
   $('cuList').classList.add('hidden'); var d = $('cuDetail'); d.classList.remove('hidden'); window.scrollTo(0, 0);
   if (!pre || !pre.notes) infoOpen = false;
-  noteOpenId = noteId || null;
-  if (pre && pre.notes) { custOpen = pre; renderCustDetail(); return; }
+  noteOpenId = noteId || (curCust && curCust.id === id ? curCust.noteId : null);
+  if (pre && pre.notes) { custOpen = pre; if (!noteOpenId || !curNote()) noteOpenId = pre.notes.length ? pre.notes[0].id : null; renderCustDetail(); return; }
   custOpen = { id: id };
   d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList;
   api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return; custOpen = c;
-    if (noteOpenId && !curNote()) noteOpenId = null; renderCustDetail();
+    if (!noteOpenId || !curNote()) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
     if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== c.name) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = c.name; saveCur(); } } })
     .catch(function (er) { d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
       if (curCust && curCust.id === id && /not found/i.test(er.message)) setCur(null); });
 }
-function renderCustDetail() { if (noteOpenId && curNote()) renderNote(); else { noteOpenId = null; renderOverview(); } }
+function renderCustDetail() { renderOverview(); }
 function infoLine(c) { return [c.name, c.phone, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
+/** Keep what's typed in the open note (title/text) in the model before any re-render. */
+function keepTyped() { var n = curNote(); if (n && $('nTitle') && noteDirty) { n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; } }
+/** Customer page: slim info line, then the customer's notes stacked as groups (the open one expanded: title, text, items,
+ *  totals, photos, quote/plan; the others collapsed to their header), "+ Add another note" right under them, voice notes. */
 function renderOverview() {
+  keepTyped();
   var c = custOpen, canShare = c.mine || session.role === 'admin';
+  if (noteOpenId && !curNote()) noteOpenId = null;
   $('cuDetail').innerHTML = '<div class="card"><div class="crumb" style="margin:0"><button class="back" id="cdBack">‹</button>' +
       '<button class="infoline' + (infoOpen ? ' open' : '') + '" id="cdInfoT" aria-expanded="' + infoOpen + '"><span>' + infoLine(c) + '</span><span class="chev">' + (infoOpen ? '▴' : '▾') + '</span></button></div>' +
       '<div id="cdInfo"' + (infoOpen ? '' : ' class="hidden"') + '>' +
@@ -695,62 +709,68 @@ function renderOverview() {
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       (canShare ? '<label style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:14px;font-weight:600"><input type="checkbox" id="cdShared" style="width:auto;min-height:0"' + (c.shared ? ' checked' : '') + '> Share with my team</label>' : '') +
       '<button class="btn" id="cdInfoSave">Save</button><div class="saved" id="cdSaved"></div></div></div>' +
-    '<div class="card"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2>Notes</h2><span class="hint" style="margin:0">' + (c.notes || []).length + '</span></div>' +
-      '<div id="cdNotes"></div><button class="newc" id="cdNewNote">+ New note</button></div>' +
+    '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add another note</button>' +
     '<div class="card"><div class="sec-h"><h2>Voice notes</h2></div><div id="cdVoice"></div>' +
       '<div style="margin-top:10px"><button class="recbtn" id="cdRec">● Record</button> <span id="cdRecT" class="hint"></span></div><div id="cdLive" class="live hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this customer</button></div>' : '');
-  $('cdBack').onclick = function () { (infoDirty ? saveInfo() : Promise.resolve()).then(loadCustList); };
+  $('cdBack').onclick = function () { Promise.all([infoDirty ? saveInfo() : null, flushNote()]).then(loadCustList); };
   $('cdInfoT').onclick = function () { infoOpen = !infoOpen; if (!infoOpen && infoDirty) { saveInfo(); return; } renderOverview(); };
   ['cdName', 'cdPhone', 'cdCity'].forEach(function (k) { $(k).addEventListener('input', function () { infoDirty = true; $('cdSaved').textContent = ''; }); });
   if ($('cdShared')) $('cdShared').onchange = function () { infoDirty = true; };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); infoDirty = true; c.tax = b.dataset.t; };
   $('cdInfoSave').onclick = function () { saveInfo(); };
-  $('cdNewNote').onclick = function () { var b = this; b.disabled = true; api('noteSave', { id: c.id }).then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderNote(); toast('New note: ' + r.note.title); })
+  $('cdNewNote').onclick = function () { var b = this; b.disabled = true; flushNote().then(function () { return api('noteSave', { id: c.id }); })
+    .then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderOverview(); scrollToNote(r.note.id); toast('New note: ' + r.note.title + ' (adding here)'); })
     .catch(function (er) { toast(er.message); b.disabled = false; }); };
   $('cdRec').onclick = toggleRec;
   if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + c.name + ' and all their notes, photos and voice notes?')) return;
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + c.name); loadCustList(); }).catch(function (er) { toast(er.message); }); };
   renderNoteCards(); renderVoice();
 }
-function renderNoteCards() { var c = custOpen, ns = c.notes || [];
-  $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
-    return '<button class="ncard" data-nopen="' + esc(n.id) + '"><div class="t"><b>' + esc(n.title) + '</b>' + (isCurNote(c.id, n.id) ? '<span class="cur">adding here</span>' : '') + '<span class="chev">›</span></div>' +
-      '<span class="s">' + cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</span>' +
-      (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button>'; }).join('') : '<div class="empty" style="padding:14px">No notes yet.</div>';
+function scrollToNote(id) { var g = document.querySelector('[data-ng="' + id + '"]'); if (g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - document.querySelector('#app header').offsetHeight - 8); }
+function noteSummary(n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
+  return cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : ''); }
+/** All note groups. Only the open one has the editing ids (nTitle, cdItems, nPhotos, cdQuote...). */
+function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNotes')) return;
+  $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
+    if (n.id !== noteOpenId) return '<div class="card ngroup" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b>' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div>' +
+      '<span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button></div>';
+    return '<div class="card ngroup open" data-ng="' + esc(n.id) + '">' +
+      '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill +
+        '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' +
+      (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
+      '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
+      '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
+      '<div id="cdItems"></div><div id="cdTotals"></div>' +
+      '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
+      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
+      '<button class="btn" id="cdQuote">Quote this note</button><button class="btn sec" id="cdPlan">Send plan to ' + esc(session.bot || 'Red') + '</button><div id="cdMsg" class="msg hidden"></div>' +
+      '<div style="text-align:center;margin-top:10px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div></div>';
+  }).join('') : '<div class="card"><div class="empty" style="padding:14px">No notes yet.</div></div>';
+  var n = curNote(); if (!n) return;
+  if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + c.name + ' · ' + n.title); };
+  $('nTitle').addEventListener('input', queueNote); $('nText').addEventListener('input', queueNote);
+  $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote);
+  $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
+  $('cdQuote').onclick = quoteCust; $('cdPlan').onclick = planFromCust;
+  $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
+    api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
+  renderPicked(); renderNotePhotos();
 }
-document.addEventListener('click', function (e) { var b = e.target.closest('[data-nopen]'); if (!b || !custOpen) return; noteOpenId = b.dataset.nopen; renderNote(); window.scrollTo(0, 0); });
+/** Tap a collapsed header: open that group (the open one collapses); tap ▴ to collapse. */
+document.addEventListener('click', function (e) { if (!custOpen || !e.target.closest('#cdNotes')) return;
+  var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]'); if (!b && !x) return;
+  var id = b ? b.dataset.nopen : null; flushNote().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
+/** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
+function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
 var infoDirty = false;
 function saveInfo() { var c = custOpen, nm = $('cdName').value.trim(); if (!nm) { $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
   var body = { id: c.id, name: nm, phone: $('cdPhone').value, city: $('cdCity').value, tax: c.tax }; if ($('cdShared')) body.shared = $('cdShared').checked;
   $('cdSaved').textContent = 'Saving…'; $('cdInfoSave').disabled = true;
   return api('customerSave', { customer: body }).then(function (r) { infoDirty = false; ['name', 'phone', 'city', 'tax', 'shared'].forEach(function (k) { c[k] = r[k]; });
     if (curCust && curCust.id === r.id && curCust.name !== r.name) { curCust.name = r.name; saveCur(); }
-    infoOpen = false; if (custOpen === c && !noteOpenId) renderOverview(); toast('Saved'); })
+    infoOpen = false; if (custOpen === c) renderOverview(); toast('Saved'); })
     .catch(function (er) { if ($('cdSaved')) { $('cdSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; $('cdInfoSave').disabled = false; } }); }
-// ---- one note (one package): title, text, items, photos at the bottom, its own quote / plan
-function renderNote() {
-  var c = custOpen, n = curNote(), isCur = isCurNote(c.id, n.id);
-  $('cuDetail').innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--muted);font-size:14px">' + esc(c.name) + ' · ' + esc(c.tax === 'Fremont' ? 'Fremont' : 'SF') + ' tax</span>' +
-      (isCur ? '<span class="pill-ok">adding here</span>' : '<button class="link" id="cdUse">Add items here</button>') + '</div>' +
-      '<input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' +
-      '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div></div>' +
-    '<div class="card"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
-      '<div id="cdItems"></div><div id="cdTotals"></div>' +
-      '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
-      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
-      '<button class="btn" id="cdQuote">Quote this note</button><button class="btn sec" id="cdPlan">Send plan to ' + esc(session.bot || 'Red') + '</button><div id="cdMsg" class="msg hidden"></div></div>' +
-    '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div>';
-  $('cdBack').onclick = function () { flushNote().then(function () { noteOpenId = null; if (custOpen === c) { renderOverview(); window.scrollTo(0, 0); } }); };
-  if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNote(); toast('Adding to ' + c.name + ' · ' + n.title); };
-  $('nTitle').addEventListener('input', queueNote); $('nText').addEventListener('input', queueNote);
-  $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote);
-  $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
-  $('cdQuote').onclick = quoteCust; $('cdPlan').onclick = planFromCust;
-  $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
-    api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderOverview(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
-  renderPicked(); renderNotePhotos();
-}
 var noteT = null, noteDirty = false;
 function queueNote() { noteDirty = true; $('nSaved').textContent = 'Editing…'; clearTimeout(noteT); noteT = setTimeout(flushNote, 900); }
 function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
@@ -760,7 +780,7 @@ function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty ||
     if (isCurNote(c.id, n.id) && curCust.noteTitle !== n.title) { curCust.noteTitle = n.title; saveCur(); } })
     .catch(function (er) { noteDirty = true; if ($('nSaved')) $('nSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; }); }
 function renderPicked() {
-  var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) renderNoteCards(); return; }
+  var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) { keepTyped(); renderNoteCards(); } return; }
   var it = n.items || [];
   $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
   $('cdItems').innerHTML = it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
