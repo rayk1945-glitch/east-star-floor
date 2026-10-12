@@ -21,7 +21,36 @@ var SEARCH_LIMIT = 30;
 var CATEGORY_WORDS_ = { FAUCET: 'Faucets', FAUCETS: 'Faucets', TAP: 'Faucets', SINK: 'Sinks', SINKS: 'Sinks', TOILET: 'Toilets', TOILETS: 'Toilets',
   HOOD: 'Range hoods', HOODS: 'Range hoods', QUARTZ: 'Countertops', COUNTERTOP: 'Countertops', GRANITE: 'Countertops', TILE: 'Tile', TILES: 'Tile',
   VANITY: 'Vanities & mirrors', MIRROR: 'Vanities & mirrors', SHOWER: 'Shower', APPLIANCE: 'Appliances', OVEN: 'Appliances', COOKTOP: 'Appliances',
-  GROUT: 'Grout & setting', THINSET: 'Grout & setting', FLOORING: 'Flooring', CABINET: 'Cabinets' };
+  GROUT: 'Grout & setting', THINSET: 'Grout & setting', FLOORING: 'Flooring', CABINET: 'Cabinets',
+  TAPS: 'Faucets', RANGEHOOD: 'Range hoods', RANGEHOODS: 'Range hoods', VANITIES: 'Vanities & mirrors', MIRRORS: 'Vanities & mirrors',
+  SHOWERS: 'Shower', APPLIANCES: 'Appliances', COUNTERTOPS: 'Countertops', CABINETS: 'Cabinets' };
+/** Words that only narrow a type ("range hood", "vent hood", "kitchen sink"): a query made of these + type words is a TYPE search. */
+var TYPE_FILLER_ = { RANGE: 1, VENT: 1, EXHAUST: 1, KITCHEN: 1, BATH: 1, BATHROOM: 1, ALL: 1, KITCHENS: 1 };
+/** Chinese type words -> English, so 抽油烟机 = range hood (the index is A-Z/0-9 only). Longest first. */
+var CJK_TYPE_WORDS_ = [['抽油烟机', ' range hood '], ['油烟机', ' range hood '], ['烟机', ' range hood '], ['水龙头', ' faucet '], ['龙头', ' faucet '],
+  ['水槽', ' sink '], ['洗菜盆', ' sink '], ['马桶', ' toilet '], ['坐便器', ' toilet '], ['浴室柜', ' vanity '], ['瓷砖', ' tile '], ['地砖', ' tile '], ['墙砖', ' tile '],
+  ['花洒', ' shower '], ['淋浴', ' shower '], ['橱柜', ' cabinet '], ['石英石', ' quartz '], ['台面', ' countertop ']];
+var CJK_RE_ = /[\u3400-\u9fff\uf900-\ufaff]+/g;
+var ZH_CACHE_ = { ver: null, list: null, hay: null };
+/** Chinese type names -> English: built-in list + bundle.zhTypes {中文: 'english type'} (from categories.json "zh" and
+ *  type-names-zh.json, folded in by build_data.py). Longest first, so 抽油烟机 wins over 烟机. */
+function zhList_(bundle) {
+  if (ZH_CACHE_.ver === bundle.version && ZH_CACHE_.list) return ZH_CACHE_.list;
+  var m = {}, k, i; for (i = 0; i < CJK_TYPE_WORDS_.length; i++) m[CJK_TYPE_WORDS_[i][0]] = CJK_TYPE_WORDS_[i][1];
+  for (k in (bundle.zhTypes || {})) if (CJK_RE_.test(k) && (CJK_RE_.lastIndex = 0, true)) m[k] = ' ' + bundle.zhTypes[k] + ' ';
+  CJK_RE_.lastIndex = 0;
+  var list = Object.keys(m).sort(function (a, b) { return b.length - a.length; }).map(function (z) { return [z, m[z]]; });
+  ZH_CACHE_ = { ver: bundle.version, list: list, hay: ZH_CACHE_.ver === bundle.version ? ZH_CACHE_.hay : null };
+  return list;
+}
+function cjkTypes_(q, bundle) { var l = bundle ? zhList_(bundle) : CJK_TYPE_WORDS_; for (var i = 0; i < l.length; i++) q = q.split(l[i][0]).join(l[i][1]); return q; }
+/** Per item: the Chinese text of its name + description + tags (Chinese has no spaces, so it is matched as a substring). */
+function cjkHay_(bundle) {
+  zhList_(bundle); if (ZH_CACHE_.hay) return ZH_CACHE_.hay;
+  var items = bundle.items || [], hay = new Array(items.length);
+  for (var i = 0; i < items.length; i++) { var t = items[i][0] + ' ' + (items[i][1] || '') + ' ' + (items[i][12] || ''); hay[i] = (t.match(CJK_RE_) || []).join(' '); }
+  return (ZH_CACHE_.hay = hay);
+}
 var ACCESSORY_RE_ = /\bSEAT\b|\bKIT\b|CONNECTION|REPAIR|REPLACEMENT|\bPART\b|\bGRID\b|STRAINER|BASKET|CARTRIDGE|ADAPTER|EXTENSION|SPLASH|BACKSPLASH|-BS\b|SHELF|DUCT|FILTER|\bCOVER\b|SOAP DISPENSER|BRACKET|HOSE|FLUSH VALVE|VACUUM BREAKER|WASHLET CONNECTION|TOILET SEAT/i;
 var DEFAULT_SYNONYMS_ = { tokens: { WB: ['WBC'], REP: ['REFPN', 'REFPN1'] }, phrases: {} };
 
@@ -183,12 +212,13 @@ function incomingIndex_(bundle) {
  */
 function searchBundle_(bundle, q, limit, f) {
   f = f || {};
-  q = String(q || '').replace(/\s+/g, ' ').trim();
-  if (normCode_(q).length < 2) throw new Error('Type at least 2 letters or numbers.');
+  q = cjkTypes_(String(q || ''), bundle).replace(/\s+/g, ' ').trim();
+  var cjk = (q.match(CJK_RE_) || []).filter(function (w, k, a) { return a.indexOf(w) === k; }).slice(0, 4);   // Chinese left after type words
+  if (normCode_(q).length < 2 && !cjk.some(function (w) { return w.length >= 2; })) throw new Error('Type at least 2 letters or numbers.');
   if (q.length > 100) q = q.slice(0, 100);
   limit = Math.min(Number(limit) || SEARCH_LIMIT, 100);
   var items = bundle.items || [], idx = getIndex_(bundle), inc = incomingIndex_(bundle);
-  var terms = parseQuery_(q, bundle.synonyms).slice(0, 8);
+  var terms = parseQuery_(q, bundle.synonyms).slice(0, 8).concat(cjk.map(function (w) { return { label: w, alts: [], cjk: w }; }));
   var qNorm = normCode_(q), N = items.length, T = terms.length;
   var tokCache = {}, dirCache = {}, best = {};         // best[token] = best vocab correction for Did you mean
 
@@ -224,6 +254,7 @@ function searchBundle_(bundle, q, limit, f) {
   var total = new Float32Array(N), cover = new Uint8Array(N), nameCover = new Uint8Array(N), strictCover = new Uint8Array(N);
   terms.forEach(function (term) {
     var termBest = new Float32Array(N), termDir = new Uint8Array(N);
+    if (term.cjk) { var hay = cjkHay_(bundle); for (var h = 0; h < N; h++) if (hay[h] && hay[h].indexOf(term.cjk) >= 0) { termBest[h] = 55; termDir[h] = 1; } }
     term.alts.forEach(function (alt, ai) {
       var arrs = alt.map(tokenScores), dirs = alt.map(function (t) { return dirCache[t]; });
       for (var i = 0; i < N; i++) {
@@ -239,8 +270,11 @@ function searchBundle_(bundle, q, limit, f) {
   // typo / close matches are the fallback when nothing is exact (strict: 0, fallback: true).
   var strictN = 0; for (var si = 0; si < N; si++) if (strictCover[si] === T) strictN++;
 
-  var catWant = {}, sizeNums = [];
-  tokenize_(q).forEach(function (w) { var c = CATEGORY_WORDS_[w]; if (c) catWant[c] = 1; if (/^\d{2}$/.test(w)) sizeNums.push(w); });
+  var catWant = {}, sizeNums = [], qw = tokenize_(q), nType = 0;
+  qw.forEach(function (w) { var c = CATEGORY_WORDS_[w]; if (c) { catWant[c] = 1; nType++; } if (/^\d{2}$/.test(w)) sizeNums.push(w); });
+  // TYPE search ("hood", "range hood", "sinks"): every word is a type word or a filler -> items OF that type come first
+  // (matched by their category tag even when code/description lack the word), then other items that merely mention it.
+  var typeOnly = nType > 0 && qw.every(function (w) { return CATEGORY_WORDS_[w] || TYPE_FILLER_[w]; });
   var cands = [], maxCover = 0;
   for (var i = 0; i < N; i++) if (cover[i] > maxCover) maxCover = cover[i];
   var minCover = Math.max(1, T >= 3 ? maxCover - 1 : maxCover);
@@ -253,7 +287,7 @@ function searchBundle_(bundle, q, limit, f) {
     if (nameCover[i] === T) s += 15;
     var oh = Number(items[i][3]); if (oh > 0) s += 12;
     if (catWant[items[i][7]]) {
-      s += 30;
+      s += typeOnly ? 400 : 30;
       if (!ACCESSORY_RE_.test(items[i][1])) s += 10;                 // the main product, not its seat / grid / kit
       var pr = Number(items[i][2]); if (pr > 0) s += Math.min(8, Math.log(pr) / Math.LN10 * 3);
     }

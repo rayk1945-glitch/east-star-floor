@@ -143,6 +143,11 @@
   .ncard .t { display:flex; align-items:center; gap:6px; } .ncard .t b { flex:1; font-size:16px; } .ncard .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
   .ncard .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ncard .cur, .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; }
+  .cbar .cbnew { margin-left:auto; border:1px solid var(--line-strong) !important; background:#fff !important; border-radius:999px; padding:4px 10px !important; font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; }
+  .cbar .cnt + .cbnew { margin-left:6px; }
+  .savest { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:55; border-radius:999px; padding:7px 14px; font-size:13.5px; font-weight:700; border:0; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  .savest.saving { background:#eef2f7; color:#334155; } .savest.ok { background:var(--ok-bg); color:var(--ok-fg); } .savest.bad { background:#fde8e6; color:#8a1c12; cursor:pointer; }
+  .pline .ltc { display:block; margin:6px 0 0 2px; font-size:13.5px; font-weight:600; color:#1e3a6e; text-decoration:underline; background:none; border:0; padding:2px 0; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
@@ -268,7 +273,7 @@
       <div id="cuList">
         <div class="card"><div class="sec-h"><h2>Customers</h2><button class="link" id="cuRefresh">Refresh</button></div>
           <div class="searchbar" style="position:relative;top:auto;padding:0;margin:6px 0 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="top:15px!important"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input id="cuQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Name, phone or city"></div>
+            <input id="cuQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Name, phone, city or #number"></div>
           <button class="newc" id="cuNew">+ New customer</button></div>
         <div class="card"><div id="cuMeta" class="hint" style="margin:0 0 2px"></div><div id="cuRows"><div class="spinner"></div></div></div>
       </div>
@@ -595,34 +600,37 @@ var curCust = null, custOpen = null, noteOpenId = null, pickThen = null, fileCac
 function curKey() { return 'esRedCur:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
 function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) || 'null'); } catch (e) { curCust = null; } if (curCust && !curCust.noteId) curCust = null; renderCustBar(); }
 /** Current customer + note: {id, name, noteId, noteTitle, count (items in that note)}. */
-function setCur(c, n) { curCust = c && n ? { id: c.id, name: c.name, noteId: n.id, noteTitle: n.title, count: n.count != null ? n.count : (n.items || []).length } : null;
+function custLabel(c) { return c.label || c.name || (c.num ? '#' + c.num : ''); }
+function setCur(c, n) { curCust = c && n ? { id: c.id, name: custLabel(c), noteId: n.id, noteTitle: n.title, count: n.count != null ? n.count : (n.items || []).length } : null;
   if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); else localStorage.removeItem(curKey()); renderCustBar(); }
 function saveCur() { if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); renderCustBar(); }
 function renderCustBar() {
   var b = $('custBar'); b.classList.toggle('none', !curCust);
   b.innerHTML = curCust ? '<span class="lbl">Adding to:</span><button class="nm" id="cbOpen">' + esc(curCust.name) + ' · ' + esc(curCust.noteTitle) + '</button><span class="lbl">·</span><button class="chg" id="cbChange">change</button>' +
       '<span class="cnt">' + (curCust.count || 0) + ' item' + (curCust.count === 1 ? '' : 's') + '</span>'
-    : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">no customer yet · pick one</button>';
+    : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">pick a customer</button>';
+  b.innerHTML += '<button class="cbnew" id="cbNew" title="New customer with the next note number">+ New</button>';
   $('cbChange').onclick = function () { openPicker(null); };
+  $('cbNew').onclick = function () { var x = this; x.disabled = true; newCustomer().then(function (c) { toast('Adding to ' + custLabel(c) + ' · Note 1'); }).catch(function () { x.disabled = false; }); };
   if ($('cbOpen')) $('cbOpen').onclick = function () { openCust(curCust.id, null, curCust.noteId); };
   var bd = $('custBadge'); bd.textContent = curCust && curCust.count ? curCust.count : ''; bd.classList.toggle('hidden', !(curCust && curCust.count));
 }
 function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCust.noteId === nid); }
-function newCustFormHtml(pre) { return '<div class="twocol"><div><label class="f">Name <span class="req">*</span></label><input id="ncName" autocapitalize="words" placeholder="Mr. Wong"></div>' +
-  '<div><label class="f">Phone</label><input id="ncPhone" type="tel" inputmode="tel"></div></div><label class="f">City / job address</label><input id="ncCity" autocapitalize="words">' +
-  '<button class="btn" id="ncSave">' + (pre || 'Create customer') + '</button><div id="ncMsg" class="msg hidden"></div>'; }
-function wireNewCust(done) { $('ncSave').onclick = function () { var b = this; if (!$('ncName').value.trim()) { msg($('ncMsg'), 'Name is required.'); $('ncName').focus(); return; }
-  b.disabled = true; api('customerSave', { customer: { name: $('ncName').value, phone: $('ncPhone').value, city: $('ncCity').value, tax: 'SF' } })
-    .then(done).catch(function (er) { msg($('ncMsg'), er.message); b.disabled = false; }); }; }
+/** New customer in one tap: the server gives the next note number (#1012) and an empty "Note 1"; info is added later. */
+var newBusy = false;
+function newCustomer() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
+  return api('customerSave', { customer: { tax: 'SF' } }).then(function (c) { newBusy = false; setCur(c, c.notes[0]); return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
+/** "+ New" from Search / the bar: create, make it the current note, open it. */
+function newCustomerOpen() { newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); toast(custLabel(c) + ' · Note 1 created'); }).catch(function () {}); }
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
   openSheet('<h3>' + (then ? 'Add to which customer?' : 'Adding to') + '</h3><div class="hint" style="margin:0 0 8px">Items from Search go into one note of this customer.</div>' +
-    '<input id="pkQ" type="search" placeholder="Search name or phone" autocomplete="off"><button class="newc" id="pkNew">+ New customer</button>' +
-    '<div id="pkNewForm" class="hidden">' + newCustFormHtml(then ? 'Create and add' : 'Create') + '</div><div class="sec-h" style="margin-top:8px"><h2 id="pkH">Recent</h2></div><div id="pkList"><div class="spinner"></div></div>');
+    '<input id="pkQ" type="search" placeholder="Search name, phone or #number" autocomplete="off"><button class="newc" id="pkNew">+ New customer (next #)</button>' +
+    '<div class="sec-h" style="margin-top:8px"><h2 id="pkH">Recent</h2></div><div id="pkList"><div class="spinner"></div></div>');
   var t = null; $('pkQ').oninput = function () { clearTimeout(t); var q = this.value; t = setTimeout(function () { loadPick(q); }, 250); };
-  $('pkNew').onclick = function () { $('pkNewForm').classList.remove('hidden'); this.classList.add('hidden'); if ($('pkQ').value && !/\d{3}/.test($('pkQ').value)) $('ncName').value = $('pkQ').value; $('ncName').focus(); };
-  wireNewCust(function (c) { pickDone(c, c.notes[0]); }); loadPick('');
+  $('pkNew').onclick = function () { var b = this; b.disabled = true; b.textContent = 'Creating…'; newCustomer().then(function (c) { pickDone(c, c.notes[0]); if (!then) toast(custLabel(c) + ' · Note 1 created'); }).catch(function () { b.disabled = false; b.textContent = '+ New customer (next #)'; }); };
+  loadPick('');
 }
 var pickRows = {};
 function loadPick(q) { $('pkH').textContent = q ? 'Matches' : 'Recent';
@@ -634,17 +642,17 @@ function pickCustomer(c) {
   var ns = c.noteList || [];
   if (ns.length === 1) { pickDone(c, ns[0]); return; }
   if (!ns.length) { api('noteSave', { id: c.id }).then(function (r) { pickDone(c, r.note); }).catch(function (er) { toast(er.message); }); return; }
-  $('sheetBody').innerHTML = '<h3>' + esc(c.name) + ': which note?</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this note.</div>' +
+  $('sheetBody').innerHTML = '<h3>' + esc(custLabel(c)) + ': which note?</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this note.</div>' +
     ns.map(function (n) { return '<button class="crow2" data-pnote="' + esc(n.id) + '"><b>' + esc(n.title) + '</b>' + (isCurNote(c.id, n.id) ? '<span class="cur">adding here</span>' : '') +
       '<span class="s">' + n.count + ' item' + (n.count === 1 ? '' : 's') + (n.photos ? ' · ' + n.photos + ' photo' + (n.photos === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) : '') + '</span></button>'; }).join('') +
     '<button class="newc" id="pkNewNote">+ New note</button>';
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-pnote]'); if (b) { $('sheetBody').onclick = null; pickDone(c, ns.filter(function (n) { return n.id === b.dataset.pnote; })[0]); } };
   $('pkNewNote').onclick = function () { this.disabled = true; $('sheetBody').onclick = null; api('noteSave', { id: c.id }).then(function (r) { pickDone(c, r.note); }).catch(function (er) { toast(er.message); }); };
 }
-function pickDone(c, n) { setCur(c, n); closeSheet(); var t = pickThen; pickThen = null; if (t) t(); else toast('Adding to ' + c.name + ' · ' + n.title);
+function pickDone(c, n) { setCur(c, n); closeSheet(); var t = pickThen; pickThen = null; if (t) t(); else toast('Adding to ' + custLabel(c) + ' · ' + n.title);
   if ($('p-cust').classList.contains('on')) { if (!custOpen) loadCustList(); else if (custOpen.id === c.id) renderCustDetail(); } }
 function custRowHtml(c) { var ago = c.updated ? whenTxt(c.updated) : '', nn = (c.noteList || []).length;
-  return '<button class="crow2" data-cust="' + esc(c.id) + '"><b>' + esc(c.name) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
+  return '<button class="crow2" data-cust="' + esc(c.id) + '"><b>' + esc(custLabel(c)) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
     (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
     '<span class="s">' + esc([c.phone, c.city].filter(Boolean).join(' · ') || 'no phone') + '</span><span class="s">' + nn + ' note' + (nn === 1 ? '' : 's') + ' · ' + c.count + ' item' + (c.count === 1 ? '' : 's') +
     (ago ? ' · ' + esc(ago) + (c.updated_by ? ' by ' + esc(c.updated_by) : '') : '') + '</span></button>'; }
@@ -670,8 +678,7 @@ function curNote() { return noteOf(custOpen && custOpen.id, noteOpenId); }
 var cuTimer = null, cuSeq = 0;
 $('cuQ').addEventListener('input', function () { clearTimeout(cuTimer); cuTimer = setTimeout(loadCustList, 250); });
 $('cuRefresh').onclick = function () { loadCustList(); };
-$('cuNew').onclick = function () { openSheet('<h3>New customer</h3>' + newCustFormHtml());
-  wireNewCust(function (c) { closeSheet(); setCur(c, c.notes[0]); infoOpen = true; openCust(c.id, c); toast('Adding items to ' + c.name + ' · Note 1'); }); $('ncName').focus(); };
+$('cuNew').onclick = newCustomerOpen;
 function loadCustList() {
   custOpen = null; noteOpenId = null; $('cuDetail').classList.add('hidden'); $('cuList').classList.remove('hidden');
   var q = $('cuQ').value.trim(), my = ++cuSeq;
@@ -691,7 +698,7 @@ function openCust(id, pre, noteId) {
   d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList;
   api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return; custOpen = c;
     if (!noteOpenId || !curNote()) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
-    if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== c.name) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = c.name; saveCur(); } } })
+    if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== custLabel(c)) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = custLabel(c); saveCur(); } } })
     .catch(function (er) { d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
       if (curCust && curCust.id === id && /not found/i.test(er.message)) setCur(null); });
 }
@@ -704,7 +711,7 @@ function shareText(c) {
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
 function openShare(c) {
-  openSheet('<h3>Share ' + esc(c.name) + '</h3><div class="hint" style="margin:0 0 8px">They see this customer with all notes, and can add items, edit notes and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
+  openSheet('<h3>Share ' + esc(custLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this customer with all notes, and can add items, edit notes and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
   api('shareTargets', {}).then(function (ts) { if (!$('shList')) return;
     var on = {}; (c.sharedWith || []).forEach(function (x) { on[x.key] = 1; });
     ts = ts.filter(function (t) { return c.mine || t.name.toLowerCase() !== String(c.owner).toLowerCase(); });
@@ -720,7 +727,7 @@ function openShare(c) {
   }).catch(function (er) { if ($('shList')) $('shList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
 function renderCustDetail() { renderOverview(); }
-function infoLine(c) { return [c.name, c.phone, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
+function infoLine(c) { return [custLabel(c), c.phone, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
 /** Keep what's typed in the open note (title/text) in the model before any re-render. */
 function keepTyped() { var n = curNote(); if (n && $('nTitle') && noteDirty) { n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; } }
 /** Customer page: slim info line, then the customer's notes stacked as groups (the open one expanded: title, text, items,
@@ -733,26 +740,26 @@ function renderOverview() {
       '<button class="infoline' + (infoOpen ? ' open' : '') + '" id="cdInfoT" aria-expanded="' + infoOpen + '"><span>' + infoLine(c) + '</span><span class="chev">' + (infoOpen ? '▴' : '▾') + '</span></button></div>' +
       '<div class="shline" id="cdShareLine"><span>' + shareText(c) + '</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '</div>' +
       '<div id="cdInfo"' + (infoOpen ? '' : ' class="hidden"') + '>' +
-      '<div class="twocol"><div><label class="f">Name</label><input id="cdName" autocapitalize="words" value="' + esc(c.name) + '"></div><div><label class="f">Phone</label><input id="cdPhone" type="tel" inputmode="tel" value="' + esc(c.phone) + '"></div></div>' +
+      '<div class="twocol"><div><label class="f">Name</label><input id="cdName" autocapitalize="words" placeholder="optional' + (c.num ? ' (shows as #' + c.num + ')' : '') + '" value="' + esc(c.name) + '"></div><div><label class="f">Phone</label><input id="cdPhone" type="tel" inputmode="tel" value="' + esc(c.phone) + '"></div></div>' +
       '<label class="f">City / job address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
-      '<button class="btn" id="cdInfoSave">Save</button><div class="saved" id="cdSaved"></div></div></div>' +
+      '<div class="saved" id="cdSaved">Changes save automatically.</div></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add another note</button>' +
     '<div class="card"><div class="sec-h"><h2>Voice notes</h2></div><div id="cdVoice"></div>' +
       '<div style="margin-top:10px"><button class="recbtn" id="cdRec">● Record</button> <span id="cdRecT" class="hint"></span></div><div id="cdLive" class="live hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this customer</button></div>' : '');
-  $('cdBack').onclick = function () { Promise.all([infoDirty ? saveInfo() : null, flushNote()]).then(loadCustList); };
-  $('cdInfoT').onclick = function () { infoOpen = !infoOpen; if (!infoOpen && infoDirty) { saveInfo(); return; } renderOverview(); };
-  ['cdName', 'cdPhone', 'cdCity'].forEach(function (k) { $(k).addEventListener('input', function () { infoDirty = true; $('cdSaved').textContent = ''; }); });
+  $('cdBack').onclick = function () { flushInfo(); flushNote(); loadCustList(); };
+  $('cdInfoT').onclick = function () { flushInfo(); infoOpen = !infoOpen; renderOverview(); };
+  [['cdName', 'name'], ['cdPhone', 'phone'], ['cdCity', 'city']].forEach(function (f) { var el = $(f[0]);
+    el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); el.addEventListener('blur', flushInfo); });
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
-  $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); infoDirty = true; c.tax = b.dataset.t; };
-  $('cdInfoSave').onclick = function () { saveInfo(); };
+  $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); flushInfo(); };
   $('cdNewNote').onclick = function () { var b = this; b.disabled = true; flushNote().then(function () { return api('noteSave', { id: c.id }); })
     .then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderOverview(); scrollToNote(r.note.id); toast('New note: ' + r.note.title + ' (adding here)'); })
     .catch(function (er) { toast(er.message); b.disabled = false; }); };
   $('cdRec').onclick = toggleRec;
-  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + c.name + ' and all their notes, photos and voice notes?')) return;
-    api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + c.name); loadCustList(); }).catch(function (er) { toast(er.message); }); };
+  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + custLabel(c) + ' and all their notes, photos and voice notes?')) return;
+    api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + custLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); };
   renderNoteCards(); renderVoice();
 }
 function scrollToNote(id) { var g = document.querySelector('[data-ng="' + id + '"]'); if (g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - document.querySelector('#app header').offsetHeight - 8); }
@@ -770,7 +777,6 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
       (NOTE_AUTOSAVE ? '' : '<button class="btn sec hidden" id="nSave">Save note</button>') +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
-      '<button class="tcbtn" id="nTile">▦ Tile calculator</button>' +
       '<div id="cdItems"></div><div id="cdTotals"></div>' +
       '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
       '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
@@ -778,12 +784,11 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       '<div style="text-align:center;margin-top:10px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div></div>';
   }).join('') : '<div class="card"><div class="empty" style="padding:14px">No notes yet.</div></div>';
   var n = curNote(); if (!n) return;
-  if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + c.name + ' · ' + n.title); };
+  if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + custLabel(c) + ' · ' + n.title); };
   $('nTitle').addEventListener('input', queueNote); $('nText').addEventListener('input', queueNote);
   if (NOTE_AUTOSAVE) { $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote); }
   else $('nSave').onclick = function () { flushNote().then(function () { if ($('nSave') && !noteDirty) $('nSave').classList.add('hidden'); }); };
   $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
-  $('nTile').onclick = function () { flushNote(); noteTileCalc(c, n); };
   $('cdQuote').onclick = quoteCust; $('cdPlan').onclick = planFromCust;
   $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
     api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
@@ -795,26 +800,53 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   var id = b ? b.dataset.nopen : null; flushNote().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
 function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
-var infoDirty = false;
-function saveInfo() { var c = custOpen, nm = $('cdName').value.trim(); if (!nm) { $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
-  var body = { id: c.id, name: nm, phone: $('cdPhone').value, city: $('cdCity').value, tax: c.tax };
-  $('cdSaved').textContent = 'Saving…'; $('cdInfoSave').disabled = true;
-  return api('customerSave', { customer: body }).then(function (r) { infoDirty = false; ['name', 'phone', 'city', 'tax', 'shared'].forEach(function (k) { c[k] = r[k]; });
-    if (curCust && curCust.id === r.id && curCust.name !== r.name) { curCust.name = r.name; saveCur(); }
-    infoOpen = false; if (custOpen === c) renderOverview(); toast('Saved'); })
-    .catch(function (er) { if ($('cdSaved')) { $('cdSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; $('cdInfoSave').disabled = false; } }); }
+// ---- autosave everywhere: customer info (1 s after typing / on leaving a box / tax tap), note title + text, item qty,
+// item notes, removals. Every save goes through saveQ: one pending save per thing (the newest wins), failed saves are
+// kept and retried (tap "Not saved, tap to retry", when the phone is back online, and every 20 s).
+var saveQ = {}, saveRun = {}, saveFail = null, saveOkT = null;
+function autoSave(key, fn) { saveQ[key] = fn; return runSave(key); }
+function runSave(key) {
+  var fn = saveQ[key]; if (!fn) return Promise.resolve();
+  if (saveRun[key]) return saveRun[key].then(function () { return runSave(key); });      // one at a time per thing, in order
+  saveState(); var p = saveRun[key] = fn().then(function (r) { if (saveQ[key] === fn) delete saveQ[key]; delete saveRun[key]; saveState(); return r; },
+    function (er) { delete saveRun[key]; if (/sign in|signed out/i.test(er.message)) { delete saveQ[key]; } else saveFail = er.message; saveState(); });
+  return p;
+}
+function retrySaves() { saveFail = null; Object.keys(saveQ).forEach(runSave); }
+function saveState() { var el = $('saveSt'), pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length;
+  if (!el) { el = document.createElement('button'); el.id = 'saveSt'; el.className = 'savest hidden'; el.onclick = function () { if (saveFail) retrySaves(); }; document.body.appendChild(el); }
+  clearTimeout(saveOkT);
+  if (pend && saveFail && !busy) { el.className = 'savest bad'; el.textContent = 'Not saved, tap to retry'; el.title = saveFail; }
+  else if (busy) { el.className = 'savest saving'; el.textContent = 'Saving…'; }
+  else if (!pend) { saveFail = null; if (!el.classList.contains('hidden')) { el.className = 'savest ok'; el.textContent = 'Saved'; saveOkT = setTimeout(function () { el.className = 'savest hidden'; }, 1200); } }
+  if ($('cdSaved')) $('cdSaved').textContent = saveQ['info:' + (custOpen && custOpen.id)] ? (saveFail ? 'Not saved yet' : 'Saving…') : 'Saved';
+}
+window.addEventListener('online', retrySaves);
+setInterval(function () { if (saveFail && Object.keys(saveQ).length) retrySaves(); }, 20000);
+window.addEventListener('beforeunload', function (e) { if (Object.keys(saveQ).length) { e.preventDefault(); e.returnValue = ''; } });
+// customer info
+var infoT = null;
+function queueInfo() { clearTimeout(infoT); if (custOpen) custOpen._infoDirty = true; if ($('cdSaved')) $('cdSaved').textContent = 'Editing…'; infoT = setTimeout(flushInfo, 1000); }
+function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdName')) return Promise.resolve();
+  if (!String(c.name || '').trim() && !c.num) { $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
+  if (!c._infoDirty) return saveRun['info:' + c.id] || Promise.resolve(); c._infoDirty = false;
+  return autoSave('info:' + c.id, function () { var body = { id: c.id, name: String(c.name || '').trim(), phone: c.phone || '', city: c.city || '', tax: c.tax };
+    return api('customerSave', { customer: body }).then(function (r) { c.label = r.label; c.num = r.num;
+      if (curCust && curCust.id === r.id && curCust.name !== r.label) { curCust.name = r.label; saveCur(); }
+      if (custOpen === c && $('cdInfoT')) $('cdInfoT').firstChild.innerHTML = infoLine(c); }); }); }
 /** Note title/text autosave (debounced + on leaving the box). Set false to save only with the "Save note" button. */
 var NOTE_AUTOSAVE = true;
 var noteT = null, noteDirty = false;
-function queueNote() { noteDirty = true; clearTimeout(noteT);
+function queueNote() { var n0 = curNote(); if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; } noteDirty = true; clearTimeout(noteT);
   if (!NOTE_AUTOSAVE) { $('nSaved').textContent = 'Not saved yet'; if ($('nSave')) $('nSave').classList.remove('hidden'); return; }
   $('nSaved').textContent = 'Editing…'; noteT = setTimeout(flushNote, 900); }
 function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
-  noteDirty = false; var c = custOpen, title = $('nTitle').value.trim() || n.title, text = $('nText').value; $('nSaved').textContent = 'Saving…';
-  return api('noteSave', { id: c.id, noteId: n.id, title: title, text: text }).then(function (r) { Object.assign(n, { title: r.note.title, text: r.note.text, updated: r.note.updated, updated_by: r.note.updated_by });
-    if ($('nSaved') && noteOpenId === n.id) $('nSaved').textContent = 'Saved ' + whenTxt(r.note.updated);
-    if (isCurNote(c.id, n.id) && curCust.noteTitle !== n.title) { curCust.noteTitle = n.title; saveCur(); } })
-    .catch(function (er) { noteDirty = true; if ($('nSaved')) $('nSaved').innerHTML = '<span class="missing">Not saved: ' + esc(er.message) + '</span>'; }); }
+  noteDirty = false; var c = custOpen; n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; $('nSaved').textContent = 'Saving…';
+  return autoSave('note:' + n.id, function () { var title = n.title, text = n.text;
+    return api('noteSave', { id: c.id, noteId: n.id, title: title, text: text }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by;
+      if ($('nSaved') && noteOpenId === n.id) $('nSaved').textContent = 'Saved ' + whenTxt(r.note.updated);
+      if (isCurNote(c.id, n.id) && curCust.noteTitle !== r.note.title) { curCust.noteTitle = r.note.title; saveCur(); } }); })
+    .then(function () { if (saveQ['note:' + n.id] && $('nSaved') && noteOpenId === n.id) $('nSaved').innerHTML = '<span class="missing">Not saved yet (will retry)</span>'; }); }
 function renderPicked() {
   var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) { keepTyped(); renderNoteCards(); } return; }
   var it = n.items || [];
@@ -824,7 +856,8 @@ function renderPicked() {
       '<div class="n"><b><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span>' + esc(l.desc || (r ? r[1] : '')) + '</span>' +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
-      '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div></div>';
+      '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
+      (isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div>';
   }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>';
   renderTotals();
 }
@@ -849,22 +882,29 @@ document.addEventListener('change', function (e) { var t = e.target; if (!t.data
     .then(function (r) { n.photos = r.photos; n.updated = r.note.updated; if (noteOpenId === n.id) renderNotePhotos(); toast('Photo saved to ' + n.title); })
     .catch(function (er) { toast(er.message); var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }); });
 function lineOf(el) { var d = el.closest('[data-lid]'), n = curNote(); return d && n && (n.items || []).filter(function (l) { return l.id === d.dataset.lid; })[0]; }
-function setLine(l, ch) { var c = custOpen, n = curNote(); return api('customerItem', Object.assign({ id: c.id, noteId: n.id, op: 'set', lineId: l.id }, ch)).then(function (r) { n.items = r.items; n.updated = r.note.updated; n.updated_by = r.note.updated_by; }).catch(function (er) { toast(er.message); }); }
+function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
+  return autoSave('line:' + id, function () { var cur = (n.items || []).filter(function (x) { return x.id === id; })[0] || l;
+    return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }); }); }
+var lnoteT = {};
 var qtyT = {};
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return; var t = e.target, l = lineOf(t); if (!l) return;
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]');
+  if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
     clearTimeout(qtyT[l.id]); qtyT[l.id] = setTimeout(function () { setLine(l, { qty: l.qty }); }, 500); }
   else if (rm) { if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
     n.items = n.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
-    api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).then(function (r) { n.items = r.items; if (noteOpenId === n.id) renderPicked(); syncCount(); }).catch(function (er) { toast(er.message); }); }
+    delete saveQ['line:' + l.id];
+    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/customer/i.test(er.message)) return; throw er; }); }); }
 });
 function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
   if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); setLine(l, { qty: l.qty }); }
-  else if (t.dataset.lnote) { l.note = t.value; setLine(l, { note: l.note }).then(function () { toast('Note saved'); }); }
+  else if (t.dataset.lnote) { clearTimeout(lnoteT[l.id]); l.note = t.value; setLine(l, { note: l.note }); }
 });
+document.addEventListener('input', function (e) { var t = e.target; if (!t.dataset.lnote || !t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
+  l.note = t.value; clearTimeout(lnoteT[l.id]); lnoteT[l.id] = setTimeout(function () { setLine(l, { note: l.note }); }, 1000); });
 /** Phone photos are shrunk before upload (longest side 1600 px, JPEG): fast on the floor's Wi-Fi, small in Drive. */
 function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = new FileReader(); rd.onerror = function () { rej(new Error('Could not read the photo.')); };
   rd.onload = function () { var img = new Image(); img.onerror = function () { rej(new Error('This photo type is not supported here. Try a JPG.')); };
@@ -878,15 +918,15 @@ function quoteCust() {
   b.disabled = true; msg($('cdMsg'), 'Sending…', true);
   flushNote().then(function () {
     var notes = [String(n.text || '').trim()].concat(it.filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + l.note.trim(); })).filter(Boolean).join('\n');
-    return api('cartQuote', { cart: { customer_name: c.name, customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
+    return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
       items: it.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
   }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'Red') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to Ray.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
     .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; });
 }
 function planFromCust() { var c = custOpen, n = curNote(); flushNote();
   go('plan'); planInit().then(function () { setPlanRev(null); setPlanKeep(null); clearReader(); msg($('plMsg'), '');
-    $('plName').value = c.name || ''; $('plPhone').value = c.phone || ''; $('plCity').value = c.city || ''; $('plTax').value = c.tax === 'Fremont' ? 'Fremont' : 'SF';
-    if (!$('plNotes').value.trim()) $('plNotes').value = n ? (n.title + (n.text ? ': ' + n.text : '')) : ''; toast('Plan form filled for ' + c.name); }); }
+    $('plName').value = custLabel(c); $('plPhone').value = c.phone || ''; $('plCity').value = c.city || ''; $('plTax').value = c.tax === 'Fremont' ? 'Fremont' : 'SF';
+    if (!$('plNotes').value.trim()) $('plNotes').value = n ? (n.title + (n.text ? ': ' + n.text : '')) : ''; toast('Plan form filled for ' + custLabel(c)); }); }
 // voice notes (MediaRecorder, same approach as Customer Notes; live transcript where the browser offers it)
 var rec = null;
 function renderVoice() { var c = custOpen, vs = c.voice || [];
@@ -1022,19 +1062,23 @@ function loadRequestIntoForm(rid, clone, btn) {
 function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600); }
 
 // ---------------- tile calculator (tile math only: area, waste %, pieces / boxes, coverage, tile cost). Opens from a tile
-// card on Search (adds to the current note) or from inside a note ("Tile calculator": pick / search a tile, adds to THAT note).
+// card on Search (adds a line to the current note) or from a tile LINE inside a note (sets that line's qty + sq ft note).
 function tileCalc(name) { tileCalcFor(shown[name], null); }
 function itemFromRow(r) { return { name: r[0], desc: r[1] || '', price: priceState.prices ? r[2] : null, tile: r[11], photo: r[13] || '' }; }
-/** target: null = the current "Adding to" note; {c, n, back} = add straight into note n of customer c. */
+/** A tile line = an item with tile sizes the math can use (sq ft per piece). Only those get the calculator. */
+function isTileRow(r) { return !!(r && r[11] && r[11].sqftPc > 0); }
+var CALC_NOTE_RE = /\s*(?:·\s*)?\d+(?:\.\d+)?\s*sq ft(?:\s*\+\s*\d+(?:\.\d+)?%)?\s*(?:·\s*)?/i;
+/** target: null = the current "Adding to" note (Search tile card: adds a line);
+ *  {c, n, line} = a tile line inside a note: "Set this line" SETS that line's qty and note ("120 sq ft + 10%"). */
 function tileCalcFor(it, target) {
-  var t = it.tile;
-  openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">' + esc(it.name) + (target ? ' → ' + esc(target.n.title) : '') + '</div>' +
-    (target ? '<button class="link" id="tcBack" style="margin:4px 0 2px">‹ pick another tile</button>' : '') +
+  var t = it.tile, ln = target && target.line, prev = ln ? String(ln.note || '').match(/(\d+(?:\.\d+)?)\s*sq ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
+  openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">' + esc(it.name) + (ln ? ' · line in ' + esc(target.n.title) : '') + '</div>' +
     '<div class="kv"><span>Tile</span><b>' + (t.w ? (+t.w).toFixed(2).replace(/\.00$/, '') + '" × ' + (+t.h).toFixed(2).replace(/\.00$/, '') + '"' : '—') + ' · ' + t.sqftPc + ' sq ft/pc' + (t.pcsBox ? ' · ' + t.pcsBox + ' pcs/box' : '') + '</b></div>' +
     (it.price != null ? '<div class="kv"><span>Price</span><b>' + money(it.price) + '/pc · ' + money(perSqft(it)) + '/sq ft' + (t.pcsBox ? ' · ' + money(it.price * t.pcsBox) + '/box' : '') + '</b></div>' : '') +
-    '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="100"></div>' +
-    '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="10" min="0" max="50"></div></div>' +
-    '<div class="calcres" id="tcRes"></div><button class="btn" id="tcAdd">' + (target ? 'Add to this note' : 'Add tile to note') + '</button>');
+    '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 100) + '"></div>' +
+    '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 10) + '" min="0" max="50"></div></div>' +
+    '<div class="calcres" id="tcRes"></div><button class="btn" id="tcAdd">' + (ln ? 'Set this line' : 'Add tile to note') + '</button>' +
+    (ln ? '<div class="note" style="margin-top:6px">Now ' + ln.qty + ' pcs' + (ln.note ? ' · “' + esc(ln.note) + '”' : '') + '. Sets the qty and the sq ft note of this line.</div>' : ''));
   var calc = function () {
     var A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0)), waste = 1 + wp / 100;
     var pcs = Math.ceil(A * waste / t.sqftPc), boxes = t.pcsBox ? Math.ceil(pcs / t.pcsBox) : null;
@@ -1047,41 +1091,18 @@ function tileCalcFor(it, target) {
   };
   $('tcA').oninput = calc; $('tcWp').oninput = calc;
   calc();
-  if ($('tcBack')) $('tcBack').onclick = function () { noteTileCalc(target.c, target.n); };
   $('tcAdd').onclick = function () { var s = tcState; if (!s.buy) { toast('Enter the area first'); return; }
-    var line = { name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note };
-    closeSheet(); if (target) addToThisNote(target.c, target.n, line); else addToNote([line]); };
+    closeSheet();
+    if (ln) { setTileLine(target.c, target.n, ln, s); return; }
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note }]); };
 }
-/** Inside a note: pick a tile (tiles already in the note first, or search tile), then the calculator. */
-function noteTileCalc(c, n) {
-  var mine = [], seen = {};
-  (n.items || []).forEach(function (l) { var r = itemRow(l.name); if (r && r[11] && r[11].sqftPc && !seen[l.name]) { seen[l.name] = 1; mine.push(itemFromRow(r)); } });
-  openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">Adds to ' + esc(c.name) + ' · ' + esc(n.title) + '</div>' +
-    '<input id="tnQ" type="search" placeholder="Search tile: name, color, size" autocomplete="off" style="margin-top:8px">' +
-    (mine.length ? '<div class="sec-h" style="margin-top:8px"><h2>In this note</h2></div><div id="tnMine">' + mine.map(tileRowHtml).join('') + '</div>' : '') +
-    '<div class="sec-h" style="margin-top:8px"><h2 id="tnH">' + (mine.length ? 'Other tile' : 'Type to find a tile') + '</h2></div><div id="tnList"></div>');
-  var rows = {}; mine.forEach(function (x) { rows[x.name] = x; });
-  var tm = null, sq = 0;
-  $('tnQ').oninput = function () { clearTimeout(tm); var q = this.value.trim(), my = ++sq; tm = setTimeout(function () {
-    if (q.replace(/[^a-z0-9]/gi, '').length < 2) { $('tnList').innerHTML = ''; $('tnH').textContent = mine.length ? 'Other tile' : 'Type to find a tile'; return; }
-    $('tnList').innerHTML = '<div class="spinner"></div>';
-    api('search', { q: q, f: {} }).then(function (r) { if (my !== sq || !$('tnList')) return;
-      var ts = r.items.filter(function (x) { return x.tile && x.tile.sqftPc; }); ts.forEach(function (x) { rows[x.name] = x; });
-      $('tnH').textContent = ts.length ? ts.length + ' tile' + (ts.length === 1 ? '' : 's') : 'No tile matches';
-      $('tnList').innerHTML = ts.map(tileRowHtml).join(''); }).catch(function (er) { if ($('tnList')) $('tnList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; }); }, 250); };
-  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-tpick]'); if (!b) return; $('sheetBody').onclick = null; tileCalcFor(rows[b.dataset.tpick], { c: c, n: n }); };
-  if (!mine.length) $('tnQ').focus();
-}
-function tileRowHtml(x) { return '<button class="crow2" data-tpick="' + esc(x.name) + '"><b>' + esc(x.name) + '</b><span class="s">' + esc(x.desc.slice(0, 80)) + '</span>' +
-  '<span class="s">' + (x.tile.w ? (+x.tile.w).toFixed(2).replace(/\.00$/, '') + '" × ' + (+x.tile.h).toFixed(2).replace(/\.00$/, '') + '" · ' : '') + x.tile.sqftPc + ' sq ft/pc' + (x.price != null ? ' · ' + money(x.price) + '/pc' : '') + '</span></button>'; }
-/** Add one line straight into a given note (not necessarily the "Adding to" one). */
-function addToThisNote(c, n, line) {
-  toast('Added ' + line.name + ' → ' + n.title);
-  api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: line }).then(function (r) {
-    n.items = r.items; n.updated = r.note.updated; n.updated_by = r.note.updated_by;
-    if (isCurNote(c.id, n.id)) { curCust.count = r.items.length; saveCur(); }
-    if (custOpen === c) { if (noteOpenId === n.id && $('cdItems')) renderPicked(); else renderNoteCards(); } })
-    .catch(function (er) { toast('Not added: ' + er.message); });
+/** Calculator result -> THIS line: qty = pieces to buy, note = "120 sq ft + 10%" (replaces an older sq ft note, keeps other words). Autosaved. */
+function setTileLine(c, n, l, s) {
+  var rest = String(l.note || '').replace(CALC_NOTE_RE, ' ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
+  l.qty = s.buy; l.note = (s.note + (rest ? ' · ' + rest : '')).slice(0, 300);
+  if (custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
+  setLine(l, { qty: l.qty, note: l.note });
+  toast(l.name + ': ' + s.buy + ' pcs · ' + s.note);
 }
 var tcState = null;
 
