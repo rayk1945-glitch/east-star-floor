@@ -303,6 +303,12 @@
   #signin .card { border-top:4px solid var(--accent); }
   .toplinks button { white-space:nowrap; } .toplinks button.plan { max-width:46vw; overflow:hidden; text-overflow:ellipsis; }
   .toprow h1 { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .pwrap { position:relative; } .pwrap input { padding-right:68px; }
+  .pwshow { position:absolute; right:6px; top:50%; transform:translateY(-50%); min-height:34px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:var(--accent); font:inherit; font-size:14px; font-weight:600; }
+  .pkbtn { width:100%; margin-top:10px; background:#fff !important; color:var(--text) !important; border:1px solid var(--line-strong) !important; }
+  /* warehouse role: search + stock only (the server also refuses everything else and never sends prices) */
+  body.wh #custBar, body.wh .toplinks .plan, body.wh #adminBtn, body.wh #bnav [data-go="cust"], body.wh #bnav [data-go="history"],
+  body.wh [onclick^="addItem"], body.wh #tcAdd, body.wh #priceBar { display:none !important; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -312,21 +318,23 @@
   <p class="hint" style="margin-top:4px">Showroom staff: stock, prices, calculators, projects. Ask admin for a login.</p>
   <form id="signinForm" autocomplete="on">
     <label class="f" for="inName">Name</label><input id="inName" name="username" autocomplete="username" autocapitalize="words" required>
-    <label class="f" for="inPin">PIN</label><input id="inPin" name="password" type="password" inputmode="numeric" pattern="\d*" autocomplete="current-password" required>
-    <button class="btn" id="signinBtn" type="submit">Sign in</button><div id="signinMsg" class="msg err hidden"></div>
+    <label class="f" for="inPin">Password</label><div class="pwrap"><input id="inPin" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="128" required><button type="button" class="pwshow" data-pwshow="inPin" aria-label="Show password">Show</button></div>
+    <button class="btn" id="signinBtn" type="submit">Sign in</button>
+    <button class="btn pkbtn hidden" id="pkSignin" type="button">Sign in with fingerprint / Face ID</button><div id="pkWho" class="hint hidden" style="text-align:center;margin-top:6px"><span class="notr" id="pkName"></span> · <button class="link" type="button" id="pkForget">Forget on this phone</button></div>
+    <div id="signinMsg" class="msg err hidden"></div>
   </form></div></main></section>
 
 <section id="pinchange" class="hidden"><main style="padding-top:40px"><div class="card">
-  <h1>Set your own PIN</h1><p class="hint">You were given a temporary PIN. Pick your own 4 to 10 digit PIN.</p>
-  <label class="f">Temporary PIN</label><input id="pcOld" type="password" inputmode="numeric">
-  <label class="f">New PIN</label><input id="pcNew" type="password" inputmode="numeric">
-  <label class="f">New PIN again</label><input id="pcNew2" type="password" inputmode="numeric">
-  <button class="btn" id="pcBtn">Save PIN</button><div id="pcMsg" class="msg err hidden"></div></div></main></section>
+  <h1>Set your own password</h1><p class="hint">Pick your own password: at least 6 characters. Letters, numbers, spaces and symbols are all OK.</p>
+  <label class="f">Current or temporary password</label><div class="pwrap"><input id="pcOld" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" maxlength="128"><button type="button" class="pwshow" data-pwshow="pcOld" aria-label="Show password">Show</button></div>
+  <label class="f">New password</label><div class="pwrap"><input id="pcNew" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" maxlength="128"><button type="button" class="pwshow" data-pwshow="pcNew" aria-label="Show password">Show</button></div>
+  <label class="f">New password again</label><div class="pwrap"><input id="pcNew2" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" maxlength="128"><button type="button" class="pwshow" data-pwshow="pcNew2" aria-label="Show password">Show</button></div>
+  <button class="btn" id="pcBtn">Save password</button><div id="pcMsg" class="msg err hidden"></div></div></main></section>
 
 <section id="app" class="hidden">
   <header><div class="head-in">
     <div class="toprow"><h1>East Star <small id="hdName" class="notr"></small></h1>
-      <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
+      <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
   </div></header>
   <main>
     <!-- SEARCH -->
@@ -347,7 +355,7 @@
     <div class="page" id="p-plan"><div class="card">
       <div class="crumb"><button class="back" data-go="search">‹</button>Send a kitchen plan to <span id="planBot">the bot</span></div>
       <div id="planRev" class="revbar hidden"></div>
-      <p class="hint" style="margin-top:0">Goes straight to the bot for an official quote. The bot replies to Ray with the quote JPG and CSV.</p>
+      <p class="hint" style="margin-top:0">Goes straight to the bot for an official quote. The bot replies to East Star Building Supply with the quote JPG and CSV.</p>
       <label class="f">Plan photo or PDF <span class="req">*</span></label>
       <div id="plKeep" class="keepbox hidden"></div>
       <input id="plFile" type="file" accept="image/*,application/pdf" capture="environment">
@@ -402,9 +410,9 @@
       <div class="card" id="staffCard"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2>Staff</h2><button class="link" id="stRefresh">Refresh</button></div>
         <div id="stList"><div class="spinner"></div></div><div id="stListMsg" class="msg hidden"></div></div>
       <div class="card"><h2 style="margin:0 0 4px;font-size:16px">Add a login</h2>
-        <p class="hint">Temporary PIN; they set their own at first sign-in. Same name again = reset PIN.</p>
-        <div class="twocol"><div><label class="f">Name</label><input id="stName"></div><div><label class="f">Temporary PIN</label><input id="stPin" inputmode="numeric"></div></div>
-        <div class="twocol"><div><label class="f">Account</label><select id="stAcct"></select></div><div><label class="f">Role</label><select id="stRole"><option value="staff">staff</option><option value="account_admin">account admin</option><option value="admin" id="stRoleAdmin" class="hidden" hidden>admin (all accounts, like Ray)</option></select></div></div>
+        <p class="hint">Temporary password (at least 6 characters); they set their own at first sign-in. Same name again = reset password.</p>
+        <div class="twocol"><div><label class="f">Name</label><input id="stName" autocomplete="off"></div><div><label class="f">Temporary password</label><div class="pwrap"><input id="stPin" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" maxlength="128"><button type="button" class="pwshow" data-pwshow="stPin" aria-label="Show password">Show</button></div></div></div>
+        <div class="twocol"><div><label class="f">Account</label><select id="stAcct"></select></div><div><label class="f">Role</label><select id="stRole"><option value="staff">staff</option><option value="account_admin">account admin</option><option value="warehouse">warehouse</option><option value="admin" id="stRoleAdmin" hidden disabled>admin (all accounts)</option></select></div></div>
         <button class="btn" id="stAdd">Add / reset login</button><div id="stMsg" class="msg hidden"></div>
         </div>
     </div>
@@ -418,11 +426,11 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js"></script>
-<script src="i18n.js?v=20261011c"></script>
+<script src="i18n.js?v=20261012a"></script>
 <script>
 'use strict';
-// The page itself holds NO item data, keys or webhook URLs. After a PIN sign-in it downloads the item data once per
-// data version from the PIN-protected API (session required), keeps it in this browser (IndexedDB) and searches on the
+// The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
+// data version from the sign-in-protected API (session required), keeps it in this browser (IndexedDB) and searches on the
 // phone with search.js (= apps-script/Search.gs, byte for byte). Signing out (or a dead session) wipes the local copy.
 var API_URL = 'https://script.google.com/macros/s/AKfycbzmMaB6B78-sJABGFGZ9vpLGsCSN67lPF3hf0aGIM8AVLbsKJrdCKovVZDi6nKdXNTO/exec';   // set by set_exec_url.sh (the rayk1945 web app /exec URL)
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) API_URL = '/api';   // local test server only
@@ -499,10 +507,11 @@ document.addEventListener('visibilitychange', function () { if (document.hidden 
   else if (Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
-function signedOut() { wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); }
+function signedOut() { wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
 
 // ---------------- navigation
 function go(p, quiet) {
+  if (session && session.role === 'warehouse' && p !== 'search') p = 'search';     // warehouse: Search only
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   window.scrollTo(0, 0);
@@ -522,6 +531,7 @@ document.addEventListener('click', function (e) { var b = e.target.closest('[dat
 function enterApp() {
   if (session.mustChangePin) { show('pinchange'); return; }
   show('app'); setHeader(session);
+  if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
   sizeChrome(); setTimeout(a2hsShow, 1500);
@@ -530,17 +540,66 @@ function enterApp() {
 function setHeader(m) {
   $('acctLine').textContent = (m.name || '') + (m.accountName ? ' · ' + m.accountName : '') + (m.bot ? ' · bot ' + m.bot : '');
   $('adminBtn').classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));
-  var ra = $('stRoleAdmin'); if (ra) { ra.hidden = m.role !== 'admin'; ra.disabled = m.role !== 'admin'; }
+  document.body.classList.toggle('wh', m.role === 'warehouse');
+  var ra = $('stRoleAdmin'); if (ra) { var full = m.role === 'admin'; ra.hidden = !full; ra.disabled = !full; ra.classList.toggle('hidden', !full); if (!full && $('stRole').value === 'admin') $('stRole').value = 'staff'; }
   var hn = $('hdName'); if (hn) hn.textContent = m.name || '';
   $('planBot').textContent = m.bot || 'the bot'; $('plSend').textContent = m.bot ? 'Send to ' + m.bot : 'Send';
   if (m.bot && session && session.bot !== m.bot) { session.bot = m.bot; try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {} }   // "Send to" may point this login at another bot
   var pb = document.querySelector('.toplinks .plan'); if (pb) pb.textContent = m.bot ? 'Send plan to ' + m.bot : 'Send plan';
 }
 $('signinForm').addEventListener('submit', function (e) { e.preventDefault(); var b = $('signinBtn'); b.disabled = true; msg($('signinMsg'), '');
-  api('signin', { name: $('inName').value, pin: $('inPin').value }).then(function (s) { session = s; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); $('inPin').value = ''; enterApp(); })
+  api('signin', { name: $('inName').value, pin: $('inPin').value }).then(function (s) { session = s; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); $('inPin').value = ''; pkOffer = true; enterApp(); })
     .catch(function (er) { msg($('signinMsg'), er.message); }).then(function () { b.disabled = false; }); });
 $('outBtn').onclick = function () { var t = session && session.token; signedOut(); if (t) fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'signout', token: t }) }).catch(function () {}); };
-$('pcBtn').onclick = function () { api('changePin', { oldPin: $('pcOld').value, pin: $('pcNew').value, pin2: $('pcNew2').value }).then(function () { session.mustChangePin = false; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); enterApp(); }).catch(function (er) { msg($('pcMsg'), er.message); }); };
+// ---------------- show / hide password, fingerprint / Face ID (WebAuthn passkey; the server checks the signature)
+document.addEventListener('click', function (e) { var b = e.target.closest('[data-pwshow]'); if (!b) return; var i = $(b.dataset.pwshow), on = i.type === 'password';
+  i.type = on ? 'text' : 'password'; b.textContent = on ? 'Hide' : 'Show'; b.setAttribute('aria-label', on ? 'Hide password' : 'Show password'); i.focus(); });
+var PK_KEY = 'esPasskey', pkOffer = false;
+function pkSaved() { try { return JSON.parse(localStorage.getItem(PK_KEY) || 'null'); } catch (e) { return null; } }
+function pkApi() { return !!(window.PublicKeyCredential && navigator.credentials && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable); }
+function pkAvailable() { return pkApi() ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; }) : Promise.resolve(false); }
+function b64uBuf(s) { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; }
+function bufB64u(buf) { var u = new Uint8Array(buf), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function pkDevice() { var u = navigator.userAgent; return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'Phone'; }
+function pkErr(er) { return er && (er.name === 'NotAllowedError' || er.name === 'AbortError') ? 'Fingerprint / Face ID was cancelled.' : (er && er.name === 'InvalidStateError') ? 'This phone is already saved.' : (er && er.message) || String(er); }
+function pkSigninShow() { var p = pkSaved(); $('pkSignin').classList.add('hidden'); $('pkWho').classList.add('hidden'); if (!p) return;
+  pkAvailable().then(function (ok) { if (!ok) return; $('pkName').textContent = p.name; $('pkSignin').classList.remove('hidden'); $('pkWho').classList.remove('hidden'); }); }
+$('pkSignin').onclick = function () { var p = pkSaved(), b = this; if (!p) return; b.disabled = true; msg($('signinMsg'), '');
+  serverApi('passkeyOptions').then(function (o) {
+    return navigator.credentials.get({ publicKey: { challenge: b64uBuf(o.challenge), rpId: location.hostname, userVerification: 'required', timeout: 60000,
+      allowCredentials: [{ type: 'public-key', id: b64uBuf(p.id), transports: ['internal', 'hybrid'] }] } }); })
+  .then(function (c) { return serverApi('passkeySignin', { id: bufB64u(c.rawId), clientDataJSON: bufB64u(c.response.clientDataJSON), authenticatorData: bufB64u(c.response.authenticatorData), signature: bufB64u(c.response.signature) }); })
+  .then(function (s) { session = s; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); p.name = s.name; localStorage.setItem(PK_KEY, JSON.stringify(p)); enterApp(); })
+  .catch(function (er) { if (/no longer saved|was removed/.test(er.message || '')) { localStorage.removeItem(PK_KEY); pkSigninShow(); } msg($('signinMsg'), pkErr(er)); })
+  .then(function () { b.disabled = false; }); };
+$('pkForget').onclick = function () { localStorage.removeItem(PK_KEY); pkSigninShow(); msg($('signinMsg'), 'Fingerprint / Face ID is off on this phone. Sign in with your password.', true); };
+function pkMaybeOffer() { var p = pkSaved(); if (!session || (p && p.key === session.name)) return;
+  if (Number(localStorage.getItem('esPkNo:' + session.name) || 0) > Date.now()) return;
+  pkAvailable().then(function (ok) { if (!ok || !session) return;
+    openSheet('<h3>Use fingerprint / Face ID next time</h3><p class="hint">Next time, sign in on this phone with your fingerprint or face instead of typing your password. Your fingerprint and face stay on the phone; the app never sees them.</p>' +
+      '<button class="btn" id="pkOn" style="width:100%">Turn on</button><button class="btn pkbtn" id="pkNo">Not now</button><div id="pkMsg" class="msg hidden"></div>');
+    $('pkNo').onclick = function () { localStorage.setItem('esPkNo:' + session.name, String(Date.now() + 30 * 86400000)); closeSheet(); };
+    $('pkOn').onclick = function () { var b = this; b.disabled = true;
+      serverApi('passkeyRegOptions').then(function (o) {
+        return navigator.credentials.create({ publicKey: { challenge: b64uBuf(o.challenge), rp: { name: o.rpName, id: location.hostname },
+          user: { id: b64uBuf(o.userId), name: o.userName, displayName: o.userName }, pubKeyCredParams: o.algs.map(function (a) { return { type: 'public-key', alg: a }; }),
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged', requireResidentKey: false },
+          excludeCredentials: o.exclude.map(function (id) { return { type: 'public-key', id: b64uBuf(id) }; }), attestation: 'none', timeout: 60000 } }); })
+      .then(function (c) { return serverApi('passkeyRegister', { id: bufB64u(c.rawId), clientDataJSON: bufB64u(c.response.clientDataJSON), attestationObject: bufB64u(c.response.attestationObject), device: pkDevice() }); })
+      .then(function (r) { localStorage.setItem(PK_KEY, JSON.stringify({ id: r.id, name: session.name, key: session.name })); closeSheet(); toastMsg('Fingerprint / Face ID is on for this phone.'); })
+      .catch(function (er) { msg($('pkMsg'), pkErr(er)); b.disabled = false; }); }; }); }
+function toastMsg(t) { var d = document.createElement('div'); d.className = 'msg ok'; d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:99'; d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+// ---------------- Change my password (every login, admin included): current + new twice; the server checks the current one
+$('pwBtn').onclick = function () {
+  openSheet('<h3>Change my password</h3><p class="hint">At least 6 characters. Letters, numbers, spaces and symbols are all OK.</p>' +
+    '<label class="f">Current password</label><div class="pwrap"><input id="cpOld" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="128"><button type="button" class="pwshow" data-pwshow="cpOld" aria-label="Show password">Show</button></div><label class="f">New password</label><div class="pwrap"><input id="cpNew" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="128"><button type="button" class="pwshow" data-pwshow="cpNew" aria-label="Show password">Show</button></div><label class="f">New password again</label><div class="pwrap"><input id="cpNew2" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="128"><button type="button" class="pwshow" data-pwshow="cpNew2" aria-label="Show password">Show</button></div>' +
+    '<button class="btn" id="cpGo" style="width:100%">Save password</button><div id="cpMsg" class="msg hidden"></div>');
+  $('cpOld').focus();
+  $('cpGo').onclick = function () { var g = this; if ($('cpNew').value.length < 6) { msg($('cpMsg'), 'Password must be 6 to 128 characters.'); return; }
+    if ($('cpNew').value !== $('cpNew2').value) { msg($('cpMsg'), 'The two passwords do not match.'); return; } g.disabled = true;
+    serverApi('changePin', { oldPin: $('cpOld').value, pin: $('cpNew').value, pin2: $('cpNew2').value })
+      .then(function () { closeSheet(); toastMsg('Your password is changed.'); }).catch(function (er) { msg($('cpMsg'), er.message); g.disabled = false; }); }; };
+$('pcBtn').onclick = function () { api('changePin', { oldPin: $('pcOld').value, pin: $('pcNew').value, pin2: $('pcNew2').value }).then(function () { session.mustChangePin = false; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); ['pcOld', 'pcNew', 'pcNew2'].forEach(function (i) { $(i).value = ''; }); pkOffer = true; enterApp(); }).catch(function (er) { msg($('pcMsg'), er.message); }); };
 
 // ---------------- sheet
 function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
@@ -1135,7 +1194,7 @@ function quoteCust() {
     var notes = [String(n.text || '').trim()].concat(it.filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + l.note.trim(); })).filter(Boolean).join('\n');
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
       items: it.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
-  }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to Ray.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
+  }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Building Supply.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
     .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; quoteBtn(); });
 }
 function planFromCust() { var c = custOpen, n = curNote(); flushNote();
@@ -1504,42 +1563,54 @@ function setWebhook(id) { api('adminSetWebhook', { id: id, url: $('wu-' + id).va
 function pingAcct(id) { msg($('acctMsg'), 'Pinging…', true); api('adminPingAccount', { id: id }).then(function (r) { msg($('acctMsg'), 'Ping ' + id + ': ' + r.status + (r.detail ? ' (' + r.detail.slice(0, 80) + ')' : ''), /^sent/.test(r.status)); }).catch(function (er) { msg($('acctMsg'), er.message); }); }
 $('naSave').onclick = function () { api('adminSaveAccount', { accountData: { id: $('naId').value, name: $('naName').value, bot: $('naBot').value, csv: $('naCsv').value, shareEmail: $('naShare').value } })
   .then(function () { msg($('acctMsg'), 'Account saved.', true); adminLoad(); }).catch(function (er) { msg($('acctMsg'), er.message); }); };
-// ---- staff list: status, last sign-in, signed in now; Pause / Resume, Reset PIN, Delete (never your own or the admin login)
+// ---- staff list: status, last sign-in, signed in now; Pause / Resume, Reset password, Delete (never your own or the admin login); Rename, Remove saved devices
 function whenTxt(ms) { if (!ms) return ''; var d = Date.now() - ms; if (d < 60000) return 'just now'; if (d < 3600000) return Math.round(d / 60000) + ' min ago';
   return new Date(ms).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' PT'; }
 var staffRows = [];
 function loadUsers() { api('adminUsers').then(function (us) { staffRows = us;
   us.sort(function (a, b) { return (b.me - a.me) || (b.online - a.online) || (b.active - a.active) || a.name.localeCompare(b.name); });
-  $('stList').innerHTML = us.map(function (u, i) { var locked = u.me || u.role === 'admin';
+  $('stList').innerHTML = us.map(function (u, i) { var locked = u.me || u.role === 'admin', canEdit = session.role === 'admin' || u.role !== 'admin';
     return '<div class="srow" data-si="' + i + '"><div class="h1"><b>' + esc(u.name) + (u.me ? ' (you)' : '') + '</b>' +
       (u.active ? '<span class="pill-ok">Active</span>' : '<span class="pill-pause">Paused</span>') + (u.online ? '<span class="on">Signed in now</span>' : '') + '</div>' +
       '<div class="h2">' + esc(u.role === 'account_admin' ? 'account admin' : u.role) + ' · ' + esc(u.account) + ' · ' + (u.lastIn ? 'last signed in ' + esc(whenTxt(u.lastIn)) : 'never signed in') +
-      (u.sessions && !u.online ? ' · signed in on ' + u.sessions + ' device' + (u.sessions === 1 ? '' : 's') + ', idle' : '') + (u.mustChangePin ? ' · temporary PIN' : '') + '</div>' +
+      (u.sessions && !u.online ? ' · signed in on ' + u.sessions + ' device' + (u.sessions === 1 ? '' : 's') + ', idle' : '') + (u.mustChangePin ? ' · temporary password' : '') + (u.passkeys ? ' · fingerprint / Face ID on ' + u.passkeys + ' device' + (u.passkeys === 1 ? '' : 's') : '') + '</div>' +
       sendToSel(u) +
-      (locked ? '' : '<div class="actions"><button data-sa="pause">' + (u.active ? 'Pause' : 'Resume') + '</button><button data-sa="pin">Reset PIN</button><button class="danger" data-sa="del">Delete</button></div>') + '</div>'; }).join('') || '<div class="empty">No logins.</div>';
+      '<div class="actions">' + (locked ? '' : '<button data-sa="pause">' + (u.active ? 'Pause' : 'Resume') + '</button><button data-sa="pin">Reset password</button>') +
+      (canEdit ? '<button data-sa="ren">Rename</button>' : '') + (canEdit && u.passkeys ? '<button data-sa="pk">Remove saved devices</button>' : '') +
+      (locked ? '' : '<button class="danger" data-sa="del">Delete</button>') + '</div></div>'; }).join('') || '<div class="empty">No logins.</div>';
 }).catch(function (er) { msg($('stListMsg'), er.message); }); }
 $('stRefresh').onclick = loadUsers;
 $('stList').addEventListener('change', function (e) { var sel = e.target.closest('select[data-sendto]'); if (!sel) return; var u = staffRows[+sel.closest('[data-si]').dataset.si];
-  sel.disabled = true; api('adminSetSendTo', { name: u.name, to: sel.value }).then(function (r) { u.sendTo = r.sendTo;
+  sel.disabled = true; api('adminSetSendTo', { id: u.id, name: u.name, to: sel.value }).then(function (r) { u.sendTo = r.sendTo;
     msg($('stListMsg'), u.name + '’s plans and carts now go to ' + r.bot + (r.sendTo ? '' : ' (own account)') + '.', true); })
     .catch(function (er) { msg($('stListMsg'), er.message); loadUsers(); }).then(function () { sel.disabled = false; }); });
 $('stList').addEventListener('click', function (e) { var b = e.target.closest('button[data-sa]'); if (!b) return; var u = staffRows[+b.closest('[data-si]').dataset.si], k = b.dataset.sa;
   if (k === 'pause') { if (u.active && !confirm('Pause ' + u.name + '? They are signed out now and cannot sign in until you tap Resume.')) return; b.disabled = true;
-    api('adminSetActive', { name: u.name, active: !u.active }).then(function (r) { msg($('stListMsg'), r.active ? u.name + ' can sign in again.' : u.name + ' is paused' + (r.sessionsEnded ? ' and was signed out (' + r.sessionsEnded + ' device' + (r.sessionsEnded === 1 ? '' : 's') + ')' : '') + '.', true); loadUsers(); })
+    api('adminSetActive', { id: u.id, name: u.name, active: !u.active }).then(function (r) { msg($('stListMsg'), r.active ? u.name + ' can sign in again.' : u.name + ' is paused' + (r.sessionsEnded ? ' and was signed out (' + r.sessionsEnded + ' device' + (r.sessionsEnded === 1 ? '' : 's') + ')' : '') + '.', true); loadUsers(); })
       .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
   else if (k === 'del') { if (!confirm('Delete the login for ' + u.name + '?\n\nThey are signed out and can no longer sign in. Their projects and history stay (shown as “deleted: ' + u.name + '”).')) return; b.disabled = true;
-    api('adminDeleteUser', { name: u.name }).then(function (r) { msg($('stListMsg'), 'Deleted ' + r.name + '. ' + r.customersKept + ' project' + (r.customersKept === 1 ? '' : 's') + ' kept.', true); loadUsers(); })
+    api('adminDeleteUser', { id: u.id, name: u.name }).then(function (r) { msg($('stListMsg'), 'Deleted ' + r.name + '. ' + r.customersKept + ' project' + (r.customersKept === 1 ? '' : 's') + ' kept.', true); loadUsers(); })
       .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
-  else if (k === 'pin') { openSheet('<h3>Reset PIN for ' + esc(u.name) + '</h3><p class="hint">They are signed out and must pick their own PIN at the next sign-in. Give them the temporary PIN in person.</p>' +
-      '<label class="f">Temporary PIN</label><input id="rpPin" inputmode="numeric" autocomplete="off"><button class="btn" id="rpGo">Reset PIN</button><div id="rpMsg" class="msg hidden"></div>');
+  else if (k === 'pin') { openSheet('<h3>Reset password for ' + esc(u.name) + '</h3><p class="hint">They are signed out and must pick their own password at the next sign-in. Give them the temporary password in person.</p>' +
+      '<label class="f">Temporary password</label><div class="pwrap"><input id="rpPin" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" maxlength="128"><button type="button" class="pwshow" data-pwshow="rpPin" aria-label="Show password">Show</button></div><button class="btn" id="rpGo">Reset password</button><div id="rpMsg" class="msg hidden"></div>');
     $('rpPin').focus();
-    $('rpGo').onclick = function () { this.disabled = true; var g = this; api('adminSetUser', { name: u.name, pin: $('rpPin').value, account: u.account, role: u.role })
-      .then(function () { closeSheet(); msg($('stListMsg'), 'PIN reset for ' + u.name + '. Give them the temporary PIN in person.', true); loadUsers(); }).catch(function (er) { msg($('rpMsg'), er.message); g.disabled = false; }); }; }
+    $('rpGo').onclick = function () { this.disabled = true; var g = this; api('adminSetUser', { id: u.id, name: u.name, pin: $('rpPin').value, account: u.account, role: u.role })
+      .then(function () { closeSheet(); msg($('stListMsg'), 'Password reset for ' + u.name + '. Give them the temporary password in person.', true); loadUsers(); }).catch(function (er) { msg($('rpMsg'), er.message); g.disabled = false; }); }; }
+  else if (k === 'ren') { openSheet('<h3>Rename ' + esc(u.name) + '</h3><p class="hint">They sign in with the new name. Their projects, history, shares and saved devices stay with this login. Tell them the new name.</p>' +
+      '<label class="f">New name</label><input id="rnName" autocomplete="off" maxlength="30"><button class="btn" id="rnGo">Rename</button><div id="rnMsg" class="msg hidden"></div>');
+    $('rnName').value = u.name; $('rnName').focus();
+    $('rnGo').onclick = function () { this.disabled = true; var g = this; api('adminRenameUser', { id: u.id, newName: $('rnName').value })
+      .then(function (r) { closeSheet(); msg($('stListMsg'), r.renamed ? 'Renamed ' + u.name + ' to ' + r.name + '. They sign in as ' + r.name + ' now.' : 'Name not changed.', true);
+        if (u.me) { session.name = r.name; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); setHeader(session); } loadUsers(); })
+      .catch(function (er) { msg($('rnMsg'), er.message); g.disabled = false; }); }; }
+  else if (k === 'pk') { if (!confirm('Remove fingerprint / Face ID for ' + u.name + ' on all ' + u.passkeys + ' saved device' + (u.passkeys === 1 ? '' : 's') + '?\n\nThey sign in with their password and can turn it on again.')) return; b.disabled = true;
+    api('adminRemovePasskeys', { id: u.id }).then(function (r) { msg($('stListMsg'), 'Removed ' + r.removed + ' saved device' + (r.removed === 1 ? '' : 's') + ' for ' + r.name + '.', true); loadUsers(); })
+      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
 });
 $('stAdd').onclick = function () { if ($('stRole').value === 'admin' && !confirm('Make ' + $('stName').value + ' a full admin? They can see every project, change webhooks and manage every login.')) return; api('adminSetUser', { name: $('stName').value, pin: $('stPin').value, account: $('stAcct').value, role: $('stRole').value }).then(function (r) {
-  msg($('stMsg'), (r.reset ? 'PIN reset for ' : 'Added ') + r.name + '. Give them the temporary PIN in person.', true); $('stPin').value = ''; loadUsers(); }).catch(function (er) { msg($('stMsg'), er.message); }); };
+  msg($('stMsg'), (r.reset ? 'Password reset for ' : 'Added ') + r.name + '. Give them the temporary password in person.', true); $('stPin').value = ''; loadUsers(); }).catch(function (er) { msg($('stMsg'), er.message); }); };
 
-if (session) enterApp(); else { show('signin'); warmUp(); }
+if (session) enterApp(); else { show('signin'); warmUp(); pkSigninShow(); }
 </script>
 </body>
 </html>

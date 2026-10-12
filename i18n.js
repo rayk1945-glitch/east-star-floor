@@ -14,7 +14,7 @@
     // header / nav / sign in
     'East Star': '劍鋒高級建材', 'East Star Red': '劍鋒高級建材 Red', 'Sign in': '登录', 'Sign out': '退出', 'Admin': '管理', 'Search': '搜索', 'Project': '项目', 'Projects': '项目',
     'History': '历史', 'Requests': '请求', 'Name': '姓名', 'PIN': '密码 (PIN)', 'Refresh': '刷新', 'All': '全部', 'Carts': '购物车', 'Plans': '图纸', 'From': '从', 'To': '到',
-    'Showroom floor: stock, prices, tile calculator, projects. Staff only. Ask Ray for a login.': '展厅工具：库存、价格、瓷砖计算器、项目。仅限员工，请向 Ray 索取登录账号。',
+    'Showroom floor: stock, prices, tile calculator, projects. Staff only. Ask admin for a login.': '展厅工具：库存、价格、瓷砖计算器、项目。仅限员工，请向管理员 索取登录账号。',
     'Set your own PIN': '设置你自己的密码', 'You were given a temporary PIN. Pick your own 4 to 10 digit PIN.': '你收到的是临时密码。请设置 4 到 10 位数字的新密码。',
     'New PIN': '新密码', 'New PIN again': '再次输入新密码', 'Save PIN': '保存密码',
     'Typos are OK. Model numbers, colors, sizes and words all work.': '可以有错字。型号、颜色、尺寸和文字都能搜。',
@@ -65,7 +65,7 @@
     'Enter the sq ft per box (on the box label or price list).': '请输入每箱平方英尺（见箱子标签或价目表）。', 'Enter the sq ft per box first': '请先输入每箱平方英尺', 'Total (retail)': '合计（零售价）', 'Retail list prices, no discount. Discounts are applied on the official quote.': '零售标价，未打折。折扣在正式报价中计算。',
     'Retail today (before tax)': '今日零售价（税前）', 'Total': '合计', 'Tile': '瓷砖',
     // plan / cart
-    'Send a kitchen plan to': '发送厨房图纸给', 'Goes straight to the bot for an official quote. The bot replies to Ray with the quote JPG and CSV.': '直接发给机器人做正式报价。机器人会把报价 JPG 和 CSV 回复给 Ray。',
+    'Send a kitchen plan to': '发送厨房图纸给', 'Goes straight to the bot for an official quote. The bot replies to East Star Building Supply with the quote JPG and CSV.': '直接发给机器人做正式报价。机器人会把报价 JPG 和 CSV 回复给 East Star Building Supply。',
     'Plan photo or PDF': '图纸照片或 PDF', 'Style': '款式', 'Pick style…': '选择款式…', 'default for style': '按款式默认', 'Discount %': '折扣 %', 'Tax': '税', 'SF 8.625%': 'SF 8.625%', 'Fremont 10.25%': 'Fremont 10.25%',
     'Job city': '工地城市', 'e.g. Hercules': '例如 Hercules', 'Trim (blank = none)': '配件（空白 = 不要）', 'Trim': '配件', 'Other (see notes)': '其他（见备注）',
     'Fridge side, hinge notes, anything unclear on the plan': '冰箱侧板、门铰方向、图纸上不清楚的地方', 'Cabinet codes on the plan': '图纸上的柜子代码', 'Read again': '重新读取', 'Read fresh': '从头读取',
@@ -87,7 +87,7 @@
     'Add an account': '添加账户', 'Account ID': '账户 ID', 'Bot name': '机器人名称', 'Account name': '账户名称', 'CSV customer ID': 'CSV 客户编号', 'e.g. phone + name used in NetSuite': '例如 NetSuite 里用的电话 + 姓名',
     "Plan share email (bot owner's Google account)": '图纸共享邮箱（机器人主人的 Google 账号）', 'Save account': '保存账户', 'Account saved.': '账户已保存。', 'Staff': '员工', 'Add a login': '添加登录账号',
     'Temporary PIN; they set their own at first sign-in. Same name again = reset PIN.': '临时密码；对方第一次登录时设置自己的密码。再次输入同一个名字 = 重设密码。',
-    'Temporary PIN': '临时密码', 'Account': '账户', 'Role': '角色', 'staff': '员工', 'account admin': '账户管理员', 'admin (all accounts, like Ray)': '管理员（所有账户，和 Ray 一样）', 'Add / reset login': '添加 / 重设账号',
+    'Temporary PIN': '临时密码', 'Account': '账户', 'Role': '角色', 'staff': '员工', 'account admin': '账户管理员', 'admin (all accounts)': '管理员（所有账户）', 'Add / reset login': '添加 / 重设账号',
     'Active': '启用', 'Paused': '已暂停', 'Signed in now': '正在登录中', 'Pause': '暂停', 'Resume': '恢复', 'Reset PIN': '重设密码', 'No logins.': '没有账号。', 'never signed in': '从未登录', 'paused or removed': '已暂停或已删除',
     'Webhook URL': 'Webhook 网址', 'Webhook key': 'Webhook 密钥', 'Save webhook': '保存 Webhook', 'Ping bot': '测试机器人', 'Pinging…': '测试中…', 'webhook set': 'Webhook 已设置', 'no webhook': '没有 Webhook',
     "Set webhook (from the bot's routine panel)": '设置 Webhook（从机器人的例程面板复制）', 'Send to bot account': '发送到机器人账户', 'Send plans & carts to': '图纸和购物车发送给', 'Send to bot': '发给机器人',
@@ -97,9 +97,9 @@
     'tap Share': '点「分享」', 'tap ⋮ then': '点 ⋮ 然后', 'then': '然后', '(or Install app).': '（或「安装应用」）。',
     'Prices shown Mon–Sat 8:30 AM–5:30 PM': '价格显示时间：周一至周六 8:30–17:30', 'just now': '刚刚',
     // server messages
-    'Wrong name or PIN.': '姓名或密码错误。', 'This login is paused. Ask Ray.': '这个账号已暂停。请联系 Ray。', 'This account is turned off. Ask Ray.': '这个账户已关闭。请联系 Ray。',
-    'Your account is turned off. Ask Ray.': '你的账户已关闭。请联系 Ray。', 'Please sign in.': '请登录。', 'Your session has expired. Please sign in again.': '登录已过期，请重新登录。',
-    'This login was paused or removed. Ask Ray.': '这个账号已被暂停或删除。请联系 Ray。', 'PIN must be 4 to 10 digits.': '密码必须是 4 到 10 位数字。', 'The two PINs do not match.': '两次输入的密码不一致。',
+    'Wrong name or PIN.': '姓名或密码错误。', 'This login is paused. Ask admin.': '这个账号已暂停。请联系管理员。', 'This account is turned off. Ask admin.': '这个账户已关闭。请联系管理员。',
+    'Your account is turned off. Ask admin.': '你的账户已关闭。请联系管理员。', 'Please sign in.': '请登录。', 'Your session has expired. Please sign in again.': '登录已过期，请重新登录。',
+    'This login was paused or removed. Ask admin.': '这个账号已被暂停或删除。请联系管理员。', 'PIN must be 4 to 10 digits.': '密码必须是 4 到 10 位数字。', 'The two PINs do not match.': '两次输入的密码不一致。',
     'Current PIN is wrong.': '当前密码错误。', 'Customer name is required.': '必须填写客户姓名。', 'Discount must be 0 to 60%.': '折扣必须在 0 到 60% 之间。', 'The cart is empty.': '购物车是空的。',
     'Add a photo or PDF of the plan.': '请添加图纸照片或 PDF。', 'Plan must be a photo (JPG, PNG, HEIC, WebP) or a PDF.': '图纸必须是照片（JPG、PNG、HEIC、WebP）或 PDF。',
     'That file is too big (max about 10 MB).': '文件太大（最大约 10 MB）。', 'File too big (max about 6 MB).': '文件太大（最大约 6 MB）。', 'Request not found.': '找不到这个请求。',
@@ -113,13 +113,15 @@
     // client page
     'Questions? Visit or call us': '有问题？欢迎来店或致电', 'Your project': '你的项目', 'Nothing has been added to this project yet.': '这个项目还没有添加内容。',
     'This link is not complete. Ask East Star for the link again.': '这个链接不完整。请向劍鋒重新索取链接。', 'No connection. Check your internet and reload the page.': '无法连接。请检查网络后刷新页面。',
-    'San Francisco': '旧金山', 'Fremont': 'Fremont'
+    'San Francisco': '旧金山', 'Fremont': 'Fremont',
+    // passwords (were PINs), rename, fingerprint / Face ID
+    'Change my password': '修改我的密码', 'warehouse': '仓库', 'Warehouse logins can only search items and stock.': '仓库账号只能搜索商品和库存。', 'Current password': '当前密码', 'Your password is changed.': '密码已修改。', 'At least 6 characters. Letters, numbers, spaces and symbols are all OK.': '至少 6 个字符，可以用字母、数字、空格和符号。', 'Password': '密码', 'Show': '显示', 'Hide': '隐藏', 'Show password': '显示密码', 'Hide password': '隐藏密码', 'Sign in with fingerprint / Face ID': '用指纹/面容登录', 'Forget on this phone': '在这部手机上关闭', 'Set your own password': '设置你自己的密码', 'Pick your own password: at least 6 characters. Letters, numbers, spaces and symbols are all OK.': '请设置你自己的密码：至少 6 个字符，可以用字母、数字、空格和符号。', 'Current or temporary password': '当前密码或临时密码', 'New password': '新密码', 'New password again': '再次输入新密码', 'Save password': '保存密码', 'Temporary password (at least 6 characters); they set their own at first sign-in. Same name again = reset password.': '临时密码（至少 6 个字符）；对方第一次登录时设置自己的密码。再次输入同一个名字 = 重设密码。', 'Temporary password': '临时密码', 'Reset password': '重设密码', 'They are signed out and must pick their own password at the next sign-in. Give them the temporary password in person.': '对方会被登出，下次登录时必须设置自己的密码。请当面把临时密码告诉对方。', 'Rename': '改名', 'New name': '新名字', 'Remove saved devices': '移除已保存的设备', 'They sign in with the new name. Their projects, history, shares and saved devices stay with this login. Tell them the new name.': '对方以后用新名字登录。项目、历史、分享和已保存的设备都保留在这个账号。请把新名字告诉对方。', 'Name not changed.': '名字没有改变。', 'Use fingerprint / Face ID next time': '下次用指纹/面容登录', 'Next time, sign in on this phone with your fingerprint or face instead of typing your password. Your fingerprint and face stay on the phone; the app never sees them.': '下次在这部手机上用指纹或面容登录，不用输入密码。指纹和面容只保存在手机上，应用看不到。', 'Turn on': '开启', 'Not now': '以后再说', 'Fingerprint / Face ID is on for this phone.': '这部手机已开启指纹/面容登录。', 'Fingerprint / Face ID was cancelled.': '指纹/面容验证已取消。', 'This phone is already saved.': '这部手机已经保存过了。', 'Fingerprint / Face ID is off on this phone. Sign in with your password.': '这部手机已关闭指纹/面容登录。请用密码登录。', 'Wrong name or password.': '姓名或密码错误。', 'Password must be 6 to 128 characters.': '密码必须是 6 到 128 个字符。', 'The two passwords do not match.': '两次输入的密码不一致。', 'Current password is wrong.': '当前密码错误。', 'Pick a new password, not the same one.': '请设置一个新密码，不要和原来的一样。', 'Another login already uses that name.': '这个名字已经被其他账号使用。', 'This fingerprint / Face ID request expired. Try again.': '这次指纹/面容请求已过期，请再试一次。', 'Fingerprint / Face ID check failed. Sign in with your password.': '指纹/面容验证失败，请用密码登录。', 'This device is no longer saved for fingerprint / Face ID. Sign in with your password.': '这台设备的指纹/面容登录已被移除，请用密码登录。', 'Fingerprint / Face ID was not confirmed on the phone. Try again.': '手机上没有确认指纹/面容，请再试一次。', 'Fingerprint / Face ID is not allowed from this page.': '这个页面不能使用指纹/面容登录。', 'Too many tries. Sign in with your password.': '尝试次数太多，请用密码登录。', 'This login was removed. Ask admin.': '这个账号已被删除。请联系管理员。', 'This device is already saved.': '这台设备已经保存过了。', 'This phone offered a key type the app does not support.': '这部手机的密钥类型不受支持。', 'Bad passkey data.': '指纹/面容数据有误。',
   };
 
   // ---------------------------------------------------------------- phrases / patterns inside longer texts (applied in order)
   var PH = [
     [/^Send plan to /, '图纸发给 '], [/^Send to /, '发送给 '], [/^Sent to /, '已发送给 '], [/\. Request /g, '。请求 '], [/^Request /, '请求 '],
-    [/ items\. The quote comes back to Ray\./, ' 件商品。报价会回复给 Ray。'], [/^Saved as /, '已保存为 '], [/ but the bot did not answer \(/, '，但机器人没有回应（'],
+    [/ items\. The quote comes back to East Star Building Supply\./, ' 件商品。报价会回复给 East Star Building Supply。'], [/^Saved as /, '已保存为 '], [/ but the bot did not answer \(/, '，但机器人没有回应（'],
     [/\)\. Re-send it below or from History\./, '）。可在下面或历史中重新发送。'], [/\)\. Re-send it from History\./, '）。可在历史中重新发送。'],
     [/^Re-sent /, '已重新发送 '], [/^Re-send failed: /, '重新发送失败：'], [/ again \(same request ID\)\?$/, ' 再发一次（同一个请求编号）？'],
     [/^Typos are OK · data from /, '可以有错字 · 数据更新于 '], [/ · all notes save automatically/, ' · 所有笔记自动保存'], [/ · contact info \+ all notes/, ' · 联系信息 + 所有笔记'],
@@ -151,7 +153,9 @@
     [/^Google is busy, trying again in /, 'Google 忙，稍后重试：'], [/^Subtotal \(retail/, '小计（零售价'], [/^Prices shown /, '价格显示 '],
     [/^Unexpected server reply \(HTTP /, '服务器回复异常（HTTP '], [/^Wrong name or PIN\. (\d+) tries left before a (\d+)-minute lock\./, '姓名或密码错误。再错 $1 次将锁定 $2 分钟。'],
     [/^Not in the item list: /, '不在商品清单中：'], [/\. Remove and re-add them\./, '。请删除后重新添加。'], [/^Your project at East Star Building Supply:/, '你在劍鋒高級建材的项目：'],
-    [/^Updated /, '更新于 '], [/^Mon – Sat 8:30 AM – 5:30 PM/, '周一至周六 8:30 – 17:30']
+    [/^Updated /, '更新于 '], [/^Mon – Sat 8:30 AM – 5:30 PM/, '周一至周六 8:30 – 17:30'],
+    // passwords, rename, fingerprint / Face ID
+    [/ · temporary password/, ' · 临时密码'], [/ · fingerprint \/ Face ID on (\d+) devices?/, ' · 指纹/面容：$1 台设备'], [/^Password reset for /, '已重设密码：'], [/\. Give them the temporary password in person\./, '。请当面把临时密码告诉对方。'], [/^Reset password for /, '重设密码：'], [/^Wrong name or password\. (\d+) tries left before a (\d+)-minute lock\./, '姓名或密码错误。再错 $1 次将锁定 $2 分钟。'], [/^This account is locked after too many wrong passwords\. Try again in (\d+) minutes\./, '错误密码次数太多，账号已锁定。请 $1 分钟后再试。'], [/^Too many wrong passwords, so this account is locked for (\d+) minutes\./, '错误密码次数太多，账号已锁定 $1 分钟。'], [/^Renamed (.+) to (.+)\. They sign in as (.+) now\.$/, '已将 $1 改名为 $2。对方现在用 $3 登录。'], [/^Rename (?=\S)/, '改名：'], [/^Remove fingerprint \/ Face ID for (.+) on all (\d+) saved devices?\?/, '移除 $1 在全部 $2 台设备上的指纹/面容登录？'], [/They sign in with their password and can turn it on again\./, '对方用密码登录，可以再次开启。'], [/^Removed (\d+) saved devices? for /, '已移除 $1 台已保存设备：'],
   ];
 
   function tr(s) {
