@@ -148,6 +148,13 @@
   .savest { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:55; border-radius:999px; padding:7px 14px; font-size:13.5px; font-weight:700; border:0; box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .savest.saving { background:#eef2f7; color:#334155; } .savest.ok { background:var(--ok-bg); color:var(--ok-fg); } .savest.bad { background:#fde8e6; color:#8a1c12; cursor:pointer; }
   .pline .ltc { display:block; margin:6px 0 0 2px; font-size:13.5px; font-weight:600; color:#1e3a6e; text-decoration:underline; background:none; border:0; padding:2px 0; }
+  .nhead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:2px 2px 8px; }
+  .nhead .back { flex-shrink:0; }
+  .nhead #cdTitle { font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%; }
+  .nhead .sh { font-size:11.5px; background:#eef2f7; color:#334155; border-radius:999px; padding:2px 8px; }
+  .nhead .infolink { flex-basis:100%; text-align:left; background:none; border:0; padding:0 0 0 42px; color:#1e3a6e; font-size:14px; font-weight:600; text-decoration:underline; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nhead .ndnew { margin-left:auto; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 12px; font-weight:700; font-size:13.5px; color:#1f2937; white-space:nowrap; }
+  .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
@@ -237,7 +244,7 @@
 <body>
 <section id="signin" class="hidden"><main style="padding-top:40px"><div class="card">
   <h1>East Star Red</h1>
-  <p class="hint" style="margin-top:4px">Showroom floor: stock, prices, tile calculator, customer notes. Staff only. Ask Ray for a login.</p>
+  <p class="hint" style="margin-top:4px">Showroom floor: stock, prices, tile calculator, notes. Staff only. Ask Ray for a login.</p>
   <form id="signinForm" autocomplete="on">
     <label class="f" for="inName">Name</label><input id="inName" name="username" autocomplete="username" autocapitalize="words" required>
     <label class="f" for="inPin">PIN</label><input id="inPin" name="password" type="password" inputmode="numeric" pattern="\d*" autocomplete="current-password" required>
@@ -270,14 +277,7 @@
     </div>
     <!-- CUSTOMERS: list + one customer (info, picked items, voice notes) -->
     <div class="page" id="p-cust">
-      <div id="cuList">
-        <div class="card"><div class="sec-h"><h2>Customers</h2><button class="link" id="cuRefresh">Refresh</button></div>
-          <div class="searchbar" style="position:relative;top:auto;padding:0;margin:6px 0 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="top:15px!important"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input id="cuQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Name, phone, city or #number"></div>
-          <button class="newc" id="cuNew">+ New customer</button></div>
-        <div class="card"><div id="cuMeta" class="hint" style="margin:0 0 2px"></div><div id="cuRows"><div class="spinner"></div></div></div>
-      </div>
-      <div id="cuDetail" class="hidden"></div>
+      <div id="cuDetail"></div>
     </div>
     <!-- SEND PLAN (separate page) -->
     <div class="page" id="p-plan"><div class="card">
@@ -296,7 +296,7 @@
           <label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:600"><input type="checkbox" id="crUse" checked style="width:auto;min-height:0"> Send this list</label></div>
         <p class="note" style="margin:6px 0 0">Read by the computer from the photo: check every code and quantity against the plan. <span class="fl check">check</span> = not in our item list, <span class="fl odd">odd</span> = the reader guessed or the label looks cut off.</p>
       </div>
-      <div class="twocol"><div><label class="f">Customer name <span class="req">*</span></label><input id="plName" autocapitalize="words"></div>
+      <div class="twocol"><div><label class="f">Name <span class="req">*</span></label><input id="plName" autocapitalize="words"></div>
         <div><label class="f">Phone</label><input id="plPhone" type="tel" inputmode="tel"></div></div>
       <div class="twocol"><div><label class="f">Job city</label><input id="plCity" autocapitalize="words" placeholder="e.g. Hercules"></div>
         <div><label class="f">Style</label><select id="plStyle"></select></div></div>
@@ -314,10 +314,11 @@
     <div class="page" id="p-history">
       <div class="card hfilters">
         <div class="sec-h"><h2>History</h2><button class="link" id="hRefresh">Refresh</button></div>
+        <div class="seg2" id="hView"><button data-v="notes" class="active">Notes</button><button data-v="req">Requests</button></div>
         <div class="searchbar" style="position:relative;top:auto;padding:0;margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="top:15px!important"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="hQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Customer, phone, city or request ID"></div>
-        <div class="seg2" id="hType"><button data-t="all" class="active">All</button><button data-t="cart">Carts</button><button data-t="plan">Plans</button></div>
-        <div class="twocol"><div><label class="f">From</label><input id="hFrom" type="date"></div><div><label class="f">To</label><input id="hTo" type="date"></div></div>
+          <input id="hQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="#number, name, phone"></div>
+        <div id="hReqF" class="hidden"><div class="seg2" id="hType"><button data-t="all" class="active">All</button><button data-t="cart">Carts</button><button data-t="plan">Plans</button></div>
+        <div class="twocol"><div><label class="f">From</label><input id="hFrom" type="date"></div><div><label class="f">To</label><input id="hTo" type="date"></div></div></div>
       </div>
       <div class="card"><div id="hMeta" class="hint" style="margin:0 0 4px"></div><div id="hList"><div class="spinner"></div></div></div>
     </div>
@@ -345,7 +346,7 @@
   </main>
   <nav class="bottom" id="bnav">
     <button data-go="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
-    <button data-go="cust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.7.8 2.8 2.6 3 5.2"/></svg>Customers<span class="badge hidden" id="custBadge"></span></button>
+    <button data-go="cust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M8.5 12.5h7M8.5 16.5h5"/></svg>Note<span class="badge hidden" id="custBadge"></span></button>
     <button data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
   </nav>
 </section>
@@ -374,9 +375,12 @@ function serverApi(action, data) {
   var body = Object.assign({}, data || {}, { action: action }); if (session) body.token = session.token;
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('Unexpected server reply (HTTP ' + r.status + ').'); }
-      if (!j.ok) { var er = new Error(j.error || 'Something went wrong.'); if (j.auth) signedOut(); throw er; } return j.data; }); },
+      if (!j.ok) { var er = new Error(noteWords(j.error || 'Something went wrong.')); if (j.auth) signedOut(); throw er; } return j.data; }); },
       function () { throw new Error('No connection to the server. Check your internet and try again.'); });
 }
+/** Server messages still say "customer" (API unchanged); staff see "note". */
+function noteWords(m) { return String(m).replace('Go back and reopen the customer.', 'Go back and reopen it.').replace('This customer has no note yet. Tap + New note.', 'This note has no section yet.')
+  .replace(/^Customer not found\./, 'Note not found.').replace(/^Customer name is required\./, 'Name is required.').replace(/^This customer is full/, 'This note is full'); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function money(n) { return n == null || n === '' || isNaN(n) ? '—' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function qty(n) { return n == null || n === '' ? '—' : Number(n).toLocaleString('en-US'); }
@@ -432,11 +436,15 @@ function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 
 function signedOut() { wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); }
 
 // ---------------- navigation
-function go(p) {
+function go(p, quiet) {
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   window.scrollTo(0, 0);
-  if (p === 'cust') { if (!custOpen) loadCustList(); else if (!$('cuDetail').innerHTML) openCust(custOpen.id); }
+  if (quiet) return;
+  if (p === 'cust') {                                   // the Note tab: the open note, else the current ("adding here") note, else a NEW numbered note
+    if (custOpen && $('cuDetail').innerHTML) { if (noteOpenId) scrollToNote(noteOpenId); }
+    else if (curCust) openCust(curCust.id, null, curCust.noteId);
+    else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new note…</div></div>'; newCustomerOpen(); } }
   if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
   if (p === 'history') loadHistory();
   if (p === 'admin') adminLoad();
@@ -446,7 +454,7 @@ document.addEventListener('click', function (e) { var b = e.target.closest('[dat
 function enterApp() {
   if (session.mustChangePin) { show('pinchange'); return; }
   show('app'); setHeader(session);
-  loadCur(); custOpen = null; $('cuDetail').innerHTML = ''; $('cuDetail').classList.add('hidden'); $('cuList').classList.remove('hidden');
+  loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
   sizeChrome();
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
@@ -608,10 +616,10 @@ function renderCustBar() {
   var b = $('custBar'); b.classList.toggle('none', !curCust);
   b.innerHTML = curCust ? '<span class="lbl">Adding to:</span><button class="nm" id="cbOpen">' + esc(curCust.name) + ' · ' + esc(curCust.noteTitle) + '</button><span class="lbl">·</span><button class="chg" id="cbChange">change</button>' +
       '<span class="cnt">' + (curCust.count || 0) + ' item' + (curCust.count === 1 ? '' : 's') + '</span>'
-    : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">pick a customer</button>';
-  b.innerHTML += '<button class="cbnew" id="cbNew" title="New customer with the next note number">+ New</button>';
+    : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">pick a note</button>';
+  b.innerHTML += '<button class="cbnew" id="cbNew" title="New note with the next number">+ New note</button>';
   $('cbChange').onclick = function () { openPicker(null); };
-  $('cbNew').onclick = function () { var x = this; x.disabled = true; newCustomer().then(function (c) { toast('Adding to ' + custLabel(c) + ' · Note 1'); }).catch(function () { x.disabled = false; }); };
+  $('cbNew').onclick = function () { this.disabled = true; newCustomerOpen(); };
   if ($('cbOpen')) $('cbOpen').onclick = function () { openCust(curCust.id, null, curCust.noteId); };
   var bd = $('custBadge'); bd.textContent = curCust && curCust.count ? curCust.count : ''; bd.classList.toggle('hidden', !(curCust && curCust.count));
 }
@@ -621,21 +629,22 @@ var newBusy = false;
 function newCustomer() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
   return api('customerSave', { customer: { tax: 'SF' } }).then(function (c) { newBusy = false; setCur(c, c.notes[0]); return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
 /** "+ New" from Search / the bar: create, make it the current note, open it. */
-function newCustomerOpen() { newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); toast(custLabel(c) + ' · Note 1 created'); }).catch(function () {}); }
+function newCustomerOpen() { newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); scrollToNote(c.notes[0].id); toast('New note ' + custLabel(c) + ' (adding here)'); }).catch(function () { renderCustBar(); }); }
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
-  openSheet('<h3>' + (then ? 'Add to which customer?' : 'Adding to') + '</h3><div class="hint" style="margin:0 0 8px">Items from Search go into one note of this customer.</div>' +
-    '<input id="pkQ" type="search" placeholder="Search name, phone or #number" autocomplete="off"><button class="newc" id="pkNew">+ New customer (next #)</button>' +
+  openSheet('<h3>' + (then ? 'Add to which note?' : 'Adding to') + '</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this note.</div>' +
+    '<input id="pkQ" type="search" placeholder="Search name, phone or #number" autocomplete="off"><button class="newc" id="pkNew">+ New note</button>' +
     '<div class="sec-h" style="margin-top:8px"><h2 id="pkH">Recent</h2></div><div id="pkList"><div class="spinner"></div></div>');
   var t = null; $('pkQ').oninput = function () { clearTimeout(t); var q = this.value; t = setTimeout(function () { loadPick(q); }, 250); };
-  $('pkNew').onclick = function () { var b = this; b.disabled = true; b.textContent = 'Creating…'; newCustomer().then(function (c) { pickDone(c, c.notes[0]); if (!then) toast(custLabel(c) + ' · Note 1 created'); }).catch(function () { b.disabled = false; b.textContent = '+ New customer (next #)'; }); };
+  $('pkNew').onclick = function () { var b = this; b.disabled = true; b.textContent = 'Creating…'; if (!then) { closeSheet(); newCustomerOpen(); return; }
+    newCustomer().then(function (c) { pickDone(c, c.notes[0]); }).catch(function () { b.disabled = false; b.textContent = '+ New note'; }); };
   loadPick('');
 }
 var pickRows = {};
 function loadPick(q) { $('pkH').textContent = q ? 'Matches' : 'Recent';
   api('customerList', { filter: { q: q, n: q ? 50 : 8 } }).then(function (l) { if (!$('pkList')) return; l.forEach(function (c) { pickRows[c.id] = c; });
-    $('pkList').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'No customer matches.' : 'No customers yet. Tap + New customer.') + '</div>';
+    $('pkList').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'No note matches.' : 'No notes yet. Tap + New note.') + '</div>';
   }).catch(function (er) { if ($('pkList')) $('pkList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; }); }
 /** A customer was tapped in the picker: one note = take it; several = ask which; none = make "Note 1". */
 function pickCustomer(c) {
@@ -650,11 +659,13 @@ function pickCustomer(c) {
   $('pkNewNote').onclick = function () { this.disabled = true; $('sheetBody').onclick = null; api('noteSave', { id: c.id }).then(function (r) { pickDone(c, r.note); }).catch(function (er) { toast(er.message); }); };
 }
 function pickDone(c, n) { setCur(c, n); closeSheet(); var t = pickThen; pickThen = null; if (t) t(); else toast('Adding to ' + custLabel(c) + ' · ' + n.title);
-  if ($('p-cust').classList.contains('on')) { if (!custOpen) loadCustList(); else if (custOpen.id === c.id) renderCustDetail(); } }
-function custRowHtml(c) { var ago = c.updated ? whenTxt(c.updated) : '', nn = (c.noteList || []).length;
+  if ($('p-cust').classList.contains('on') && custOpen && custOpen.id === c.id) renderCustDetail(); }
+function custRowHtml(c) { var ago = c.updated ? whenTxt(c.updated) : '', nl = c.noteList || [],   // sections named, unless it's just the default "Note 1"
+    secs = nl.length === 1 && /^Note 1$/.test(nl[0].title || 'Note 1') ? [] : nl.map(function (n) { return n.title || 'Note'; });
   return '<button class="crow2" data-cust="' + esc(c.id) + '"><b>' + esc(custLabel(c)) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
     (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
-    '<span class="s">' + esc([c.phone, c.city].filter(Boolean).join(' · ') || 'no phone') + '</span><span class="s">' + nn + ' note' + (nn === 1 ? '' : 's') + ' · ' + c.count + ' item' + (c.count === 1 ? '' : 's') +
+    ([c.phone, c.city].filter(Boolean).length ? '<span class="s">' + esc([c.phone, c.city].filter(Boolean).join(' · ')) + '</span>' : '') +
+    '<span class="s">' + (secs.length ? esc(secs.join(', ')) + ' · ' : '') + c.count + ' item' + (c.count === 1 ? '' : 's') +
     (ago ? ' · ' + esc(ago) + (c.updated_by ? ' by ' + esc(c.updated_by) : '') : '') + '</span></button>'; }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-cust]'); if (!b) return;
   if (b.closest('#pkList')) pickCustomer(pickRows[b.dataset.cust]); else openCust(b.dataset.cust); });
@@ -666,7 +677,7 @@ function addToNote(lines) {
   lines.reduce(function (pr, l) { return pr.then(function () { return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: l }); }); }, Promise.resolve())
     .then(function (r) { if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
       var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); } } })
-    .catch(function (er) { toast('Not added: ' + er.message); if (/customer not found|note is gone/i.test(er.message)) setCur(null); });
+    .catch(function (er) { toast('Not added: ' + er.message); if (/^note not found|note is gone/i.test(er.message)) setCur(null); });
 }
 function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' }); }
 function itemRow(name) { if (!localData) return null; var i = nameIndex_(localData)[name]; return i == null ? null : localData.items[i]; }
@@ -674,32 +685,34 @@ function linePrice(l) { var r = itemRow(l.name); return priceState.prices && r &
 function noteOf(cid, nid) { return custOpen && custOpen.id === cid ? (custOpen.notes || []).filter(function (n) { return n.id === nid; })[0] : null; }
 function curNote() { return noteOf(custOpen && custOpen.id, noteOpenId); }
 
-// ---- customer list
-var cuTimer = null, cuSeq = 0;
-$('cuQ').addEventListener('input', function () { clearTimeout(cuTimer); cuTimer = setTimeout(loadCustList, 250); });
-$('cuRefresh').onclick = function () { loadCustList(); };
-$('cuNew').onclick = newCustomerOpen;
-function loadCustList() {
-  custOpen = null; noteOpenId = null; $('cuDetail').classList.add('hidden'); $('cuList').classList.remove('hidden');
-  var q = $('cuQ').value.trim(), my = ++cuSeq;
-  api('customerList', { filter: { q: q } }).then(function (l) { if (my !== cuSeq) return;
-    $('cuMeta').textContent = l.length ? l.length + ' customer' + (l.length === 1 ? '' : 's') + (q ? ' matching' : '') + ' · yours, plus any shared with you' : '';
-    $('cuRows').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'Nothing found for “' + esc(q) + '”.' : 'No customers yet. Tap + New customer, or Add to note from Search.') + '</div>';
-  }).catch(function (er) { if (my === cuSeq) $('cuRows').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+// ---- past notes live in History ("Notes" view; "Requests" = the plan / quote requests). Back from a note lands there.
+function loadCustList() { custOpen = null; noteOpenId = null; $('cuDetail').innerHTML = ''; setHView('notes'); go('history'); }
+var hView = 'notes';
+function setHView(v) { hView = v; [].forEach.call($('hView').children, function (x) { x.classList.toggle('active', x.dataset.v === v); });
+  $('hReqF').classList.toggle('hidden', v !== 'req'); }
+$('hView').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; setHView(b.dataset.v); loadHistory(); });
+var cuSeq = 0;
+function loadNotesList() {
+  var q = $('hQ').value.trim(), my = ++cuSeq;
+  $('hList').innerHTML = '<div class="spinner"></div>';
+  api('customerList', { filter: { q: q } }).then(function (l) { if (my !== cuSeq || hView !== 'notes') return;
+    $('hMeta').textContent = l.length ? l.length + (q ? ' matching' : ' notes') + ' · yours, plus any shared with you' : '';
+    $('hList').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'Nothing found for “' + esc(q) + '”.' : 'No notes yet. Tap Note below to start one.') + '</div>';
+  }).catch(function (er) { if (my === cuSeq) $('hList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
 // ---- one customer: slim info line (collapsed; a brand-new customer opens expanded), note cards, voice notes
 function openCust(id, pre, noteId) {
-  if (!$('p-cust').classList.contains('on')) go('cust');
-  $('cuList').classList.add('hidden'); var d = $('cuDetail'); d.classList.remove('hidden'); window.scrollTo(0, 0);
+  if (!$('p-cust').classList.contains('on')) go('cust', true);
+  var d = $('cuDetail'); window.scrollTo(0, 0);
   if (!pre || !pre.notes) infoOpen = false;
   noteOpenId = noteId || (curCust && curCust.id === id ? curCust.noteId : null);
   if (pre && pre.notes) { custOpen = pre; if (!noteOpenId || !curNote()) noteOpenId = pre.notes.length ? pre.notes[0].id : null; renderCustDetail(); return; }
   custOpen = { id: id };
-  d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList;
+  d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Note</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList;
   api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return; custOpen = c;
     if (!noteOpenId || !curNote()) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
     if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== custLabel(c)) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = custLabel(c); saveCur(); } } })
-    .catch(function (er) { d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Customer</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
+    .catch(function (er) { d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Note</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
       if (curCust && curCust.id === id && /not found/i.test(er.message)) setCur(null); });
 }
 // ---- sharing: the owner (or admin) ticks logins (and/or the whole team); they see the customer with all notes and can
@@ -711,7 +724,7 @@ function shareText(c) {
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
 function openShare(c) {
-  openSheet('<h3>Share ' + esc(custLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this customer with all notes, and can add items, edit notes and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
+  openSheet('<h3>Share ' + esc(custLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this note with all its sections, and can add items, edit and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
   api('shareTargets', {}).then(function (ts) { if (!$('shList')) return;
     var on = {}; (c.sharedWith || []).forEach(function (x) { on[x.key] = 1; });
     ts = ts.filter(function (t) { return c.mine || t.name.toLowerCase() !== String(c.owner).toLowerCase(); });
@@ -727,6 +740,9 @@ function openShare(c) {
   }).catch(function (er) { if ($('shList')) $('shList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
 function renderCustDetail() { renderOverview(); }
+/** The small line under the note header: "+ Add customer info" until something is filled in, then "Customer: phone · city". */
+function infoLinkText(c) { var has = [c.name, c.phone, c.city].some(function (x) { return String(x || '').trim(); }) || c.tax === 'Fremont';
+  return infoOpen ? 'Hide contact info ▴' : has ? 'Contact: ' + ([c.phone, c.city].filter(Boolean).map(esc).join(' · ') || esc(c.name)) + (c.tax === 'Fremont' ? ' · Fremont tax' : '') + ' ▾' : '+ Add contact info'; }
 function infoLine(c) { return [custLabel(c), c.phone, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
 /** Keep what's typed in the open note (title/text) in the model before any re-render. */
 function keepTyped() { var n = curNote(); if (n && $('nTitle') && noteDirty) { n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; } }
@@ -736,19 +752,23 @@ function renderOverview() {
   keepTyped();
   var c = custOpen, canShare = c.mine || session.role === 'admin';
   if (noteOpenId && !curNote()) noteOpenId = null;
-  $('cuDetail').innerHTML = '<div class="card"><div class="crumb" style="margin:0"><button class="back" id="cdBack">‹</button>' +
-      '<button class="infoline' + (infoOpen ? ' open' : '') + '" id="cdInfoT" aria-expanded="' + infoOpen + '"><span>' + infoLine(c) + '</span><span class="chev">' + (infoOpen ? '▴' : '▾') + '</span></button></div>' +
-      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + '</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '</div>' +
-      '<div id="cdInfo"' + (infoOpen ? '' : ' class="hidden"') + '>' +
+  $('cuDetail').innerHTML = '<div class="nhead"><button class="back" id="cdBack" aria-label="Back to notes">‹</button><b id="cdTitle">' + esc(custLabel(c)) + '</b>' +
+      (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
+      '<button class="ndnew" id="ndNew">+ New note</button>' +
+      '<button class="infolink" id="cdInfoT" aria-expanded="' + infoOpen + '">' + infoLinkText(c) + '</button></div>' +
+      '<div class="card' + (infoOpen ? '' : ' hidden') + '" id="cdInfo">' +
+      '<div class="sec-h" style="margin:0 0 6px"><h2>Contact info</h2></div>' +
       '<div class="twocol"><div><label class="f">Name</label><input id="cdName" autocapitalize="words" placeholder="optional' + (c.num ? ' (shows as #' + c.num + ')' : '') + '" value="' + esc(c.name) + '"></div><div><label class="f">Phone</label><input id="cdPhone" type="tel" inputmode="tel" value="' + esc(c.phone) + '"></div></div>' +
-      '<label class="f">City / job address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
+      '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
-      '<div class="saved" id="cdSaved">Changes save automatically.</div></div></div>' +
-    '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add another note</button>' +
+      '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
+    '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add a section (Kitchen, Bath…)</button>' +
     '<div class="card"><div class="sec-h"><h2>Voice notes</h2></div><div id="cdVoice"></div>' +
       '<div style="margin-top:10px"><button class="recbtn" id="cdRec">● Record</button> <span id="cdRecT" class="hint"></span></div><div id="cdLive" class="live hidden"></div></div>' +
-    (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this customer</button></div>' : '');
+    '<div class="card"><div class="shline" id="cdShareLine"><span>' + shareText(c) + '</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share') + '</button>' : '') + '</div></div>' +
+    (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this note</button></div>' : '');
   $('cdBack').onclick = function () { flushInfo(); flushNote(); loadCustList(); };
+  $('ndNew').onclick = function () { this.disabled = true; flushInfo(); flushNote(); newCustomerOpen(); };
   $('cdInfoT').onclick = function () { flushInfo(); infoOpen = !infoOpen; renderOverview(); };
   [['cdName', 'name'], ['cdPhone', 'phone'], ['cdCity', 'city']].forEach(function (f) { var el = $(f[0]);
     el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); el.addEventListener('blur', flushInfo); });
@@ -758,7 +778,7 @@ function renderOverview() {
     .then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderOverview(); scrollToNote(r.note.id); toast('New note: ' + r.note.title + ' (adding here)'); })
     .catch(function (er) { toast(er.message); b.disabled = false; }); };
   $('cdRec').onclick = toggleRec;
-  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + custLabel(c) + ' and all their notes, photos and voice notes?')) return;
+  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete note ' + custLabel(c) + ' with all its sections, photos and voice notes?')) return;
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + custLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); };
   renderNoteCards(); renderVoice();
 }
@@ -833,7 +853,7 @@ function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdNa
   return autoSave('info:' + c.id, function () { var body = { id: c.id, name: String(c.name || '').trim(), phone: c.phone || '', city: c.city || '', tax: c.tax };
     return api('customerSave', { customer: body }).then(function (r) { c.label = r.label; c.num = r.num;
       if (curCust && curCust.id === r.id && curCust.name !== r.label) { curCust.name = r.label; saveCur(); }
-      if (custOpen === c && $('cdInfoT')) $('cdInfoT').firstChild.innerHTML = infoLine(c); }); }); }
+      if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = custLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); } }); }); }
 /** Note title/text autosave (debounced + on leaving the box). Set false to save only with the "Save note" button. */
 var NOTE_AUTOSAVE = true;
 var noteT = null, noteDirty = false;
@@ -895,7 +915,7 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
   else if (rm) { if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
     n.items = n.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
     delete saveQ['line:' + l.id];
-    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/customer/i.test(er.message)) return; throw er; }); }); }
+    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^note not found/i.test(er.message)) return; throw er; }); }); }
 });
 function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
@@ -976,7 +996,7 @@ function histRowHtml(r) { var ok = /^sent/.test(r.status);
     (r.revised_from ? '<br>Revised from ' + esc(r.revised_from) : '') + (session.role === 'admin' && r.account !== session.account ? ' · account ' + esc(r.account) : '') + '</div>' +
     '<div class="actions">' + histActs(r.kind, r.request_id, true) + '</div></div>'; }
 function histActs(kind, rid, open) { var a = function (k, t) { return '<button data-hact="' + k + '" data-rid="' + esc(rid) + '">' + t + '</button>'; };
-  return (open ? a('open', 'Open') : '') + (kind === 'cart' ? a('tocust', 'Copy to customer') : a('edit', 'Edit') + a('clone', 'Clone')) + a('resend', 'Re-send'); }
+  return (open ? a('open', 'Open') : '') + (kind === 'cart' ? a('tocust', 'Copy as note') : a('edit', 'Edit') + a('clone', 'Clone')) + a('resend', 'Re-send'); }
 function loadRecent(kind, el, n) {
   api('history', { filter: { type: kind, n: n } }).then(function (r) {
     $(el).innerHTML = r.rows.length ? r.rows.map(histRowHtml).join('') : '<div class="empty">None yet.</div>';
@@ -987,6 +1007,7 @@ $('hType').addEventListener('click', function (e) { var b = e.target.closest('bu
 $('hQ').addEventListener('input', function () { clearTimeout(hTimer); hTimer = setTimeout(loadHistory, 300); });
 $('hFrom').onchange = $('hTo').onchange = loadHistory; $('hRefresh').onclick = loadHistory;
 function loadHistory() {
+  if (hView === 'notes') { loadNotesList(); return; }
   var q = $('hQ').value.trim().toLowerCase(), my = ++hSeq;
   $('hList').innerHTML = '<div class="spinner"></div>';
   api('history', { filter: { type: hType, q: q, from: $('hFrom').value, to: $('hTo').value, n: 80 } }).then(function (r) { if (my !== hSeq) return;
@@ -1008,7 +1029,7 @@ function openRequest(rid) {
   openSheet('<div class="spinner"></div>');
   api('requestGet', { request_id: rid }).then(function (g) { var p = g.payload, r = g.row, cartK = r.kind === 'cart';
     var body = '<h3>' + (cartK ? 'Cart request' : 'Plan request') + '</h3><div style="font-size:13px;color:var(--muted)">' + esc(r.request_id) + ' · ' + esc(r.time) + ' · ' + esc(r.submitted_by) + '</div>' +
-      kv('Customer', p.customer_name) + kv('Note', p.note_title) + kv('Phone', p.customer_phone) + kv('Job city', p.job_city) + kv('Style', p.style) +
+      kv('Name', p.customer_name) + kv('Note', p.note_title) + kv('Phone', p.customer_phone) + kv('Job city', p.job_city) + kv('Style', p.style) +
       kv('Discount', p.discount_pct == null ? 'default' : p.discount_pct + '%') + kv('Tax', p.tax_store) + kv('Revised from', p.revised_from) +
       kv('Status', r.status + (r.sends > 1 ? ' (sent ' + r.sends + '×)' : ''));
     if (cartK) { var sub = g.lines.reduce(function (a, l) { return a + l.price * l.qty; }, 0);
@@ -1029,10 +1050,10 @@ function openRequest(rid) {
 function cartToCustomer(rid, btn) { if (btn) btn.disabled = true;
   api('requestGet', { request_id: rid }).then(function (g) { var p = g.payload, ls = g.lines.filter(function (l) { return !l.missing && !l.cab && !(l.parts && l.parts.length); });
     var skipped = g.lines.length - ls.length;
-    return api('customerSave', { customer: { name: p.customer_name || 'Customer from ' + rid, phone: p.customer_phone, city: p.job_city, tax: p.tax_store, notes: (p.notes ? p.notes + '\n' : '') + '(copied from ' + rid + ')' } }).then(function (c) {
+    return api('customerSave', { customer: { name: String(p.customer_name || '').replace(/ · #\d+$/, ''), phone: p.customer_phone, city: p.job_city, tax: p.tax_store, notes: (p.notes ? p.notes + '\n' : '') + '(copied from ' + rid + ')' } }).then(function (c) {
       var n1 = c.notes[0];
       return ls.reduce(function (pr, l) { var r = itemRow(l.name); return pr.then(function () { return api('customerItem', { id: c.id, noteId: n1.id, op: 'add', line: { name: l.name, desc: (l.desc || (r ? r[1] : '')).slice(0, 110), qty: l.qty, photo: r && r[13] || '' } }); }); }, Promise.resolve())
-        .then(function () { closeSheet(); n1.count = ls.length; setCur(c, n1); openCust(c.id, null, n1.id); toast('New customer from ' + rid + (skipped ? ' (' + skipped + ' cabinet/old line' + (skipped === 1 ? '' : 's') + ' skipped)' : '')); }); });
+        .then(function () { closeSheet(); n1.count = ls.length; setCur(c, n1); openCust(c.id, null, n1.id); toast('New note from ' + rid + (skipped ? ' (' + skipped + ' cabinet/old line' + (skipped === 1 ? '' : 's') + ' skipped)' : '')); }); });
   }).catch(function (er) { toast(er.message); }).then(function () { if (btn) btn.disabled = false; });
 }
 var SPECIAL_RE = /^\d+ x .+ \(special order .+, priced from #2083 parts\)$/;
@@ -1252,8 +1273,8 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
   if (k === 'pause') { if (u.active && !confirm('Pause ' + u.name + '? They are signed out now and cannot sign in until you tap Resume.')) return; b.disabled = true;
     api('adminSetActive', { name: u.name, active: !u.active }).then(function (r) { msg($('stListMsg'), r.active ? u.name + ' can sign in again.' : u.name + ' is paused' + (r.sessionsEnded ? ' and was signed out (' + r.sessionsEnded + ' device' + (r.sessionsEnded === 1 ? '' : 's') + ')' : '') + '.', true); loadUsers(); })
       .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
-  else if (k === 'del') { if (!confirm('Delete the login for ' + u.name + '?\n\nThey are signed out and can no longer sign in. Their customers and history stay (shown as “deleted: ' + u.name + '”).')) return; b.disabled = true;
-    api('adminDeleteUser', { name: u.name }).then(function (r) { msg($('stListMsg'), 'Deleted ' + r.name + '. ' + r.customersKept + ' customer' + (r.customersKept === 1 ? '' : 's') + ' kept.', true); loadUsers(); })
+  else if (k === 'del') { if (!confirm('Delete the login for ' + u.name + '?\n\nThey are signed out and can no longer sign in. Their notes and history stay (shown as “deleted: ' + u.name + '”).')) return; b.disabled = true;
+    api('adminDeleteUser', { name: u.name }).then(function (r) { msg($('stListMsg'), 'Deleted ' + r.name + '. ' + r.customersKept + ' note' + (r.customersKept === 1 ? '' : 's') + ' kept.', true); loadUsers(); })
       .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
   else if (k === 'pin') { openSheet('<h3>Reset PIN for ' + esc(u.name) + '</h3><p class="hint">They are signed out and must pick their own PIN at the next sign-in. Give them the temporary PIN in person.</p>' +
       '<label class="f">Temporary PIN</label><input id="rpPin" inputmode="numeric" autocomplete="off"><button class="btn" id="rpGo">Reset PIN</button><div id="rpMsg" class="msg hidden"></div>');
