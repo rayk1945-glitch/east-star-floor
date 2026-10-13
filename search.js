@@ -205,9 +205,10 @@ function incomingIndex_(bundle) {
 }
 
 /**
- * f (optional) = {cat, inStock, store: 'SF'|'FRE', size, offset}: narrows the ranked list and pages it ("Load more").
+ * f (optional) = {cat, inStock, store: 'SF'|'FRE', size, finish, offset}: narrows the ranked list and pages it ("Load more").
  * facets = counts over the FULL match set (all-words matches, or the closest set when nothing matches every word), each
- * computed with the other filters applied: cats [[cat, n]] in Browse order, stock / sf / fre counts, sizes [[size, n]] (Tile/Flooring).
+ * computed with the other filters applied: cats [[cat, n]] in Browse order, stock / sf / fre counts, sizes [[size, n]] (Tile/Flooring),
+ * finishes [[label, n, named]] from variantIndex_ (Chrome, Brushed Nickel, …).
  * SF / FRE = the item has a shelf location at that store (the item list has one on-hand total, not per store).
  */
 function searchBundle_(bundle, q, limit, f) {
@@ -299,22 +300,27 @@ function searchBundle_(bundle, q, limit, f) {
   // ---- filters + facets (over the whole match set, not just the first page)
   var set = cands;                                     // exact set, or (fallback) every close match that is listed
   var store = f.store === 'SF' ? 5 : f.store === 'FRE' ? 6 : 0, sizeOn = f.cat === 'Tile' || f.cat === 'Flooring';
+  var vix = variantIndex_(bundle);
   var pass = function (r, skip) {
+    var ve = vix.byName[r[0]];
     return (skip === 'cat' || !f.cat || r[7] === f.cat) && (skip === 'stock' || !f.inStock || Number(r[3]) > 0) &&
-           (skip === 'store' || !store || !!r[store]) && (skip === 'size' || !f.size || !sizeOn || r[10] === f.size);
+           (skip === 'store' || !store || !!r[store]) && (skip === 'size' || !f.size || !sizeOn || r[10] === f.size) &&
+           (skip === 'finish' || !f.finish || (ve && ve.label === f.finish));
   };
-  var fc = {}, sz = {}, facets = { stock: 0, sf: 0, fre: 0, cats: [], sizes: [] };
+  var fc = {}, sz = {}, fin = {}, facets = { stock: 0, sf: 0, fre: 0, cats: [], sizes: [], finishes: [] };
   for (var fi = 0; fi < set.length; fi++) {
     var fr = items[set[fi][3]];
     if (pass(fr, 'cat')) fc[fr[7]] = (fc[fr[7]] || 0) + 1;
     if (pass(fr, 'stock') && Number(fr[3]) > 0) facets.stock++;
     if (pass(fr, 'store')) { if (fr[5]) facets.sf++; if (fr[6]) facets.fre++; }
     if (sizeOn && fr[10] && pass(fr, 'size')) sz[fr[10]] = (sz[fr[10]] || 0) + 1;
+    if (pass(fr, 'finish')) { var ve = vix.byName[fr[0]]; if (ve && ve.label) { var slot = fin[ve.label] = fin[ve.label] || { n: 0, named: 0 }; slot.n++; if (ve.named) slot.named = 1; } }
   }
   facets.cats = (bundle.categories || []).concat(Object.keys(fc).filter(function (k) { return (bundle.categories || []).indexOf(k) < 0; }))
     .filter(function (k) { return fc[k]; }).map(function (k) { return [k, fc[k]]; }).sort(function (a, b) { return b[1] - a[1]; });   // biggest first (stable: Browse order on ties)
   facets.sizes = Object.keys(sz).map(function (k) { return [k, sz[k]]; }).sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); }).slice(0, 12);
-  var filtered = f.cat || f.inStock || store || (sizeOn && f.size);
+  facets.finishes = Object.keys(fin).map(function (k) { return [k, fin[k].n, fin[k].named]; }).sort(function (a, b) { return b[2] - a[2] || b[1] - a[1] || (a[0] < b[0] ? -1 : 1); }).slice(0, 24);
+  var filtered = f.cat || f.inStock || store || (sizeOn && f.size) || f.finish;
   var list = filtered ? cands.filter(function (c) { return pass(items[c[3]]); }) : cands;
   var offset = Math.max(0, Math.floor(Number(f.offset) || 0));
   var out = list.slice(offset, offset + limit).map(function (c) { return itemOut_(items[c[3]], inc, c[0] === T ? 'all' : 'partial'); });
@@ -412,6 +418,122 @@ function nameIndex_(bundle) {
   if (NAME_INDEX_ && NAME_VER_ === bundle.version) return NAME_INDEX_;
   var m = {}; (bundle.items || []).forEach(function (r, i) { m[r[0]] = i; });
   NAME_INDEX_ = m; NAME_VER_ = bundle.version; return m;
+}
+
+// ------------------------------------------------------------------ finish / variant families
+// Sibling items share a code prefix and differ only in the last 3 characters, or the last 4 when the last 3
+// has no sibling. Prefix must be at least 5 characters so short size codes (WDC2440 / W3030) are not finishes.
+// Cabinet codes (prefix + size digits) are never finishes. Labels: Hansgrohe/Axor finish digits when the family
+// uses more than one of those codes, else a finish word in the description (or the bundle finish tags), else the suffix.
+var HG_FINISH_ = { '00': 'Chrome', '82': 'Brushed Nickel', '14': 'Brushed Bronze', '67': 'Matte Black', '25': 'Brushed Gold Optic', '34': 'Brushed Black Chrome', '83': 'Polished Nickel' };
+var FINISH_PHRASES_ = [
+  ['BRUSHED BLACK CHROME', 'Brushed Black Chrome'], ['BRUSHED GOLD OPTIC', 'Brushed Gold Optic'],
+  ['OIL-RUBBED BRONZE', 'Oil Rubbed Bronze'], ['OIL RUBBED BRONZE', 'Oil Rubbed Bronze'],
+  ['VENETIAN BRONZE', 'Venetian Bronze'], ['CHAMPAGNE BRONZE', 'Champagne Bronze'], ['UNLACQUERED BRASS', 'Unlacquered Brass'],
+  ['POLISHED NICKEL', 'Polished Nickel'], ['POLISHED CHROME', 'Polished Chrome'], ['POLISHED BRASS', 'Polished Brass'],
+  ['BRUSHED NICKEL', 'Brushed Nickel'], ['BRUSHED BRONZE', 'Brushed Bronze'], ['BRUSHED BRASS', 'Brushed Brass'],
+  ['BRUSHED GOLD', 'Brushed Gold'], ['BRUSHED BLACK', 'Brushed Black'], ['BRUSHED GRAPHITE', 'Brushed Graphite'],
+  ['SATIN NICKEL', 'Satin Nickel'], ['SATIN BRONZE', 'Satin Bronze'], ['SATIN BRASS', 'Satin Brass'],
+  ['STAINLESS STEEL', 'Stainless Steel'], ['SUPER STEEL', 'SuperSteel'], ['SUPERSTEEL', 'SuperSteel'],
+  ['HARD GRAPHITE', 'Hard Graphite'], ['WARM SUNSET', 'Warm Sunset'], ['COOL SUNRISE', 'Cool Sunrise'],
+  ['MATTE BLACK', 'Matte Black'], ['MATTE WHITE', 'Matte White'], ['GUN METAL', 'Gunmetal'], ['GUNMETAL', 'Gunmetal'],
+  ['STAINLESS', 'Stainless Steel'], ['CHROME', 'Chrome'],
+  ['拉丝黑铬', 'Brushed Black Chrome'], ['拉丝金', 'Brushed Gold Optic'], ['拉丝镍', 'Brushed Nickel'], ['拉丝青铜', 'Brushed Bronze'],
+  ['拉丝黄铜', 'Brushed Brass'], ['哑光黑', 'Matte Black'], ['磨砂黑', 'Matte Black'], ['哑光白', 'Matte White'],
+  ['抛光镍', 'Polished Nickel'], ['抛光铬', 'Polished Chrome'], ['油擦青铜', 'Oil Rubbed Bronze'], ['不锈钢', 'Stainless Steel'],
+  ['铬色', 'Chrome'], ['镀铬', 'Chrome']];
+var CABINET_CODE_ = /^(PANTRY|GDWDC|BBFD|BEFE|WDC|WBC|BBC|VDB|VSB|LSB|MWC|OVD|OMD|ROT|GDW|BMC|BSR|BOE|WEQ|WEA|BEA|WSP|WF|BF|TF|WB|WD|WR|DB|SB|LS|PC|TK|SM|OV|UT|W|B|T|V|F)\d{2,6}[LR]?$/;
+function phraseAt_(hay, phrase, ascii) {
+  var from = 0, i;
+  while ((i = hay.indexOf(phrase, from)) >= 0) {
+    if (!ascii) return true;
+    var before = i === 0 || !/[A-Z0-9]/.test(hay.charAt(i - 1));
+    var after = i + phrase.length >= hay.length || !/[A-Z0-9]/.test(hay.charAt(i + phrase.length));
+    if (before && after) return true;
+    from = i + 1;
+  }
+  return false;
+}
+function finishFromDesc_(text) {
+  var raw = String(text || ''), up = raw.toUpperCase(), i;
+  for (i = 0; i < FINISH_PHRASES_.length; i++) {
+    var p = FINISH_PHRASES_[i][0], ascii = p.charCodeAt(0) < 128;
+    if (phraseAt_(ascii ? up : raw, p, ascii)) return FINISH_PHRASES_[i][1];
+  }
+  return '';
+}
+function hgLabel_(tail) { return tail.length === 3 && /^\d{2}[0-9A-Z]$/.test(tail) ? (HG_FINISH_[tail.slice(0, 2)] || '') : ''; }
+function variantBuckets_(codes, tail) {
+  var m = {}, min = tail + 5, i;
+  for (i = 0; i < codes.length; i++) {
+    var c = codes[i];
+    if (!c || c.length < min || CABINET_CODE_.test(c)) continue;
+    var p = c.slice(0, c.length - tail);
+    (m[p] = m[p] || []).push(i);
+  }
+  return m;
+}
+function variantLabelFamily_(items, codes, idxs, tail) {
+  var distinct = {}, i, t, h;
+  for (i = 0; i < idxs.length; i++) { h = hgLabel_(codes[idxs[i]].slice(-tail)); if (h) distinct[h] = 1; }
+  // Known digits only when the family uses more than one of them (Chrome and Brushed Nickel, …).
+  // A run of 003/004/005 is not a finish family just because each tail starts with 00.
+  var useHg = Object.keys(distinct).length >= 2;
+  return idxs.map(function (ix) {
+    t = codes[ix].slice(-tail);
+    var tags = [].concat(items[ix][9] || []).join(' ');
+    var fromCode = useHg ? hgLabel_(t) : '';
+    var fromDesc = finishFromDesc_(String(items[ix][1] || '') + ' ' + tags);
+    var label = fromCode || fromDesc || t;
+    return { i: ix, name: items[ix][0], label: label, tail: t, named: label !== t };
+  });
+}
+var VARIANT_CACHE_ = { ver: null, idx: null };
+/** { byName: {item name: {name, label, tail, key, named}}, groups: {key: [entries]} }. Cached per bundle version. */
+function variantIndex_(bundle) {
+  var items = (bundle && bundle.items) || [];
+  var ver = (bundle && (bundle.version || bundle.built) || '') + '#' + items.length;
+  if (VARIANT_CACHE_.ver === ver && VARIANT_CACHE_.idx) return VARIANT_CACHE_.idx;
+  var codes = new Array(items.length), i;
+  for (i = 0; i < items.length; i++) codes[i] = normCode_(items[i][0]);
+  var assigned = {}, byName = {}, groups = {};
+  function consider(buckets, tail) {
+    for (var p in buckets) {
+      var mem = buckets[p], uniq = [], seen = {}, k;
+      for (k = 0; k < mem.length; k++) {
+        var ix = mem[k];
+        if (assigned[ix] || seen[codes[ix]]) continue;
+        seen[codes[ix]] = 1; uniq.push(ix);
+      }
+      if (uniq.length < 2) continue;
+      var key = tail + ':' + p, entries = variantLabelFamily_(items, codes, uniq, tail);
+      entries.forEach(function (e) { e.key = key; assigned[e.i] = 1; byName[e.name] = e; });
+      groups[key] = entries;
+    }
+  }
+  consider(variantBuckets_(codes, 3), 3);
+  consider(variantBuckets_(codes, 4), 4);
+  VARIANT_CACHE_ = { ver: ver, idx: { byName: byName, groups: groups } };
+  return VARIANT_CACHE_.idx;
+}
+function variantSiblings_(bundle, name) {
+  if (!bundle) return [];
+  var e = variantIndex_(bundle).byName[name];
+  return e ? variantIndex_(bundle).groups[e.key] : [];
+}
+/** Sibling with this finish. null = this item is already that finish. undefined = no such sibling in the item list. */
+function variantPick_(siblings, currentName, label) {
+  var cur = null, hits = [], i;
+  for (i = 0; i < siblings.length; i++) {
+    if (siblings[i].name === currentName) cur = siblings[i];
+    if (siblings[i].label === label) hits.push(siblings[i]);
+  }
+  if (cur && cur.label === label) return null;
+  if (!hits.length) return undefined;
+  if (hits.length === 1) return hits[0];
+  var last = cur && cur.tail ? cur.tail.slice(-1) : '';
+  for (i = 0; i < hits.length; i++) if (last && hits[i].tail.slice(-1) === last) return hits[i];
+  return hits[0];
 }
 
 /** One shelf of one style: every size with combined price and per-part stock + incoming. */
