@@ -254,9 +254,16 @@
   .trimgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .trimgrid label { font-size:12.5px; font-weight:700; color:#374151; } .trimgrid input { min-height:40px; padding:8px; text-align:center; }
   .twocol { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .schips { display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; margin:0 -2px; scrollbar-width:none; } .schips::-webkit-scrollbar { display:none; }
+  .schips .flab { flex:none; align-self:center; font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
   .schips button { flex:none; border:1px solid var(--line-strong); background:#fff; color:#111; border-radius:999px; padding:6px 11px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .vsw { margin:2px 0 8px; } .vsw .vlab { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 4px; }
+  .vsw .schips button { min-height:40px; } .pline .vsw { margin:8px 0 0; }
+  .vmiss { font-size:13px; background:var(--err-bg); color:var(--err-fg); border-radius:10px; padding:8px 10px; margin-top:6px; word-break:break-word; }
+  .lsub { display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:3px; font-size:12.5px; font-weight:700; }
+  .lsub .good { color:var(--ok-fg); } .lsub .bad { color:var(--err-fg); } .lsub .muted { color:var(--muted); font-weight:600; }
   .schips button small { color:var(--muted); font-weight:500; margin-left:4px; } .schips button.on { background:#111; color:#fff; border-color:#111; } .schips button.on small { color:#ddd; }
   .schips.sub button { font-size:12.5px; padding:4px 10px; background:#f4f4f5; } .schips.sub button.on { background:#374151; border-color:#374151; }
+  .schips.fin button { min-height:40px; padding:6px 12px; }
   .schips .sep { flex:none; width:1px; background:var(--line-strong); margin:4px 2px; }
   .dym { font-size:14px; margin:6px 2px 10px; } .dym button { border:0; background:#e9f0fb; color:#1e3a6e; border-radius:999px; padding:5px 10px; margin:3px 4px 0 0; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
   .closest { background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
@@ -429,8 +436,8 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<script src="search.js?v=20261012j"></script>
-<script src="i18n.js?v=20261012j"></script>
+<script src="search.js?v=20261013a"></script>
+<script src="i18n.js?v=20261013a"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -480,7 +487,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261012j';
+var PAGE_VER = '20261013a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -745,7 +752,11 @@ function renderSearchFilters(r) {
   var cl = fc.cats.filter(function (c) { return c[0] !== sF.cat; }); if (sF.cat) cl.unshift([sF.cat, (fc.cats.filter(function (c) { return c[0] === sF.cat; })[0] || [0, 0])[1]]);   // tapped chip first, never disappears
   var cats = cl.length > 1 || sF.cat ? '<div class="schips">' + cl.map(function (c) { return chip('cat', c[0], c[0], c[1]); }).join('') + '</div>' : '';
   var sizes = (sF.cat === 'Tile' || sF.cat === 'Flooring') && fc.sizes.length > 1 ? '<div class="schips sub">' + fc.sizes.map(function (z) { return chip('size', z[0], z[0], z[1]); }).join('') + '</div>' : '';
-  $('sfilt').innerHTML = cats + sizes + '<div class="schips sub tog">' + top + '</div>';
+  var fins = fc.finishes || [], namedF = fins.filter(function (x) { return x[2]; }), useF = namedF.length >= 2 ? namedF : fins;
+  useF = useF.slice(0, 14);
+  if (sF.finish && !useF.some(function (x) { return x[0] === sF.finish; })) useF.unshift([sF.finish, 0, 1]);
+  var finishes = useF.length > 1 ? '<div class="schips sub fin"><span class="flab">Finish</span>' + useF.map(function (z) { return chip('finish', z[0], z[0], z[1]); }).join('') + '</div>' : '';
+  $('sfilt').innerHTML = cats + finishes + sizes + '<div class="schips sub tog">' + top + '</div>';
 }
 $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
   var k = b.dataset.sk, v = k === 'inStock' ? true : b.dataset.sv;
@@ -1140,15 +1151,163 @@ function renderPicked() {
   var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) { keepTyped(); renderNoteCards(); } return; }
   var it = n.items || [];
   $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
-  $('cdItems').innerHTML = it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
+  $('cdItems').innerHTML = (it.length ? variantBar(n) : '') + (it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = (r && r[13]) || l.photo || '', pr = linePrice(l);
+    var desc = r ? String(r[1] || '').slice(0, 110) : (l.desc || '');
+    var oh = r ? r[3] : null, ohN = Number(oh);
     return '<div class="pline" data-lid="' + esc(l.id) + '"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
-      '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(l.desc || (r ? r[1] : '')) + '</span>' +
+      '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(desc) + '</span>' +
+      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b></span>' +
+        (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') + '</span>' : '') +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
+      lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
       '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
       (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div>';
-  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>';
+  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
   renderTotals();
+}
+// Finish families (search.js): same code prefix, last 3–4 characters differ. Chips only offer a finish that exists
+// on a sibling in the item list. "Finish" above the lines switches every line it can; the rest stay and are listed.
+var FINISH_RANK_ = ['Chrome', 'Polished Chrome', 'Polished Nickel', 'Brushed Nickel', 'Satin Nickel', 'SuperSteel', 'Brushed Bronze', 'Oil Rubbed Bronze', 'Venetian Bronze', 'Champagne Bronze', 'Brushed Brass', 'Unlacquered Brass', 'Polished Brass', 'Brushed Gold', 'Brushed Gold Optic', 'Brushed Black Chrome', 'Brushed Black', 'Brushed Graphite', 'Hard Graphite', 'Matte Black', 'Matte White', 'Stainless Steel', 'Gunmetal', 'Warm Sunset', 'Cool Sunrise'];
+var varMiss = null, varBusy = false;
+function sortFinishes(labels) { return labels.slice().sort(function (a, b) { var ia = FINISH_RANK_.indexOf(a), ib = FINISH_RANK_.indexOf(b); if (ia < 0) ia = 80; if (ib < 0) ib = 80; return ia - ib || (a < b ? -1 : a > b ? 1 : 0); }); }
+function variantSiblings(name) { return localData && typeof variantSiblings_ === 'function' ? variantSiblings_(localData, name) : []; }
+function finishLabelsOf(name) {
+  var sibs = variantSiblings(name), seen = {}, out = [], cur = '';
+  sibs.forEach(function (s) { if (s.name === name) cur = s.label; if (!s.label || seen[s.label]) return; seen[s.label] = 1; out.push(s.label); });
+  return { labels: sortFinishes(out), current: cur };
+}
+function noteFinishState(items) {
+  var seen = {}, labels = [], cur = '', mixed = false, any = false;
+  (items || []).forEach(function (l) {
+    var f = finishLabelsOf(l.name); if (f.labels.length < 2) return; any = true;
+    f.labels.forEach(function (lab) { if (!seen[lab]) { seen[lab] = 1; labels.push(lab); } });
+    if (!cur) cur = f.current; else if (cur !== f.current) mixed = true;
+  });
+  return { labels: sortFinishes(labels), current: any && !mixed ? cur : '' };
+}
+function variantBar(n) {
+  var st = noteFinishState(n.items); if (st.labels.length < 2) return '';
+  var miss = varMiss && varMiss.noteId === n.id ? varMiss.html : '';
+  return '<div class="vsw" id="vSwitch"><div class="vlab">Finish</div><div class="schips">' + st.labels.map(function (lab) {
+    return '<button type="button" data-vall="' + esc(lab) + '"' + (lab === st.current ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(lab) + '</button>';
+  }).join('') + '</div>' + miss + '</div>';
+}
+function lineVariants(name) {
+  var f = finishLabelsOf(name); if (f.labels.length < 2) return '';
+  return '<div class="vsw linev"><div class="schips">' + f.labels.map(function (lab) {
+    return '<button type="button" data-vf="' + esc(lab) + '"' + (lab === f.current ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(lab) + '</button>';
+  }).join('') + '</div></div>';
+}
+function applyVariantToLine(l, sibName) {
+  var r = itemRow(sibName); if (!r) return false;
+  l.name = r[0]; l.desc = String(r[1] || '').slice(0, 110); l.photo = r[13] || '';
+  return true;
+}
+function missHtml(label, names) {
+  var shown = names.slice(0, 12), more = names.length > 12 ? ' +' + (names.length - 12) + ' more' : '';
+  return '<div class="vmiss"><span>Could not switch to </span><b>' + esc(label) + '</b><span class="notr">: ' + esc(shown.join(', ')) + more + '</span></div>';
+}
+function switchNoteFinish(label) {
+  if (varBusy) return; var n = curNote(); if (!n || !localData) return;
+  var changed = [], missed = [];
+  (n.items || []).forEach(function (l) {
+    var sibs = variantSiblings(l.name);
+    if (sibs.length < 2) { missed.push(l.name); return; }
+    var pick = variantPick_(sibs, l.name, label);
+    if (pick === null) return;
+    if (!pick || !applyVariantToLine(l, pick.name)) missed.push(l.name);
+    else changed.push(l);
+  });
+  if (!changed.length && !missed.length) return;
+  varMiss = missed.length ? { noteId: n.id, html: missHtml(label, missed) } : null;
+  renderPicked(); syncCount();
+  if (!changed.length) { toast('Could not switch ' + missed.length + ' item' + (missed.length === 1 ? '' : 's')); return; }
+  toast('Switched ' + changed.length + ' item' + (changed.length === 1 ? '' : 's'));
+  saveNoteVariants(n, changed);
+}
+function switchLineFinish(l, label) {
+  if (varBusy) return; var n = curNote(); if (!n || !l) return;
+  var pick = variantPick_(variantSiblings(l.name), l.name, label);
+  if (pick === null || !pick) return;
+  if (!applyVariantToLine(l, pick.name)) { toast('Could not switch 1 item'); return; }
+  varMiss = null; renderPicked(); syncCount(); toast('Switched 1 item');
+  saveNoteVariants(n, [l]);
+}
+/** Persist a finish switch with the same customerItem save the qty / line note already uses.
+ *  set carries the new code, description and photo. If the server copy of the line keeps the old code,
+ *  the lines are rewritten with remove + add (existing ops), in the same order, keeping qty and the line note. */
+function snapLines(n) { return (n.items || []).map(function (l) { return { id: l.id, name: l.name, desc: l.desc || '', qty: l.qty, note: l.note || '', photo: l.photo || '' }; }); }
+function saveNoteVariants(n, changed) {
+  var c = custOpen; if (!c || !n || !changed.length) return Promise.resolve();
+  changed.forEach(function (l) { clearTimeout(qtyT[l.id]); clearTimeout(lnoteT[l.id]); delete qtyT[l.id]; delete lnoteT[l.id]; delete saveQ['line:' + l.id]; });
+  var ids = {}; changed.forEach(function (l) { ids[l.id] = 1; });
+  var wait = changed.map(function (l) { return saveRun['line:' + l.id] || Promise.resolve(); });
+  varBusy = true;
+  var before = (n.items || []).map(function (l) { return l.id; }).join(',');
+  return Promise.all(wait).then(function () {
+    return autoSave('var:' + n.id, function () { return pushVariants(c, n, snapLines(n), ids); });
+  }).then(function () {
+    varBusy = false;
+    var after = (n.items || []).map(function (l) { return l.id; }).join(',');
+    if (after !== before && custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
+    if (isCurNote(c.id, n.id)) syncCount();
+  }, function (er) { varBusy = false; toast(er.message || 'Not saved yet'); });
+}
+function linesMatch(serverItems, snap, ids) {
+  var by = {}; (serverItems || []).forEach(function (x) { by[x.id] = x; });
+  return snap.every(function (l) { if (!ids[l.id]) return true; var s = by[l.id]; return s && s.name === l.name; });
+}
+function pushVariants(c, n, snap, ids) {
+  var changed = snap.filter(function (l) { return ids[l.id]; });
+  var chain = Promise.resolve(), saw = 0, bad = 0;
+  changed.forEach(function (l) {
+    chain = chain.then(function () {
+      var live = (n.items || []).filter(function (x) { return x.id === l.id; })[0] || l;
+      return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: l.id, qty: live.qty, note: live.note || '', name: live.name, desc: live.desc || '', photo: live.photo || '' })
+        .then(function (r) {
+          if (r && r.note) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }
+          if (r && r.items) { saw++; var s = r.items.filter(function (x) { return x.id === l.id; })[0]; if (!s || s.name !== l.name) bad++; }
+        }, function (er) { if (/sign in|signed out/i.test(er.message || '')) throw er; bad++; });
+    });
+  });
+  return chain.then(function () {
+    if (saw === changed.length && !bad) return;
+    return api('customerGet', { id: c.id }).then(function (fresh) {
+      var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
+      if (fn && linesMatch(fn.items, snap, ids)) { n.updated = fn.updated; n.updated_by = fn.updated_by; return; }
+      return rewriteItems(c, n, snap);
+    });
+  });
+}
+function rewriteItems(c, n, snap) {
+  var live = {}; (n.items || []).forEach(function (l) { live[l.id] = l; });
+  snap = snap.map(function (l) { var x = live[l.id]; return x ? { id: l.id, name: x.name, desc: x.desc || '', qty: x.qty, note: x.note || '', photo: x.photo || '' } : l; });
+  return api('customerGet', { id: c.id }).then(function (fresh) {
+    var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
+    if (!fn) throw new Error('That note is gone.');
+    if (linesMatch(fn.items, snap, snap.reduce(function (m, l) { m[l.id] = 1; return m; }, {})) && (fn.items || []).length === snap.length && snap.every(function (l, i) { return fn.items[i] && fn.items[i].name === l.name; })) {
+      n.items = fn.items; n.updated = fn.updated; n.updated_by = fn.updated_by; return;
+    }
+    var ids = (fn.items || []).map(function (l) { return l.id; }), chain = Promise.resolve(), last = null, i;
+    for (i = ids.length - 1; i >= 0; i--) {
+      (function (id) { chain = chain.then(function () {
+        return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: id }).catch(function (er) {
+          if (/not found|gone/i.test(er.message || '') && !/^project not found/i.test(er.message || '')) return; throw er;
+        });
+      }); })(ids[i]);
+    }
+    snap.forEach(function (l) {
+      chain = chain.then(function () {
+        return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' } })
+          .then(function (r) { last = r; });
+      });
+    });
+    return chain.then(function () {
+      if (last && last.items) n.items = last.items;
+      if (last && last.note) { n.updated = last.note.updated; n.updated_by = last.note.updated_by; }
+    });
+  });
 }
 function renderTotals() { var n = curNote(), el = $('cdTotals'); if (!el || !n) return; var it = n.items || [];
   if (!it.length || !priceState.prices) { el.innerHTML = ''; return; }
@@ -1214,8 +1373,11 @@ function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
     return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }); }); }
 var lnoteT = {};
 var qtyT = {};
-document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return; var t = e.target, l = lineOf(t); if (!l) return;
+document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return;
+  var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
+  var t = e.target, l = lineOf(t); if (!l) return;
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]');
+  if (t.closest('[data-vf]')) { switchLineFinish(l, t.closest('[data-vf]').dataset.vf); return; }
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
   if (t.closest('[data-lfc]')) { var r1 = itemRow(l.name); if (isFloorRow(r1)) floorCalcFor(itemFromRow(r1), { c: custOpen, n: curNote(), line: l }); return; }
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
