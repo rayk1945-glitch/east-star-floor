@@ -187,7 +187,9 @@
   .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
   .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
-  .nphb { display:flex; gap:8px; margin-top:8px; }
+  .nphb { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .nphz { border:2px dashed transparent; border-radius:12px; padding:2px; transition:background .15s,border-color .15s; } .nphd { display:none; text-align:center; font-size:13px; color:var(--muted); padding:6px; }
+  .nphz.drag { border-color:#2563eb; background:#eff6ff; } .nphz.drag .nphd { display:block; }
   .crow2 { display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--line); padding:11px 2px; font:inherit; cursor:pointer; color:inherit; }
   .crow2 b { font-size:15.5px; } .crow2 .s { display:block; font-size:12.5px; color:var(--muted); margin-top:1px; }
   .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; margin-left:6px; }
@@ -426,8 +428,8 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<script src="search.js?v=20261012g"></script>
-<script src="i18n.js?v=20261012g"></script>
+<script src="search.js?v=20261012h"></script>
+<script src="i18n.js?v=20261012h"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -471,7 +473,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261012g';
+var PAGE_VER = '20261012h';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1016,8 +1018,8 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
       '<div id="cdItems"></div><div id="cdTotals"></div>' +
-      '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nph" id="nPhotos"></div>' +
-      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" data-nph="1"></label></div>' +
+      '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nphz"><div class="nph" id="nPhotos"></div>' +
+      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" multiple data-nph="1"></label><span class="hint" id="nPhProg" style="margin:0;align-self:center;display:none"></span></div><div class="nphd">Drop photos here (up to 20)</div></div>' +
       '<div style="text-align:center;margin-top:10px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div></div>';
   }).join('') : '<div class="ngroup"><div class="empty" style="padding:14px">No notes yet. Tap + Add note.</div></div>';
   quoteBtn();
@@ -1119,13 +1121,43 @@ function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
   $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
 document.addEventListener('click', function (e) { var img = e.target.closest('#nPhotos img[data-fid]'); if (!img) return; var n = curNote(), c = custOpen, f = img.dataset.fid;
-  openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="actions"><button id="phDel">Remove photo</button></div>');
+  openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="mvh">Move to note</div><div class="mvrow">' + ((c.notes || []).filter(function (x) { return x.id !== n.id; }).map(function (x) { return '<button class="mvbtn" data-phmv="' + esc(x.id) + '"><span class="notr">' + esc(x.title) + '</span> <span>' + (x.photos || []).length + '/12</span></button>'; }).join('') || '<span class="hint" style="margin:0">Add another note first.</span>') + '</div><div id="phMsg" class="msg hidden"></div><div class="actions"><button id="phDel">Remove photo</button></div>');
+  $('sheetBody').onclick = function (ev) { var b = ev.target.closest('[data-phmv]'); if (!b) return; $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = true; }); b.textContent = 'Working…';
+    movePhoto(f, b.dataset.phmv).then(closeSheet, function (er) { msg($('phMsg'), er.message); $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = false; }); }); };
   $('phDel').onclick = function () { this.disabled = true; api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
-document.addEventListener('change', function (e) { var t = e.target; if (!t.dataset.nph || !t.files[0]) return; var f = t.files[0], c = custOpen, n = curNote(); t.value = ''; if (!n) return;
-  $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); var h = $('nPhotos').querySelector('.hint'); if (h) h.remove();
-  shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
-    .then(function (r) { n.photos = r.photos; n.updated = r.note.updated; if (noteOpenId === n.id) renderNotePhotos(); toast('Photo saved to ' + n.title); })
-    .catch(function (er) { toast(er.message); var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }); });
+/** Multi-photo upload (pick or drop up to 20 at once): shrunk on the phone, sent 2 at a time, progress "3/20".
+ *  The server keeps MAX_NOTE_PHOTOS (12) per note, so only the free slots are sent. */
+var PH_BATCH = 20, PH_NOTE_MAX = 20, phBusy = false;
+function uploadNotePhotos(files) { var c = custOpen, n = curNote(); if (!c || !n) return;
+  files = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name || ''); });
+  if (!files.length) return; if (phBusy) { toast('Photos are still uploading…'); return; }
+  if (files.length > PH_BATCH) { files = files.slice(0, PH_BATCH); toastMsg('Only the first 20 photos are added at a time.'); }
+  var room = PH_NOTE_MAX - (n.photos || []).length;
+  if (room <= 0) { toast('Max 20 photos per note.'); return; }
+  if (files.length > room) { files = files.slice(0, room); toastMsg('This note has room for ' + room + ' more photos (max 20 per note).'); }
+  var total = files.length, done = 0, ok = 0, fail = 0, idx = 0; phBusy = true;
+  var h = $('nPhotos') && $('nPhotos').querySelector('.hint'); if (h) h.remove();
+  files.forEach(function () { $('nPhotos') && $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); });
+  function prog() { var b = $('nPhProg'); if (b) { b.textContent = done < total ? 'Uploading ' + done + '/' + total : ''; b.style.display = done < total ? '' : 'none'; } }
+  function dropPh() { var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }
+  function one() { if (idx >= total) return Promise.resolve(); var f = files[idx++];
+    return shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
+      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; }, function (er) { fail++; n._phErr = er.message; })
+      .then(function () { done++; dropPh(); if (noteOpenId === n.id) { renderNotePhotos(); for (var k = done; k < total; k++) $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); } prog(); return one(); }); }
+  prog();
+  Promise.all([one(), one()]).then(function () { phBusy = false; prog();
+    toast(fail ? ok + ' saved, ' + fail + ' failed: ' + (n._phErr || '') : (total === 1 ? 'Photo saved to ' + n.title : ok + ' photos saved to ' + n.title)); delete n._phErr; }); }
+document.addEventListener('change', function (e) { var t = e.target; if (!t.dataset.nph || !t.files || !t.files.length) return; var fs = [].slice.call(t.files); t.value = ''; uploadNotePhotos(fs); });
+// drag and drop photos onto the open note
+function phDropZone(e) { return e.target.closest && e.target.closest('.nphz'); }
+['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { var z = phDropZone(e); if (!z || !e.dataTransfer || [].indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; z.classList.add('drag'); }); });
+document.addEventListener('dragleave', function (e) { var z = phDropZone(e); if (z && !z.contains(e.relatedTarget)) z.classList.remove('drag'); });
+document.addEventListener('drop', function (e) { var z = phDropZone(e); if (!z) return; e.preventDefault(); z.classList.remove('drag'); uploadNotePhotos(e.dataTransfer.files); });
+/** Move a photo to another note of the same project (server: customerFileMove). */
+function movePhoto(f, toId) { var c = custOpen, n = curNote();
+  return api('customerFileMove', { id: c.id, fileId: f, noteId: n.id, toNoteId: toId }).then(function (r) { n.photos = r.photos; n.updated = r.note.updated;
+    var t = c.notes.filter(function (x) { return x.id === r.toNoteId; })[0]; if (t) { t.photos = r.toPhotos; t.updated = r.toNote.updated; }
+    renderNotePhotos(); renderNoteCards(); toast('Photo moved to ' + (t ? t.title : 'note')); }); }
 function lineOf(el) { var d = el.closest('[data-lid]'), n = curNote(); return d && n && (n.items || []).filter(function (l) { return l.id === d.dataset.lid; })[0]; }
 function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
   return autoSave('line:' + id, function () { var cur = (n.items || []).filter(function (x) { return x.id === id; })[0] || l;
