@@ -1584,12 +1584,12 @@ function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = n
  *  Quote project uses that same cartQuote call for every note, in note order, and saves the project first. */
 /** The "Quote Note N" button (beside Quote project) quotes the OPEN note: "Quote Note 2" / "Quote Kitchen". */
 var quoteFor = null, quoteBusy = false;
-function quoteBtn() { var b = $('cdQuote'), a = $('cdQuoteAll'); if (!b) return; var n = curNote(), t = n ? (($('nTitle') && $('nTitle').value.trim()) || n.title) : '';
+function quoteBtn(keep) { var b = $('cdQuote'), a = $('cdQuoteAll'); if (!b) return; var n = curNote(), t = n ? (($('nTitle') && $('nTitle').value.trim()) || n.title) : '';
   b.textContent = n ? 'Quote ' + t : 'Quote this note (open a note first)';
   if (!quoteBusy) { b.disabled = !n; if (a) a.disabled = false; }
-  if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; if (!quoteBusy) msg($('cdMsg'), ''); } }
+  if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; if (!quoteBusy && !keep) msg($('cdMsg'), ''); } }
 function quoteLock(on) { quoteBusy = on; var b = $('cdQuote'), a = $('cdQuoteAll');
-  if (on) { if (b) b.disabled = true; if (a) a.disabled = true; } else quoteBtn(); }
+  if (on) { if (b) b.disabled = true; if (a) a.disabled = true; } else quoteBtn(true); }
 function lineNoteBits(it) { return (it || []).filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + String(l.note).trim(); }); }
 function quoteSent(r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Building Supply.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); }
 function quoteCust() {
@@ -1723,7 +1723,7 @@ function openRequest(rid) {
       function cartLineRow(l) { return '<div class="kv"><span>' + l.qty + ' × ' + esc(l.name) + (l.missing ? ' <span class="missing">(gone)</span>' : '') + '</span><b>' + (l.missing ? '' : money(l.price * l.qty)) + '</b></div>'; }
       var groups = Array.isArray(p.project_notes) ? p.project_notes : null, used = 0;
       if (groups && groups.length) groups.forEach(function (gn) { var nItems = (gn.items || []).length, chunk = g.lines.slice(used, used + nItems); used += nItems;
-        body += '<div class="sec-h" style="margin-top:12px"><h2 class="notr">' + esc(gn.title || 'Note') + '</h2></div>' + (chunk.length ? chunk.map(cartLineRow).join('') : '<div class="hint">None</div>'); });
+        body += '<div class="sec-h" style="margin-top:12px"><h2 class="notr" style="text-transform:none;letter-spacing:0;font-size:15px;color:var(--text)">' + esc(gn.title || 'Note') + '</h2></div>' + (chunk.length ? chunk.map(cartLineRow).join('') : '<div class="hint">None</div>'); });
       if (!groups || !groups.length || used < g.lines.length) body += '<div class="sec-h" style="margin-top:12px"><h2>Items</h2></div>' + g.lines.slice(groups && groups.length ? used : 0).map(cartLineRow).join('');
       body += (g.lines.some(function (l) { return l.price == null && !l.missing; }) ? '' : '<div class="kv"><span>Retail today (before tax)</span><b>' + money(sub) + '</b></div>'); }
     else { var t = Object.keys(p.trim || {}).filter(function (k) { return p.trim[k] !== '' && p.trim[k] != null; });
