@@ -429,8 +429,8 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<script src="search.js?v=20261012i"></script>
-<script src="i18n.js?v=20261012i"></script>
+<script src="search.js?v=20261012j"></script>
+<script src="i18n.js?v=20261012j"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -442,7 +442,13 @@ var SESSION_KEY = 'esRedSession', PEXP_KEY = 'esRedPriceExp', TAX = { SF: 0.0862
 var TRIM_KEYS = ['WSP40', 'BSP', 'TK8', 'WF3X40', 'WF3X96', 'DWP1', 'DWP3', 'REP', '4X8', 'OCM', 'CM2', '25.5X96', 'SM8'];
 var session = (function () { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return s && s.token ? s : null; } catch (e) { return null; } })();
 var $ = function (id) { return document.getElementById(id); };
+/** Temp note ids ("tmp-…"): a note added on the phone shows at once; calls naming it wait until the server made it, then use the real id. */
+var tmpNotes = {};
+function realIds(data) { var w = [];
+  ['noteId', 'toNoteId'].forEach(function (k) { var t = data && data[k]; if (t && tmpNotes[t]) w.push(tmpNotes[t].then(function (id) { data[k] = id; })); });
+  return w.length ? Promise.all(w).then(function () { return data; }) : null; }
 function api(action, data) {
+  var w = realIds(data); if (w) return w.then(function (d) { return api(action, d); });
   if (LOCAL_ACTIONS[action] && (localData || dataP)) return (localData ? Promise.resolve(localData) : dataP).then(function (b) {
     if (!b) return serverApi(action, data);                                       // download failed: ask the server as before
     return JSON.parse(JSON.stringify(LOCAL_ACTIONS[action](b, data || {})));       // same functions the server runs
@@ -474,7 +480,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261012i';
+var PAGE_VER = '20261012j';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -520,7 +526,16 @@ function checkData() {
   return p;
 }
 function pricedCopyExpired() { var e = localStorage.getItem(PEXP_KEY); return !e || (e !== 'never' && Date.now() > +e); }
-function wipeLocalData() { localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
+// ---- project cache (per login, localStorage): lists and projects show at once, then refresh from the server in the background
+function pcKey(k) { return 'esProj:' + (session && session.name || '') + ':' + k; }
+function pcGet(k) { try { return JSON.parse(localStorage.getItem(pcKey(k)) || 'null'); } catch (e) { return null; } }
+function pcPut(k, v) { try { localStorage.setItem(pcKey(k), JSON.stringify(v)); } catch (e) { pcWipe(); } }
+function pcWipe() { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('esProj:') === 0) localStorage.removeItem(k); }); } catch (e) {} }
+/** Cache the open project as it is now (notes still being created on the phone are left out). */
+function pcSave(c) { c = c || custOpen; if (!c || !c.notes) return; var o = {}; Object.keys(c).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = c[k]; });
+  o.notes = c.notes.filter(function (n) { return String(n.id).indexOf('tmp-') !== 0; }); pcPut('c:' + c.id, o); }
+function projPending(id) { return Object.keys(saveQ).some(function (k) { return k.indexOf(':' + id) > 0 || k.indexOf('note:') === 0 || k.indexOf('newnote:' + id) === 0; }) || noteDirty; }
+function wipeLocalData() { pcWipe(); localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
 document.addEventListener('visibilitychange', function () { if (!document.hidden) checkPageVersion(); if (document.hidden || !session) return;
   if (priceState.prices && localData && !localData.noPrices && pricedCopyExpired()) priceWindowEnded();        // the phone slept through the end of price hours
   else if (Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
@@ -890,12 +905,14 @@ $('hView').addEventListener('click', function (e) { var b = e.target.closest('bu
 var cuSeq = 0;
 function loadNotesList() {
   var q = $('hQ').value.trim(), my = ++cuSeq;
-  $('hList').innerHTML = '<div class="spinner"></div>';
-  api('customerList', { filter: { q: q } }).then(function (l) { if (my !== cuSeq || hView !== 'notes') return;
-    $('hMeta').textContent = l.length ? l.length + (q ? ' matching' : (l.length === 1 ? ' project' : ' projects')) + ' · yours, plus any shared with you' : '';
-    $('hList').innerHTML = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'Nothing found for “' + esc(q) + '”.' : 'No projects yet. Tap Project below to start one.') + '</div>';
-  }).catch(function (er) { if (my === cuSeq) $('hList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
+  var cl = q ? null : pcGet('list');
+  $('hList').innerHTML = cl ? listHtml(cl, q) : '<div class="spinner"></div>';
+  api('customerList', { filter: { q: q } }).then(function (l) { if (my !== cuSeq || hView !== 'notes') return; if (!q) pcPut('list', l);
+    listHtml(l, q, true); }).catch(function (er) { if (my === cuSeq && !cl) $('hList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
+function listHtml(l, q, put) { var h = l.length ? l.map(custRowHtml).join('') : '<div class="empty">' + (q ? 'Nothing found for “' + esc(q) + '”.' : 'No projects yet. Tap Project below to start one.') + '</div>';
+  $('hMeta').textContent = l.length ? l.length + (q ? ' matching' : (l.length === 1 ? ' project' : ' projects')) + ' · yours, plus any shared with you' : '';
+  if (put) $('hList').innerHTML = h; return h; }
 // ---- one customer: slim info line (collapsed; a brand-new customer opens expanded), note cards, voice notes
 function openCust(id, pre, noteId) {
   if (!$('p-cust').classList.contains('on')) go('cust', true);
@@ -903,12 +920,19 @@ function openCust(id, pre, noteId) {
   if (!pre || !pre.notes) infoOpen = false;
   noteOpenId = noteId || (curCust && curCust.id === id ? curCust.noteId : null);
   if (pre && pre.notes) { custOpen = pre; if (!noteOpenId || !curNote()) noteOpenId = pre.notes.length ? pre.notes[0].id : null; renderCustDetail(); return; }
-  custOpen = { id: id };
-  d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList;
-  api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return; custOpen = c;
+  var cached = pcGet('c:' + id);
+  if (cached) { custOpen = cached; if (!noteOpenId || !curNote()) noteOpenId = cached.notes.length ? cached.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId); }
+  else { custOpen = { id: id };
+    d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList; }
+  api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return;
+    if (cached) { if (custOpen !== cached) return;                                         // something else opened since
+      if (projPending(id) || document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && $('cuDetail').contains(document.activeElement)) { pcSave(c); return; }   // don't yank what they're typing; next open shows it
+      if (JSON.stringify(c) === JSON.stringify(cached)) return; }
+    custOpen = c; pcSave(c);
     if (!noteOpenId || !curNote()) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
     if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== projLabel(c)) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = custLabel(c); saveCur(); } } })
-    .catch(function (er) { d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
+    .catch(function (er) { if (cached && !/not found/i.test(er.message)) return;             // offline: keep the cached copy on screen
+      if (cached) pcPut('c:' + id, null); d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
       if (curCust && curCust.id === id && /not found/i.test(er.message)) setCur(null); });
 }
 // ---- sharing: the owner (or admin) ticks logins (and/or the whole team); they see the customer with all notes and can
@@ -994,15 +1018,32 @@ function renderOverview() {
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
   $('cdClient').onclick = function () { flushInfo(); flushNote(); openClientLink(c); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); flushInfo(); };
-  $('cdNewNote').onclick = function () { var b = this; b.disabled = true; flushNote().then(function () { return api('noteSave', { id: c.id }); })
-    .then(function (r) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; renderOverview(); scrollToNote(r.note.id); toast('New note: ' + r.note.title + ' (adding here)'); })
-    .catch(function (er) { toast(er.message); b.disabled = false; }); };
+  $('cdNewNote').onclick = function () { addNoteNow(c); };
   $('cdSaveAll').onclick = saveProject; $('cdQuote').onclick = quoteCust;
   $('cdRec').onclick = toggleRec;
   $('cdVoiceT').onclick = function () { voiceOpen = !voiceOpen; renderVoice(); };
   if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?')) return;
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); };
   renderNoteCards(); renderVoice();
+}
+/** "+ Add note": the note shows right away with a temp id; the server creates it in the background (Saving… / Saved, retried
+ *  like every other save). When the real id comes back it replaces the temp id everywhere; edits made meanwhile wait for it. */
+function addNoteNow(c) {
+  if ((c.notes || []).length >= 12) { toast('Max 12 notes per project.'); return; }
+  flushNote();
+  var titles = c.notes.map(function (t) { return t.title; }), k = c.notes.length + 1; while (titles.indexOf('Note ' + k) >= 0) k++;
+  var tmp = 'tmp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), n = { id: tmp, title: 'Note ' + k, text: '', items: [], photos: [], updated: 0, updated_by: '' }, done;
+  tmpNotes[tmp] = new Promise(function (r) { done = r; });
+  c.notes.push(n); setCur(c, n); noteOpenId = tmp; renderOverview(); scrollToNote(tmp); toast('New note: ' + n.title + ' (adding here)');
+  autoSave('newnote:' + c.id + ':' + tmp, function () {
+    return serverApi('noteSave', { id: c.id, title: 'Note ' + k }).then(function (r) { var id = r.note.id;
+      n.id = id; n.updated = r.note.updated; n.updated_by = r.note.updated_by; n.created = r.note.created;
+      Object.keys(r.note).forEach(function (f) { if (!(f in n)) n[f] = r.note[f]; });
+      if (noteOpenId === tmp) noteOpenId = id;
+      if (curCust && curCust.noteId === tmp) { curCust.noteId = id; saveCur(); }
+      document.querySelectorAll('[data-ng="' + tmp + '"],[data-nopen="' + tmp + '"],[data-nmenu="' + tmp + '"]').forEach(function (el) { ['ng', 'nopen', 'nmenu'].forEach(function (a) { if (el.dataset[a] === tmp) el.dataset[a] = id; }); });
+      done(id); delete tmpNotes[tmp]; pcSave(c); });
+  });
 }
 function scrollToNote(id) { var g = document.querySelector('[data-ng="' + id + '"]'); if (g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - document.querySelector('#app header').offsetHeight - 8); }
 function noteSummary(n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
@@ -1048,9 +1089,9 @@ function autoSave(key, fn) { saveQ[key] = fn; return runSave(key); }
 function runSave(key) {
   var fn = saveQ[key]; if (!fn) return Promise.resolve();
   if (saveRun[key]) return saveRun[key].then(function () { return runSave(key); });      // one at a time per thing, in order
-  saveState(); var p = saveRun[key] = fn().then(function (r) { if (saveQ[key] === fn) delete saveQ[key]; delete saveRun[key]; saveState(); return r; },
+  saveState(); var p = saveRun[key] = fn().then(function (r) { if (saveQ[key] === fn) delete saveQ[key]; delete saveRun[key]; saveState(); if (custOpen && !Object.keys(saveQ).length) pcSave(); return r; },
     function (er) { delete saveRun[key]; if (/sign in|signed out/i.test(er.message)) { delete saveQ[key]; } else saveFail = er.message; saveState(); });
-  return p;
+  saveState(); return p;
 }
 function retrySaves() { saveFail = null; Object.keys(saveQ).forEach(runSave); }
 function saveState() { var el = $('saveSt'), pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length;
@@ -1122,7 +1163,7 @@ function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
   $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
 document.addEventListener('click', function (e) { var img = e.target.closest('#nPhotos img[data-fid]'); if (!img) return; var n = curNote(), c = custOpen, f = img.dataset.fid;
-  openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="mvh">Move to note</div><div class="mvrow">' + ((c.notes || []).filter(function (x) { return x.id !== n.id; }).map(function (x) { return '<button class="mvbtn" data-phmv="' + esc(x.id) + '"><span class="notr">' + esc(x.title) + '</span> <span>' + (x.photos || []).length + '/12</span></button>'; }).join('') || '<span class="hint" style="margin:0">Add another note first.</span>') + '</div><div id="phMsg" class="msg hidden"></div><div class="actions"><button id="phDel">Remove photo</button></div>');
+  openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="mvh">Move to note</div><div class="mvrow">' + ((c.notes || []).filter(function (x) { return x.id !== n.id; }).map(function (x) { return '<button class="mvbtn" data-phmv="' + esc(x.id) + '"><span class="notr">' + esc(x.title) + '</span> <span>' + (x.photos || []).length + '/20</span></button>'; }).join('') || '<span class="hint" style="margin:0">Add another note first.</span>') + '</div><div id="phMsg" class="msg hidden"></div><div class="actions"><button id="phDel">Remove photo</button></div>');
   $('sheetBody').onclick = function (ev) { var b = ev.target.closest('[data-phmv]'); if (!b) return; $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = true; }); b.textContent = 'Working…';
     movePhoto(f, b.dataset.phmv).then(closeSheet, function (er) { msg($('phMsg'), er.message); $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = false; }); }); };
   $('phDel').onclick = function () { this.disabled = true; api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
