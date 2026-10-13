@@ -189,6 +189,7 @@
   .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
   .nphb { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
   .nphz { border:2px dashed transparent; border-radius:12px; padding:2px; transition:background .15s,border-color .15s; } .nphd { display:none; text-align:center; font-size:13px; color:var(--muted); padding:6px; }
+  .pldz { border:2px dashed transparent; border-radius:12px; padding:4px; } .pldz.drag { border-color:#2563eb; background:#eff6ff; }
   .nphz.drag { border-color:#2563eb; background:#eff6ff; } .nphz.drag .nphd { display:block; }
   .crow2 { display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--line); padding:11px 2px; font:inherit; cursor:pointer; color:inherit; }
   .crow2 b { font-size:15.5px; } .crow2 .s { display:block; font-size:12.5px; color:var(--muted); margin-top:1px; }
@@ -369,7 +370,7 @@
       <p class="hint" style="margin-top:0">Goes straight to the bot for an official quote. The bot replies to East Star Building Supply with the quote JPG and CSV.</p>
       <label class="f">Plan photo or PDF <span class="req">*</span></label>
       <div id="plKeep" class="keepbox hidden"></div>
-      <input id="plFile" type="file" accept="image/*,application/pdf" capture="environment">
+      <div id="plDrop" class="pldz"><input id="plFile" type="file" accept="image/*,application/pdf" capture="environment"><div class="hint" style="margin:4px 0 0">or drag a file here / paste (Ctrl+V)</div></div>
       <img id="plPrev" class="planpreview hidden" alt="">
       <div class="twocol"><div><label class="f">Name <span class="req">*</span></label><input id="plName" autocapitalize="words"></div>
         <div><label class="f">Phone</label><input id="plPhone" type="tel" inputmode="tel"></div></div>
@@ -428,8 +429,8 @@
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<script src="search.js?v=20261012h"></script>
-<script src="i18n.js?v=20261012h"></script>
+<script src="search.js?v=20261012i"></script>
+<script src="i18n.js?v=20261012i"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -473,7 +474,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261012h';
+var PAGE_VER = '20261012i';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1019,7 +1020,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
       '<div id="cdItems"></div><div id="cdTotals"></div>' +
       '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nphz"><div class="nph" id="nPhotos"></div>' +
-      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" multiple data-nph="1"></label><span class="hint" id="nPhProg" style="margin:0;align-self:center;display:none"></span></div><div class="nphd">Drop photos here (up to 20)</div></div>' +
+      '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" multiple data-nph="1"></label><span class="hint" id="nPhProg" style="margin:0;align-self:center;display:none"></span><span class="hint nphp" style="margin:0;align-self:center">or paste (Ctrl+V)</span></div><div class="nphd">Drop photos here (up to 20)</div></div>' +
       '<div style="text-align:center;margin-top:10px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div></div>';
   }).join('') : '<div class="ngroup"><div class="empty" style="padding:14px">No notes yet. Tap + Add note.</div></div>';
   quoteBtn();
@@ -1153,6 +1154,14 @@ function phDropZone(e) { return e.target.closest && e.target.closest('.nphz'); }
 ['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { var z = phDropZone(e); if (!z || !e.dataTransfer || [].indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; z.classList.add('drag'); }); });
 document.addEventListener('dragleave', function (e) { var z = phDropZone(e); if (z && !z.contains(e.relatedTarget)) z.classList.remove('drag'); });
 document.addEventListener('drop', function (e) { var z = phDropZone(e); if (!z) return; e.preventDefault(); z.classList.remove('drag'); uploadNotePhotos(e.dataTransfer.files); });
+// paste photos (Ctrl+V) into the open note
+document.addEventListener('paste', function (e) { if (!custOpen || !noteOpenId || !curNote() || !$('nPhotos')) return; var cd = e.clipboardData; if (!cd) return;
+  var fs = []; [].forEach.call(cd.items || [], function (it) { if (it.kind === 'file' && /^image\//.test(it.type)) { var f = it.getAsFile(); if (f) fs.push(f); } });
+  if (!fs.length) [].forEach.call(cd.files || [], function (f) { if (/^image\//.test(f.type)) fs.push(f); });
+  if (!fs.length) return; var t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  if (typing && cd.getData && cd.getData('text/plain')) return;
+  e.preventDefault(); fs = fs.map(function (f, i) { return f.name && f.name !== 'image.png' ? f : new File([f], 'pasted-' + Date.now() + '-' + i + '.' + ((f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: f.type }); });
+  uploadNotePhotos(fs); });
 /** Move a photo to another note of the same project (server: customerFileMove). */
 function movePhoto(f, toId) { var c = custOpen, n = curNote();
   return api('customerFileMove', { id: c.id, fileId: f, noteId: n.id, toNoteId: toId }).then(function (r) { n.photos = r.photos; n.updated = r.note.updated;
@@ -1497,10 +1506,23 @@ function setPlanKeep(rid) { planKeep = rid || null; var k = $('plKeep'); if (pla
   $('plKeepX').onclick = function () { setPlanKeep(null); clearReader(); };
   api('planThumb', { request_id: planKeep }).then(function (t) { if (t.thumb && $('plKeepImg')) $('plKeepImg').src = t.thumb; }).catch(function () {}); }
 function clearReader() {}   // plan code reader removed (2026-10-12): photos are sent without a code list
-$('plFile').onchange = function () { var f = this.files[0]; if (!f) return;
+/** Plan file: the server takes ONE plan file per request (max 10 MB), so pick/drop/paste keep the first and say so. */
+function setPlanFromFiles(fs) { fs = [].slice.call(fs || []).filter(function (f) { return /^image\//.test(f.type) || f.type === 'application/pdf' || /\.(jpe?g|png|webp|heic|pdf)$/i.test(f.name || ''); });
+  if (!fs.length) { toast('Use a photo or PDF for the plan.'); return; } if (fs.length > 1) toastMsg('One plan file per request: using the first one.'); var f = fs[0];
   if (f.size > 10 * 1024 * 1024) { msg($('plMsg'), 'That file is over 10 MB. Take the photo again at a lower size.'); return; }
   var rd = new FileReader(); rd.onload = function () { planFile = { data: rd.result, mimeType: f.type || 'image/jpeg', name: f.name };
-    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); }; rd.readAsDataURL(f); };
+    $('plPrev').classList.toggle('hidden', !/^image\//.test(f.type)); if (/^image\//.test(f.type)) $('plPrev').src = rd.result; setPlanKeep(null); }; rd.readAsDataURL(f); }
+$('plFile').onchange = function () { if (this.files.length) setPlanFromFiles(this.files); };
+function planOpen() { return $('p-plan').classList.contains('on'); }
+// drag-drop and paste onto the Send plan page (takes priority over notes)
+['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { if (!planOpen() || !e.dataTransfer || [].indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; $('plDrop').classList.add('drag'); }, true); });
+document.addEventListener('dragleave', function (e) { if (planOpen() && !e.relatedTarget) $('plDrop').classList.remove('drag'); }, true);
+document.addEventListener('drop', function (e) { if (!planOpen()) return; e.preventDefault(); e.stopImmediatePropagation(); $('plDrop').classList.remove('drag'); if (e.dataTransfer && e.dataTransfer.files.length) setPlanFromFiles(e.dataTransfer.files); }, true);
+document.addEventListener('paste', function (e) { if (!planOpen()) return; var cd = e.clipboardData; if (!cd) return; var fs = [];
+  [].forEach.call(cd.items || [], function (it) { if (it.kind === 'file') { var f = it.getAsFile(); if (f) fs.push(f); } }); if (!fs.length) fs = [].slice.call(cd.files || []);
+  fs = fs.filter(function (f) { return /^image\//.test(f.type) || f.type === 'application/pdf'; }); if (!fs.length) return;
+  var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) && cd.getData('text/plain')) return;
+  e.preventDefault(); e.stopImmediatePropagation(); setPlanFromFiles(fs.map(function (f, i) { return f.name && f.name !== 'image.png' ? f : new File([f], 'pasted-plan-' + Date.now() + '.' + ((f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: f.type }); })); }, true);
 $('plSend').onclick = function () {
   var trim = {}; $('plTrim').querySelectorAll('input').forEach(function (i) { trim[i.dataset.k] = i.value.trim(); });
   var b = this; b.disabled = true; msg($('plMsg'), 'Sending…', true);
