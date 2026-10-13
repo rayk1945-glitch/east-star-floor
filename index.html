@@ -202,6 +202,15 @@
   .pline .n { flex:1; min-width:0; } .pline .n b { display:block; font-size:15px; word-break:break-word; } .pline .n span { display:block; font-size:12.5px; color:var(--muted); }
   .pline .n .ln { font-size:11px; font-weight:800; color:#8a93a0; margin-right:4px; }
   .pline .x { border:0; background:#eef0f3; border-radius:999px; width:40px; height:40px; font-size:18px; cursor:pointer; flex:none; } .pline .x.lmenu { margin-right:-4px; font-weight:800; color:#374151; }
+  .pline.hasord { display:flex; gap:8px; align-items:flex-start; }
+  .pline .lbody { flex:1; min-width:0; }
+  .pline .ord { display:flex; flex-direction:column; gap:4px; flex:none; }
+  .pline .ord button { width:40px; height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:10px; font:inherit; font-size:16px; line-height:1; font-weight:800; color:#1f2937; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
+  .pline .ord .ordh { cursor:grab; touch-action:none; background:#f4f4f5; color:#4b5563; }
+  .pline .ord button:disabled { opacity:.28; cursor:default; }
+  .pline.dragging { position:relative; z-index:3; background:#fff; box-shadow:0 8px 20px rgba(16,24,40,.18); border-radius:12px; }
+  .pline.dragging .ordh { cursor:grabbing; }
+  body.linedrag { user-select:none; -webkit-user-select:none; }
   .ngmenu { flex:none; width:40px; height:40px; border:0; border-radius:999px; background:#eef0f3; font:inherit; font-size:18px; font-weight:800; color:#374151; cursor:pointer; }
   .ngroup { position:relative; } .ngmenu.abs { position:absolute; top:6px; right:6px; } .ngroup .nghead .t { padding-right:44px; }
   .mvh { font-size:12.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:12px 0 6px; }
@@ -437,7 +446,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261013a"></script>
+<script src="i18n.js?v=20261013b"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -487,7 +496,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261013a';
+var PAGE_VER = '20261013b';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1154,7 +1163,8 @@ function renderPicked() {
   $('cdItems').innerHTML = (it.length ? variantBar(n) : '') + (it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = (r && r[13]) || l.photo || '', pr = linePrice(l);
     var desc = r ? String(r[1] || '').slice(0, 110) : (l.desc || '');
     var oh = r ? r[3] : null, ohN = Number(oh);
-    return '<div class="pline" data-lid="' + esc(l.id) + '"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
+    return '<div class="pline' + (it.length > 1 ? ' hasord' : '') + '" data-lid="' + esc(l.id) + '">' + (it.length > 1 ? ordHtml(i, it.length) : '') +
+      '<div class="lbody"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
       '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(desc) + '</span>' +
       (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b></span>' +
         (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') + '</span>' : '') +
@@ -1162,8 +1172,9 @@ function renderPicked() {
       lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
       '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
-      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div>';
+      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div></div>';
   }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
+  if (!ordPending && !varBusy && !lineDrag) ordBase[n.id] = noteOrderKey(n);
   renderTotals();
 }
 // Finish families (search.js): same code prefix, last 3–4 characters differ. Chips only offer a finish that exists
@@ -1367,25 +1378,132 @@ function movePhoto(f, toId) { var c = custOpen, n = curNote();
   return api('customerFileMove', { id: c.id, fileId: f, noteId: n.id, toNoteId: toId }).then(function (r) { n.photos = r.photos; n.updated = r.note.updated;
     var t = c.notes.filter(function (x) { return x.id === r.toNoteId; })[0]; if (t) { t.photos = r.toPhotos; t.updated = r.toNote.updated; }
     renderNotePhotos(); renderNoteCards(); toast('Photo moved to ' + (t ? t.title : 'note')); }); }
+// Reorder inside one note. The server has no reorder call: the stored order is the order lines were added,
+// which is also the order the client link lists. A move is saved by rewriting the note (remove + add) through the same autosave queue.
+var ordBase = {}, ordPending = false, ordTimer = null, ordSwallow = false, lineDrag = null;
+function noteOrderKey(n) { return (n && n.items || []).map(function (l) { return l.id; }).join('\n'); }
+function ordHtml(i, n) {
+  return '<div class="ord"><button type="button" class="ordb" data-lord="up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+    '<button type="button" class="ordh" data-drag="1" aria-label="Drag to reorder"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M4 3h2.2v2.2H4zm5.8 0H12v2.2H9.8zM4 6.9h2.2v2.2H4zm5.8 0H12v2.2H9.8zM4 10.8h2.2V13H4zm5.8 0H12V13H9.8z"/></svg></button>' +
+    '<button type="button" class="ordb" data-lord="down" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button></div>';
+}
+function renumberLines() {
+  var rows = document.querySelectorAll('#cdItems .pline'), i, last = rows.length - 1;
+  for (i = 0; i < rows.length; i++) {
+    var s = rows[i].querySelector('.ln'); if (s) s.textContent = String(i + 1);
+    var up = rows[i].querySelector('[data-lord="up"]'), dn = rows[i].querySelector('[data-lord="down"]');
+    if (up) up.disabled = i === 0;
+    if (dn) dn.disabled = i === last;
+  }
+}
+function syncOrderFromDom() {
+  var n = curNote(); if (!n) return;
+  var by = {}; (n.items || []).forEach(function (l) { by[l.id] = l; });
+  var next = [], rows = document.querySelectorAll('#cdItems .pline'), i;
+  for (i = 0; i < rows.length; i++) { var l = by[rows[i].dataset.lid]; if (l) next.push(l); }
+  if (next.length === (n.items || []).length) n.items = next;
+}
+function moveItem(l, dir) {
+  if (varBusy || lineDrag) return;
+  var n = curNote(); if (!n) return;
+  var items = n.items || [], i = items.indexOf(l); if (i < 0) return;
+  var j = i + dir; if (j < 0 || j >= items.length) return;
+  items.splice(j, 0, items.splice(i, 1)[0]);
+  ordPending = true; renderPicked(); queueOrderSave(n);
+}
+function queueOrderSave(n) {
+  clearTimeout(ordTimer);
+  ordTimer = setTimeout(function () { runOrderSave(n); }, 400);
+}
+function runOrderSave(n) {
+  var c = custOpen; if (!c || !n) return;
+  if (noteOrderKey(n) === ordBase[n.id]) { ordPending = false; return; }
+  if (varBusy) { ordTimer = setTimeout(function () { runOrderSave(n); }, 250); return; }
+  (n.items || []).forEach(function (l) { clearTimeout(qtyT[l.id]); clearTimeout(lnoteT[l.id]); delete qtyT[l.id]; delete lnoteT[l.id]; delete saveQ['line:' + l.id]; });
+  varBusy = true; ordPending = false;
+  var wait = (n.items || []).map(function (l) { return saveRun['line:' + l.id] || Promise.resolve(); });
+  Promise.all(wait).then(function () {
+    return autoSave('ord:' + n.id, function () {
+      var beforeIds = noteOrderKey(n);
+      return rewriteItems(c, n, snapLines(n)).then(function () {
+        ordBase[n.id] = noteOrderKey(n);
+        if (noteOrderKey(n) !== beforeIds && custOpen === c && noteOpenId === n.id && $('cdItems') && !lineDrag) renderPicked();
+      });
+    });
+  }).then(function () { varBusy = false; if (ordPending) queueOrderSave(n); }, function () { varBusy = false; if (ordPending) queueOrderSave(n); });
+}
+function rowUnder(y, skip) {
+  var rows = document.querySelectorAll('#cdItems .pline'), i, hit = null, best = null, bestD = 1e9;
+  for (i = 0; i < rows.length; i++) {
+    if (rows[i] === skip) continue;
+    var b = rows[i].getBoundingClientRect();
+    if (y >= b.top && y <= b.bottom) hit = rows[i];
+    var d = Math.abs(y - (b.top + b.bottom) / 2);
+    if (d < bestD) { bestD = d; best = rows[i]; }
+  }
+  return hit || best;
+}
+function dragPlace(row, y) {
+  var over = rowUnder(y, row); if (!over) return;
+  var mid = (over.getBoundingClientRect().top + over.getBoundingClientRect().bottom) / 2, parent = row.parentNode;
+  if (y < mid) { if (row.nextElementSibling === over) return; parent.insertBefore(row, over); }
+  else { if (over.nextElementSibling === row) return; parent.insertBefore(row, over.nextElementSibling); }
+  syncOrderFromDom(); renumberLines();
+}
+function endLineDrag(e) {
+  if (!lineDrag || (e && e.pointerId != null && e.pointerId !== lineDrag.pointer)) return;
+  var moved = lineDrag.moved, n = lineDrag.note, row = lineDrag.row;
+  if (row) row.classList.remove('dragging');
+  document.body.classList.remove('linedrag');
+  lineDrag = null;
+  if (moved && n) { ordPending = true; ordSwallow = true; setTimeout(function () { ordSwallow = false; }, 500); queueOrderSave(n); }
+}
+document.addEventListener('pointerdown', function (e) {
+  var h = e.target.closest && e.target.closest('[data-drag]');
+  if (!h || !h.closest('#cdItems') || varBusy || lineDrag) return;
+  if (e.button != null && e.button !== 0) return;
+  var row = h.closest('.pline'), n = curNote(); if (!row || !n) return;
+  e.preventDefault();
+  try { h.setPointerCapture(e.pointerId); } catch (err) {}
+  lineDrag = { pointer: e.pointerId, y: e.clientY, row: row, note: n, moved: false };
+  row.classList.add('dragging'); document.body.classList.add('linedrag');
+}, { passive: false });
+document.addEventListener('pointermove', function (e) {
+  if (!lineDrag || e.pointerId !== lineDrag.pointer) return;
+  if (Math.abs(e.clientY - lineDrag.y) > 4) lineDrag.moved = true;
+  if (!lineDrag.moved) return;
+  e.preventDefault();
+  dragPlace(lineDrag.row, e.clientY);
+  var edge = 72;
+  if (e.clientY < edge) window.scrollBy(0, -14);
+  else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, 14);
+}, { passive: false });
+document.addEventListener('pointerup', endLineDrag);
+document.addEventListener('pointercancel', endLineDrag);
 function lineOf(el) { var d = el.closest('[data-lid]'), n = curNote(); return d && n && (n.items || []).filter(function (l) { return l.id === d.dataset.lid; })[0]; }
 function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
   return autoSave('line:' + id, function () { var cur = (n.items || []).filter(function (x) { return x.id === id; })[0] || l;
     return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }); }); }
 var lnoteT = {};
 var qtyT = {};
+document.addEventListener('click', function (e) {
+  if (ordSwallow) { ordSwallow = false; e.preventDefault(); e.stopPropagation(); return; }
+}, true);
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return;
   var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
   var t = e.target, l = lineOf(t); if (!l) return;
-  var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]');
+  var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), mv = t.closest('[data-lord]');
+  if (mv) { moveItem(l, mv.dataset.lord === 'up' ? -1 : 1); return; }
   if (t.closest('[data-vf]')) { switchLineFinish(l, t.closest('[data-vf]').dataset.vf); return; }
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
   if (t.closest('[data-lfc]')) { var r1 = itemRow(l.name); if (isFloorRow(r1)) floorCalcFor(itemFromRow(r1), { c: custOpen, n: curNote(), line: l }); return; }
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
     clearTimeout(qtyT[l.id]); qtyT[l.id] = setTimeout(function () { setLine(l, { qty: l.qty }); }, 500); }
-  else if (rm) { if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
+  else if (rm) { if (varBusy) return; if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
     n.items = n.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
     delete saveQ['line:' + l.id];
+    if (ordPending) { queueOrderSave(n); return; }
     autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }); }); }
 });
 // ---- move / copy an item line to another note of the project; clone a note (same project or another one)
