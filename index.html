@@ -491,7 +491,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014m"></script>
+<script src="i18n.js?v=20261014n"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -541,7 +541,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014m';
+var PAGE_VER = '20261014n';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -602,7 +602,10 @@ document.addEventListener('visibilitychange', function () { if (!document.hidden
   if (document.hidden || !session) return;
   if (priceState.prices && localData && !localData.noPrices && pricedCopyExpired()) priceWindowEnded();        // the phone slept through the end of price hours
   else if (Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
-window.addEventListener('pagehide', function () { if (batchT || noteDirty || (lineHold && Object.keys(lineHold).length) || (custOpen && custOpen._infoDirty) || Object.keys(saveQ).length) flushBatch(); });
+window.addEventListener('pagehide', function () {
+  if (document.visibilityState === 'visible') return;
+  if (batchT || noteDirty || (lineHold && Object.keys(lineHold).length) || (custOpen && custOpen._infoDirty) || Object.keys(saveQ).length) flushBatch();
+});
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
 function signedOut() { var nr = $('navReported'); if (nr) nr.classList.add('hidden'); document.body.classList.remove('rmon'); rmList = []; wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
@@ -1344,11 +1347,11 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   var id = b ? b.dataset.nopen : null; flushBatch().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
 function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
-// ---- autosave: contact info, note title/text, qty and line notes wait SAVE_AFTER (10s) after the last real change,
-// then save once. A reverted edit cancels the timer. Save project, quote, clone, leaving the project, and hiding the
-// page flush immediately. Every save goes through saveQ: one pending save per thing (the newest wins), failed saves are
-// kept and retried (tap "Not saved, tap to retry", when the phone is back online, and every 20 s).
-var SAVE_AFTER = 10000, batchT = null, lineHold = {};
+// ---- autosave: contact info, note title/text, qty and line notes wait SAVE_AFTER (15s) after the LAST change.
+// Each new change clears the timer and starts it again. A reverted edit cancels it. Save project, quote, clone,
+// leaving the project, and hiding the page flush immediately. Every save goes through saveQ: one pending save per
+// thing (the newest wins), failed saves are kept and retried (tap "Not saved, tap to retry", back online, every 20 s).
+var SAVE_AFTER = 15000, batchT = null, lineHold = {};
 var saveQ = {}, saveRun = {}, saveFail = null, saveOkT = null;
 function infoSnap(c) {
   var list = savedContacts(c);
@@ -1364,6 +1367,8 @@ function scheduleAutosave() {
   if (!isBatchDirty()) { clearTimeout(batchT); batchT = null; saveState(); return; }
   clearTimeout(batchT);
   batchT = setTimeout(function () { flushBatch(); }, SAVE_AFTER);
+  var n = curNote();
+  if ($('nSaved') && n && (noteDirty || Object.keys(lineHold).some(function (id) { return lineHold[id] === n.id; }))) $('nSaved').textContent = 'Unsaved changes…';
   saveState();
 }
 function flushHeldLines() {
@@ -1386,7 +1391,9 @@ function flushHeldLines() {
 function flushBatch() {
   clearTimeout(batchT); batchT = null;
   clearTimeout(infoT); clearTimeout(noteT);
-  return flushHeldLines().then(function () { return Promise.all([flushInfo(), flushNote()]); }).then(function () { saveState(); });
+  return flushHeldLines().then(function () { return Promise.all([flushInfo(), flushNote()]); }).then(function () {
+    if (isBatchDirty()) scheduleAutosave(); else saveState();
+  });
 }
 function autoSave(key, fn) { saveQ[key] = fn; return runSave(key); }
 function runSave(key) {
@@ -1438,7 +1445,7 @@ function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdNa
       else { c._infoDirty = true; if (!batchT) scheduleAutosave(); }
       if (curCust && curCust.id === r.id && curCust.name !== r.label) { curCust.name = r.label; saveCur(); }
       if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = projLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); } }); }); }
-/** Note title/text: 10s after the last change. "Save project", quote, and leaving the note flush right away. */
+/** Note title/text: 15s after the last change. "Save project", quote, and leaving the note flush right away. */
 var noteT = null, noteDirty = false;
 function queueNote() { var n0 = curNote(); if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; syncCurTitle(n0); }
   rememberNote(n0); noteDirty = noteChanged(n0); clearTimeout(noteT);
@@ -2136,19 +2143,55 @@ function copyMissingPhotos(src, n, destId, note) {
     });
   }, Promise.resolve());
 }
-/** Drop every note except the one just cloned, so a server that copies the whole project cannot leave the extras behind. */
-function keepOnlyClonedNote(projectId, keepId) {
-  if (!keepId) return Promise.resolve();
+function deleteNotes(projectId, ids) {
+  return (ids || []).reduce(function (chain, id) {
+    return chain.then(function () {
+      if (!id) return;
+      return api('noteDelete', { id: projectId, noteId: id }).catch(function (er) {
+        if (/not found|gone/i.test(er.message || '')) return;
+        throw er;
+      });
+    });
+  }, Promise.resolve());
+}
+/** customerSave / noteClone on the server can copy every note. Delete until only keepId is left, then re-read. */
+function assertOnlyNote(projectId, keepId, left) {
+  left = left == null ? 4 : left;
   return api('customerGet', { id: projectId }).then(function (p) {
-    var extras = (p.notes || []).filter(function (x) { return x.id !== keepId; });
-    return extras.reduce(function (chain, x) {
-      return chain.then(function () { return api('noteDelete', { id: projectId, noteId: x.id }).catch(function () {}); });
-    }, Promise.resolve());
+    var notes = p.notes || [], extras = notes.filter(function (n) { return n.id !== keepId; });
+    var kept = notes.filter(function (n) { return n.id === keepId; })[0];
+    if (kept && !extras.length) return p;
+    if (left <= 0) throw new Error(kept ? 'Not saved yet. Check the connection and try again.' : 'Nothing was copied.');
+    return deleteNotes(projectId, extras.map(function (n) { return n.id; })).then(function () {
+      return new Promise(function (r) { setTimeout(r, extras.length ? 200 : 350); }).then(function () { return assertOnlyNote(projectId, keepId, left - 1); });
+    });
   });
 }
-/** "Clone to new project": one new project with this note only (items, photos, title) and the source client's contact info. */
+/** Notes that were not on the destination before this clone, except the one note we meant to add. */
+function dropUnexpectedNotes(projectId, beforeIds, keepId, left) {
+  left = left == null ? 4 : left;
+  var before = {};
+  (beforeIds || []).forEach(function (id) { before[id] = 1; });
+  return api('customerGet', { id: projectId }).then(function (p) {
+    var extras = (p.notes || []).filter(function (n) { return n.id !== keepId && !before[n.id]; });
+    if (!extras.length) return p;
+    if (left <= 0) throw new Error('Not saved yet. Check the connection and try again.');
+    return deleteNotes(projectId, extras.map(function (n) { return n.id; })).then(function () {
+      return dropUnexpectedNotes(projectId, beforeIds, keepId, left - 1);
+    });
+  });
+}
+/** "Clone to new project": one new project with this note only (items, photos, title) and the source client's contact info.
+ *  The new customer is saved with contact fields only — never the source notes array. noteClone is not used, because that
+ *  call copies every note of the source project. Any notes the server still attached are deleted, then the project is re-read. */
 function cloneNoteToNewProject(c, n) {
   var createdId = '';
+  var snap = {
+    title: n.title || '',
+    text: n.text || '',
+    items: (n.items || []).map(function (l) { return { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' }; }),
+    photos: (n.photos || []).slice()
+  };
   return drainSaves().then(function (ok) {
     if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
     var list = savedContacts(c).map(normContact);
@@ -2157,25 +2200,50 @@ function cloneNoteToNewProject(c, n) {
     var body = { phone: list[0].phone, email: list[0].email, city: c.city || '', tax: c.tax === 'Fremont' ? 'Fremont' : 'SF', contacts: list };
     if (list[0].name) body.name = list[0].name;
     return api('customerSave', { customer: body }).then(function (created) {
+      createdId = created.id;
       created.name = body.name || created.name; created.phone = body.phone; created.email = body.email; created.city = body.city; created.tax = body.tax; created.contacts = body.contacts;
+      delete created.notes;
       return created;
     });
   }).then(function (created) {
-    createdId = created.id;
-    var blankId = created.notes && created.notes[0] && created.notes[0].id;
-    return cloneNotesInto(c.id, [n], created.id, blankId).then(function (cloned) {
-      var note = cloned[0];
-      if (!note) throw new Error('Nothing was copied.');
-      return keepOnlyClonedNote(created.id, note.id).then(function () { return { created: created, note: note }; });
+    return api('customerGet', { id: created.id }).then(function (p) {
+      var prior = (p.notes || []).map(function (x) { return x.id; });
+      return api('noteSave', { id: created.id, title: snap.title, text: snap.text }).then(function (r) {
+        var note = r && r.note;
+        if (!note || !note.id) throw new Error('Nothing was copied.');
+        return api('customerGet', { id: created.id }).then(function (fresh) {
+          var live = (fresh.notes || []).filter(function (x) { return x.id === note.id; })[0] || note;
+          return (live.items || []).reduce(function (chain, l) {
+            return chain.then(function () {
+              return api('customerItem', { id: created.id, noteId: note.id, op: 'remove', lineId: l.id }).catch(function (er) {
+                if (/not found|gone/i.test(er.message || '')) return;
+                throw er;
+              });
+            });
+          }, Promise.resolve());
+        }).then(function () {
+          return snap.items.reduce(function (chain, l) {
+            return chain.then(function () { return api('customerItem', { id: created.id, noteId: note.id, op: 'add', line: l }); });
+          }, Promise.resolve());
+        }).then(function () {
+          return copyMissingPhotos(c, { photos: snap.photos }, created.id, note);
+        }).then(function () {
+          return deleteNotes(created.id, prior.filter(function (id) { return id && id !== note.id; }));
+        }).then(function () { return assertOnlyNote(created.id, note.id); }).then(function (fresh) {
+          var kept = (fresh.notes || []).filter(function (x) { return x.id === note.id; })[0];
+          if (!kept || (fresh.notes || []).length !== 1) throw new Error('Nothing was copied.');
+          fresh.name = created.name; fresh.phone = created.phone; fresh.email = created.email; fresh.city = created.city; fresh.tax = created.tax; fresh.contacts = created.contacts;
+          if (created.mine != null) fresh.mine = created.mine; else fresh.mine = true;
+          pcSave(fresh);
+          return { created: fresh, note: kept };
+        });
+      });
     });
   }).then(function (o) {
     closeSheet();
-    openCust(o.created.id, null, o.note && o.note.id);
-    api('customerGet', { id: o.created.id }).then(function (t) {
-      var note = o.note && (t.notes || []).filter(function (x) { return x.id === o.note.id; })[0];
-      setCur(t, note || (t.notes && t.notes[0]));
-    }).catch(function () { if (o.note) setCur(o.created, o.note); });
-    toast('Cloned into another project: ' + ((o.note && o.note.title) || n.title));
+    openCust(o.created.id, o.created, o.note && o.note.id);
+    setCur(o.created, o.note);
+    toast('Cloned into another project: ' + ((o.note && o.note.title) || snap.title));
   }).catch(function (er) { if (createdId) api('customerDelete', { id: createdId }).catch(function () {}); throw er; });
 }
 function copyProjectName(c) {
@@ -2218,10 +2286,20 @@ function cloneProject(c, btn) {
 function cloneNote(c, n, toId) {
   return drainSaves().then(function (ok) {
     if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
-    return api('noteClone', { id: c.id, noteId: n.id, toId: toId }).then(function (r) { return copyMissingPhotos(c, n, toId, r.note).then(function () { return r; }); });
-  }).then(function (r) {
-    if (toId === c.id) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; if (custOpen === c) { renderNoteCards(); scrollToNote(r.note.id); } toast('Cloned: ' + r.note.title + ' (adding here)'); }
-    else { openCust(toId, null, r.note.id); api('customerGet', { id: toId }).then(function (t) { setCur(t, r.note); }).catch(function () {}); toast('Cloned into another project: ' + r.note.title); } });
+    var prior = toId === c.id ? Promise.resolve(c) : api('customerGet', { id: toId });
+    return prior.then(function (dest) {
+      var before = (dest && dest.notes || []).map(function (x) { return x.id; });
+      return api('noteClone', { id: c.id, noteId: n.id, toId: toId }).then(function (r) {
+        var note = r && r.note;
+        if (!note || !note.id) throw new Error('Nothing was copied.');
+        return copyMissingPhotos(c, n, toId, note).then(function () { return dropUnexpectedNotes(toId, before, note.id); }).then(function () { return note; });
+      });
+    });
+  }).then(function (note) {
+    if (toId === c.id) {
+      if (!(c.notes || []).some(function (x) { return x.id === note.id; })) c.notes.push(note);
+      setCur(c, note); noteOpenId = note.id; if (custOpen === c) { renderNoteCards(); scrollToNote(note.id); } toast('Cloned: ' + note.title + ' (adding here)');
+    } else { openCust(toId, null, note.id); api('customerGet', { id: toId }).then(function (t) { setCur(t, note); }).catch(function () {}); toast('Cloned into another project: ' + note.title); } });
 }
 var HIST_MAX = 20, histPause = false, histOpen = null;
 function histKey(id) { return 'esNoteHist:' + (session ? ((session.account || '') + ':' + String(session.name || '').toLowerCase()) : '') + ':' + id; }
