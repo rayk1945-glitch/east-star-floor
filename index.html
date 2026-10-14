@@ -163,7 +163,7 @@
   .nhead .ndnew { margin-left:auto; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 12px; font-weight:700; font-size:13.5px; color:#1f2937; white-space:nowrap; }
   .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
-  .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
+  .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); flex-wrap:wrap; } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
   .clbtns { display:flex; gap:8px; margin-top:8px; } .clbtns .btn { flex:1; margin-top:0; } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
   .sendto { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .sendto select { flex:1; min-width:0; min-height:40px; font-size:14px; }
   .shbtn.on { border-color:#1A8BC9; color:#0b5f8f; background:#eef7fc; }
@@ -448,7 +448,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261013d"></script>
+<script src="i18n.js?v=20261014a"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -501,7 +501,7 @@ var localData = null, dataP = null, dataChecked = 0;
  * so a phone could keep running an old page after an upload. version.json is fetched uncached (cache-busting query)
  * on open, whenever the app comes forward, and every 20s while it stays open. A newer release reloads the page
  * once (after the current save finishes). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261013d';
+var PAGE_VER = '20261014a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -919,7 +919,7 @@ function addToNote(lines) {
   var c = curCust; toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
   lines.reduce(function (pr, l) { return pr.then(function () { return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: l }); }); }, Promise.resolve())
     .then(function (r) { if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
-      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); } } })
+      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); rememberNoteVersion(n); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); } } })
     .catch(function (er) { toast('Not added: ' + er.message); if (/^project not found|note is gone/i.test(er.message)) setCur(null); });
 }
 function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' }); }
@@ -1037,7 +1037,7 @@ function renderOverview() {
       '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
-      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
+      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button><button class="shbtn" id="cdCloneProj">Clone project</button></div></div>' +
     '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
@@ -1051,6 +1051,10 @@ function renderOverview() {
     el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); });
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
   $('cdClient').onclick = function () { openClientLink(c); };
+  $('cdCloneProj').onclick = function () { var src = c;
+    askCopyName(src, 'Clone project', 'Copies every note, with items, order, and photos. This project stays as it is.', function (name) {
+      return makeProjectCopy(src, name).then(function (dest) { return cloneNotesInto(src, (src.notes || []).slice(), dest); }).then(showCopied);
+    }); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); };
   $('cdNewNote').onclick = function () { addNoteNow(c); };
   $('cdSaveAll').onclick = saveProject; $('cdQuote').onclick = quoteCust; $('cdQuoteAll').onclick = quoteProject;
@@ -1288,6 +1292,7 @@ function flushNote() {
       live.updated = r.note.updated; live.updated_by = r.note.updated_by;
       if (live.title === title && (live.text || '') === (text || '')) { live._baseTitle = title || ''; live._baseText = text || ''; if (curNote() === live) noteDirty = false; }
       else if (curNote() === live) noteDirty = true;
+      rememberNoteVersion(live);
       if ($('nSaved') && noteOpenId === nid) $('nSaved').textContent = noteChanged(live) ? 'Unsaved changes…' : ('Saved ' + whenTxt(r.note.updated) + (r.note.updated_by ? ' by ' + r.note.updated_by : ''));
       if (isCurNote(c.id, nid) && curCust && curCust.noteTitle !== r.note.title) { curCust.noteTitle = r.note.title; saveCur(); }
       pcSave(c); if (isAutosaveDirty() && !batchT) scheduleAutosave();
@@ -1430,6 +1435,7 @@ function saveNoteVariants(n, changed) {
     var after = (n.items || []).map(function (l) { return l.id; }).join(',');
     if (after !== before && custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
     if (isCurNote(c.id, n.id)) syncCount();
+    rememberNoteVersion(n);
     if (isAutosaveDirty() && !batchT) scheduleAutosave();
   }, function (er) { varBusy = false; toast(er.message || 'Not saved yet'); if (isAutosaveDirty() && !batchT) scheduleAutosave(); });
 }
@@ -1498,13 +1504,14 @@ function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !
   $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
   el.innerHTML = ps.length ? ps.map(function (f) { return fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>'; }).join('') : '<span class="hint" style="margin:0">No photos yet.</span>';
   var c = custOpen; el.querySelectorAll('.ld[data-fid]').forEach(function (s) { var f = s.dataset.fid;
-    api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
+    api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; keepPhotoBlob(f, r.data); var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
   $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
 document.addEventListener('click', function (e) { var img = e.target.closest('#nPhotos img[data-fid]'); if (!img) return; var n = curNote(), c = custOpen, f = img.dataset.fid;
   openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="mvh">Move to note</div><div class="mvrow">' + ((c.notes || []).filter(function (x) { return x.id !== n.id; }).map(function (x) { return '<button class="mvbtn" data-phmv="' + esc(x.id) + '"><span class="notr">' + esc(x.title) + '</span> <span>' + (x.photos || []).length + '/20</span></button>'; }).join('') || '<span class="hint" style="margin:0">Add another note first.</span>') + '</div><div id="phMsg" class="msg hidden"></div><div class="actions"><button id="phDel">Remove photo</button></div>');
   $('sheetBody').onclick = function (ev) { var b = ev.target.closest('[data-phmv]'); if (!b) return; $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = true; }); b.textContent = 'Working…';
     movePhoto(f, b.dataset.phmv).then(closeSheet, function (er) { msg($('phMsg'), er.message); $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = false; }); }); };
-  $('phDel').onclick = function () { this.disabled = true; api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
+  $('phDel').onclick = function () { this.disabled = true; if (img.src) { fileCache[f] = fileCache[f] || img.src; keepPhotoBlob(f, fileCache[f]); }
+    api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); rememberNoteVersion(n); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
 /** Multi-photo upload (pick or drop up to 20 at once): shrunk on the phone, sent 2 at a time, progress "3/20".
  *  The server keeps MAX_NOTE_PHOTOS (12) per note, so only the free slots are sent. */
 var PH_BATCH = 20, PH_NOTE_MAX = 20, phBusy = false;
@@ -1521,8 +1528,8 @@ function uploadNotePhotos(files) { var c = custOpen, n = curNote(); if (!c || !n
   function prog() { var b = $('nPhProg'); if (b) { b.textContent = done < total ? 'Uploading ' + done + '/' + total : ''; b.style.display = done < total ? '' : 'none'; } }
   function dropPh() { var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }
   function one() { if (idx >= total) return Promise.resolve(); var f = files[idx++];
-    return shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
-      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; }, function (er) { fail++; n._phErr = er.message; })
+    return shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; keepPhotoBlob(r.fileId, d.data); return r; }); })
+      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; rememberNoteVersion(n); }, function (er) { fail++; n._phErr = er.message; })
       .then(function () { done++; dropPh(); if (noteOpenId === n.id) { renderNotePhotos(); for (var k = done; k < total; k++) $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); } prog(); return one(); }); }
   prog();
   Promise.all([one(), one()]).then(function () { phBusy = false; prog();
@@ -1545,6 +1552,7 @@ document.addEventListener('paste', function (e) { if (!custOpen || !noteOpenId |
 function movePhoto(f, toId) { var c = custOpen, n = curNote();
   return api('customerFileMove', { id: c.id, fileId: f, noteId: n.id, toNoteId: toId }).then(function (r) { n.photos = r.photos; n.updated = r.note.updated;
     var t = c.notes.filter(function (x) { return x.id === r.toNoteId; })[0]; if (t) { t.photos = r.toPhotos; t.updated = r.toNote.updated; }
+    rememberNoteVersion(n); if (t) rememberNoteVersion(t);
     renderNotePhotos(); renderNoteCards(); toast('Photo moved to ' + (t ? t.title : 'note')); }); }
 // Reorder inside one note. The server has no reorder call: the stored order is the order lines were added,
 // which is also the order the client link lists. A move is saved by rewriting the note (remove + add) through the same autosave queue.
@@ -1600,6 +1608,7 @@ function runOrderSave(n) {
         (n.items || []).forEach(function (l) { lineBase[l.id] = lineKey(l); nameBase[l.id] = l.name; });
         if (varHold && varHold.noteId === nid) varHold = null;
         ordBase[n.id] = noteOrderKey(n); ordPending = false;
+        rememberNoteVersion(n);
         if (noteOrderKey(n) !== beforeIds && custOpen === c && noteOpenId === n.id && $('cdItems') && !lineDrag) renderPicked();
         if (isAutosaveDirty() && !batchT) scheduleAutosave();
       });
@@ -1664,6 +1673,7 @@ function setLine(l, n) { var c = custOpen; n = n || curNote(); if (!c || !n || !
       var live = (note.items || []).filter(function (x) { return x.id === id; })[0] || cur;
       if (lineKey(live) === (qty + '\n' + noteTxt)) { lineBase[id] = qty + '\n' + noteTxt; delete lineHold[id]; }
       else lineHold[id] = nid;
+      var snapN = noteById(nid) || (note && note.id ? note : curNote()); if (snapN && snapN.id) rememberNoteVersion(snapN);
       pcSave(c); if (isAutosaveDirty() && !batchT) scheduleAutosave();
     }); }); }
 function markLine(l, n) { n = n || curNote(); if (!l || !n) return; rememberLine(l);
@@ -1686,7 +1696,7 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
     delete lineHold[l.id]; delete lineBase[l.id]; delete nameBase[l.id]; delete saveQ['line:' + l.id];
     if (varHold && varHold.ids) { delete varHold.ids[l.id]; if (!Object.keys(varHold.ids).length) varHold = null; }
     if (ordPending) { queueOrderSave(n); return; }
-    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }); });
+    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }).then(function () { rememberNoteVersion(n); }); });
     scheduleAutosave(); }
 });
 // ---- move / copy an item line to another note of the project; clone a note (same project or another one)
@@ -1708,24 +1718,269 @@ function moveLine(l, op, to) { var c = custOpen, n = curNote(), t;
     return api('customerItem', { id: c.id, noteId: n.id, op: op, lineId: l.id, toNoteId: t.id }); })
   .then(function (r) { n.items = r.items; t.items = r.toItems; [[n, r.note], [t, r.toNote]].forEach(function (p) { p[0].updated = p[1].updated; p[0].updated_by = p[1].updated_by; });
     if (curCust && curCust.id === c.id) { var cn = c.notes.filter(function (x) { return x.id === curCust.noteId; })[0]; if (cn) { curCust.count = cn.items.length; saveCur(); } }
+    rememberNoteVersion(n); rememberNoteVersion(t);
     if (custOpen === c) { keepTyped(); renderNoteCards(); }
     toast((op === 'move' ? 'Moved ' : 'Copied ') + l.name + ' → ' + t.title); });
 }
+/** Default for a copy: the typed project name, otherwise "Project #1004", plus " copy". Never the display label "Chen · #1004". */
+function copyName(c) { var n = String(c && c.name || '').trim(); return (n || projLabel(c) || 'Project') + ' copy'; }
+function askCopyName(c, title, hint, go) {
+  var def = copyName(c);
+  openSheet('<h3>' + esc(title) + '</h3><div class="hint" style="margin:0 0 8px">' + hint + '</div>' +
+    '<label class="f">Project name</label><input id="cpName" maxlength="80" value="' + esc(def) + '">' +
+    '<button class="btn" id="cpGo" style="margin-top:10px">Create project</button><div id="cpMsg" class="msg hidden"></div>');
+  var inp = $('cpName'); inp.focus(); try { inp.select(); } catch (e) {}
+  function run() {
+    if ($('cpGo').disabled) return;
+    var name = inp.value.trim() || def;
+    $('cpGo').disabled = true; $('cpGo').textContent = 'Cloning…';
+    go(name).then(closeSheet, function (er) { if (!$('cpMsg')) return; msg($('cpMsg'), er.message || 'Something went wrong.'); $('cpGo').disabled = false; $('cpGo').textContent = 'Create project'; });
+  }
+  $('cpGo').onclick = run;
+  inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+}
+function makeProjectCopy(src, name) {
+  return flushAutosave().then(function (ok) {
+    if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
+    return api('customerSave', { customer: { name: name, phone: src.phone || '', city: src.city || '', tax: src.tax || 'SF' } });
+  });
+}
+function cloneOneNote(src, n, destId) {
+  return api('noteClone', { id: src.id, noteId: n.id, toId: destId }).then(function (r) {
+    if (!r || !r.note) throw new Error('Nothing was copied.');
+    return copyMissingPhotos(src, n, destId, r.note).then(function () { return r.note; });
+  });
+}
+/** If noteClone came back with no photos and this note has some, upload the copies we already have. Skip when the server copied any. */
+function copyMissingPhotos(src, n, destId, note) {
+  var want = (n && n.photos) || [], have = (note && note.photos) || [];
+  if (!note || !want.length || have.length) return Promise.resolve();
+  return want.reduce(function (p, fid) {
+    return p.then(function () {
+      var got = fileCache[fid] ? Promise.resolve({ data: fileCache[fid] }) : api('customerFile', { id: src.id, fileId: fid });
+      return got.then(function (r) {
+        if (!r || !r.data) return;
+        var mime = (String(r.data).match(/^data:([^;]+)/) || [])[1] || 'image/jpeg';
+        return api('customerFileAdd', { id: destId, noteId: note.id, kind: 'photo', file: { data: r.data, mimeType: mime } }).then(function (add) {
+          if (add && add.photos) note.photos = add.photos;
+          if (add && add.fileId) { fileCache[add.fileId] = r.data; keepPhotoBlob(add.fileId, r.data); }
+        });
+      }, function () {});
+    });
+  }, Promise.resolve());
+}
+function dropEmptyStarter(projectId, starterId) {
+  function once(left) {
+    return api('customerGet', { id: projectId }).then(function (p) {
+      var starter = (p.notes || []).filter(function (n) { return n.id === starterId; })[0];
+      var others = (p.notes || []).filter(function (n) { return n.id !== starterId; });
+      if (!others.length && left > 0) return new Promise(function (r) { setTimeout(r, 400); }).then(function () { return once(left - 1); });
+      if (starter && others.length && !(starter.items || []).length && !(starter.photos || []).length && !String(starter.text || '').trim()) {
+        return api('noteDelete', { id: projectId, noteId: starterId }).catch(function (er) { if (/not found|gone/i.test(er.message || '')) return; throw er; });
+      }
+    });
+  }
+  return once(2);
+}
+function cloneNotesInto(src, notes, dest) {
+  var starterId = dest.notes && dest.notes[0] && dest.notes[0].id, copied = 0;
+  return notes.reduce(function (p, n) {
+    return p.then(function () {
+      return cloneOneNote(src, n, dest.id).then(function () { copied++; if (copied === 1 && starterId) return dropEmptyStarter(dest.id, starterId); });
+    });
+  }, Promise.resolve()).then(function () { return api('customerGet', { id: dest.id }); }).then(function (p) {
+    if (!copied) return api('customerDelete', { id: p.id }).then(function () { throw new Error('Nothing was copied.'); });
+    return p;
+  }).catch(function (er) {
+    if (!copied && dest && dest.id) return api('customerDelete', { id: dest.id }).then(function () { throw er; }, function () { throw er; });
+    throw er;
+  });
+}
+function showCopied(p) {
+  var n = (p.notes || [])[0];
+  if (n) setCur(p, n);
+  openCust(p.id, p, n && n.id);
+  toast('Cloned into ' + projLabel(p));
+}
 function noteMenu(id) { var c = custOpen, n = (c.notes || []).filter(function (x) { return x.id === id; })[0]; if (!n) return;
-  openSheet('<h3>' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
-    '<button class="btn" id="ncClone">Clone note</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
+  openSheet('<h3 class="notr">' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
+    '<button class="btn" id="ncClone">Clone note</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button>' +
+    '<button class="btn sec" id="ncNew" style="margin-top:8px">Clone to new project…</button><button class="btn sec" id="ncHist" style="margin-top:8px">Version history</button>' +
+    '<div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
   $('ncClone').onclick = function () { this.disabled = true; this.textContent = 'Cloning…';
     cloneNote(c, n, c.id).then(closeSheet, function (er) { msg($('ncMsg'), er.message); $('ncClone').disabled = false; $('ncClone').textContent = 'Clone note'; }); };
   $('ncOther').onclick = function () { this.disabled = true; $('ncList').innerHTML = '<div class="spinner"></div>';
     api('customerList', { filter: {} }).then(function (l) { l = l.filter(function (x) { return x.id !== c.id; });
       $('ncList').innerHTML = '<div class="mvh">Clone “' + esc(n.title) + '” into…</div>' + (l.length ? l.map(function (x) { return '<button class="crow2" data-clto="' + esc(x.id) + '"><b>' + esc(projLabel(x)) + '</b><span class="s">' + (x.noteList || []).length + ' notes</span></button>'; }).join('') : '<div class="empty">No other projects.</div>'); })
       .catch(function (er) { msg($('ncMsg'), er.message); }); };
+  $('ncNew').onclick = function () {
+    askCopyName(c, 'Clone to new project…', 'Copies this note into a new project. This project stays as it is.', function (name) {
+      return makeProjectCopy(c, name).then(function (dest) { return cloneNotesInto(c, [n], dest); }).then(showCopied);
+    });
+  };
+  $('ncHist').onclick = function () { openNoteHistory(c, n); };
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-clto]'); if (!b) return; b.disabled = true; b.querySelector('b').textContent += ' · cloning…';
     cloneNote(c, n, b.dataset.clto).then(closeSheet, function (er) { msg($('ncMsg'), er.message); b.disabled = false; }); }; }
 function cloneNote(c, n, toId) {
-  return flushAutosave().then(function (ok) { if (!ok) throw new Error('Not saved yet. Check the connection and try again.'); return api('noteClone', { id: c.id, noteId: n.id, toId: toId }); }).then(function (r) {
-    if (toId === c.id) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; if (custOpen === c) { renderNoteCards(); scrollToNote(r.note.id); } toast('Cloned: ' + r.note.title + ' (adding here)'); }
-    else { openCust(toId, null, r.note.id); api('customerGet', { id: toId }).then(function (t) { setCur(t, r.note); }).catch(function () {}); toast('Cloned into another project: ' + r.note.title); } });
+  return flushAutosave().then(function (ok) { if (!ok) throw new Error('Not saved yet. Check the connection and try again.'); return cloneOneNote(c, n, toId); }).then(function (note) {
+    if (toId === c.id) { c.notes.push(note); setCur(c, note); noteOpenId = note.id; if (custOpen === c) { renderNoteCards(); scrollToNote(note.id); } toast('Cloned: ' + note.title + ' (adding here)'); }
+    else { openCust(toId, null, note.id); api('customerGet', { id: toId }).then(function (t) { setCur(t, note); }).catch(function () {}); toast('Cloned into another project: ' + note.title); } });
+}
+// Version history is per note on this phone (the project cache only keeps the current copy). Last 20 saves.
+// Photo bytes, when this phone has them, sit in IndexedDB so a restore can put a removed photo back.
+var HIST_MAX = 20, histPause = false, histOpen = null;
+function histKey(id) { return 'esNoteHist:' + (session ? ((session.account || '') + ':' + String(session.name || '').toLowerCase()) : '') + ':' + id; }
+function loadHist(id) { try { var a = JSON.parse(localStorage.getItem(histKey(id)) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function saveHist(id, list) {
+  try { localStorage.setItem(histKey(id), JSON.stringify(list)); }
+  catch (e) { if (list.length > 1) { list.pop(); saveHist(id, list); } }
+}
+function snapSame(a, b) {
+  return !!(a && b && a.title === b.title && a.text === b.text && JSON.stringify(a.items) === JSON.stringify(b.items) && JSON.stringify(a.photos) === JSON.stringify(b.photos));
+}
+function noteSnap(n) {
+  return { at: Date.now(), title: n.title || '', text: n.text || '',
+    items: (n.items || []).map(function (l) { return { name: l.name, desc: l.desc || '', qty: l.qty, note: l.note || '', photo: l.photo || '' }; }),
+    photos: (n.photos || []).slice() };
+}
+function keepPhotoBlob(fid, data) { if (!fid || !data || String(data).indexOf('data:') !== 0 || !window.indexedDB) return; idb('readwrite', function (st) { st.put(data, 'ph:' + fid); }).catch(function () {}); }
+function photoBlob(fid) {
+  if (fileCache[fid]) return Promise.resolve(fileCache[fid]);
+  if (!window.indexedDB) return Promise.resolve('');
+  return idb('readonly', function (st) { return st.get('ph:' + fid); }).then(function (d) { return d || ''; }).catch(function () { return ''; });
+}
+function ensurePhotoBlob(c, fid) {
+  return photoBlob(fid).then(function (data) {
+    if (data) return data;
+    if (!c) return '';
+    return api('customerFile', { id: c.id, fileId: fid }).then(function (r) {
+      if (r && r.data) { fileCache[fid] = r.data; keepPhotoBlob(fid, r.data); return r.data; }
+      return '';
+    }, function () { return ''; });
+  });
+}
+function rememberNoteVersion(n, force) {
+  if ((histPause && !force) || !n || !n.id || String(n.id).indexOf('tmp-') === 0) return;
+  (n.photos || []).forEach(function (fid) { if (fileCache[fid]) keepPhotoBlob(fid, fileCache[fid]); });
+  var snap = noteSnap(n), list = loadHist(n.id);
+  if (snapSame(list[0], snap)) return;
+  list.unshift(snap); if (list.length > HIST_MAX) list.length = HIST_MAX;
+  saveHist(n.id, list);
+}
+function histWhen(ms) {
+  try { return new Date(ms).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }); }
+  catch (e) { return whenTxt(ms); }
+}
+function clearNoteDirtyState(n) {
+  if (!n) return;
+  Object.keys(lineHold).forEach(function (id) { if (lineHold[id] === n.id) delete lineHold[id]; });
+  (n.items || []).forEach(function (l) { lineBase[l.id] = lineKey(l); nameBase[l.id] = l.name; });
+  if (varHold && varHold.noteId === n.id) varHold = null;
+  ordBase[n.id] = noteOrderKey(n);
+  if (!curNote() || curNote() === n) ordPending = false;
+  n._baseTitle = n.title || ''; n._baseText = n.text || '';
+  if (curNote() === n) noteDirty = false;
+  scheduleAutosave();
+}
+function syncNotePhotos(c, n, want) {
+  want = want || [];
+  var have = (n.photos || []).slice(), wantSet = {}, haveSet = {}, missing = 0;
+  want.forEach(function (f) { wantSet[f] = 1; }); have.forEach(function (f) { haveSet[f] = 1; });
+  var chain = Promise.resolve();
+  have.forEach(function (fid) {
+    if (wantSet[fid]) return;
+    chain = chain.then(function () {
+      return ensurePhotoBlob(c, fid).then(function () {
+        return api('customerFileRemove', { id: c.id, fileId: fid, noteId: n.id }).then(function (r) {
+          n.photos = (r && r.photos) || (n.photos || []).filter(function (x) { return x !== fid; });
+        });
+      });
+    });
+  });
+  want.forEach(function (fid) {
+    if (haveSet[fid]) return;
+    chain = chain.then(function () {
+      return photoBlob(fid).then(function (data) {
+        if (!data) { missing++; return; }
+        var mime = (String(data).match(/^data:([^;]+)/) || [])[1] || 'image/jpeg';
+        return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: { data: data, mimeType: mime } }).then(function (r) {
+          if (r && r.fileId) { fileCache[r.fileId] = data; keepPhotoBlob(r.fileId, data); }
+          if (r && r.photos) n.photos = r.photos;
+        }, function () { missing++; });
+      });
+    });
+  });
+  return chain.then(function () { return missing; });
+}
+function applyNoteSnapshot(c, n, snap) {
+  rememberNoteVersion(n, true);
+  histPause = true;
+  return api('noteSave', { id: c.id, noteId: n.id, title: snap.title || n.title, text: snap.text || '' }).then(function () {
+    return api('customerGet', { id: c.id });
+  }).then(function (fresh) {
+    var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
+    var ids = ((fn && fn.items) || []).map(function (l) { return l.id; }), chain = Promise.resolve();
+    for (var i = ids.length - 1; i >= 0; i--) {
+      (function (id) { chain = chain.then(function () {
+        return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: id }).catch(function (er) {
+          if (/not found|gone/i.test(er.message || '') && !/^project not found/i.test(er.message || '')) return; throw er;
+        });
+      }); })(ids[i]);
+    }
+    (snap.items || []).forEach(function (l) {
+      chain = chain.then(function () {
+        return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' } })
+          .then(function (r) { if (r && r.items) n.items = r.items; if (r && r.note) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; } });
+      });
+    });
+    return chain.then(function () { if (!(snap.items || []).length) n.items = []; });
+  }).then(function () { return syncNotePhotos(c, n, snap.photos || []); }).then(function (missing) {
+    histPause = false;
+    n.title = snap.title || n.title; n.text = snap.text || '';
+    clearNoteDirtyState(n); rememberNoteVersion(n); pcSave(c);
+    if (isCurNote(c.id, n.id)) syncCount();
+    return missing;
+  }).catch(function (er) {
+    histPause = false;
+    return api('customerGet', { id: c.id }).then(function (fresh) {
+      var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
+      if (fn) { n.items = fn.items || []; n.photos = fn.photos || []; n.title = fn.title; n.text = fn.text || ''; n.updated = fn.updated; n.updated_by = fn.updated_by; clearNoteDirtyState(n); if (custOpen === c) renderOverview(); }
+      throw er;
+    }, function () { throw er; });
+  });
+}
+function restoreNoteVersion(c, n, snap) {
+  function waitIdle(left) { if ((!phBusy && !varBusy) || left <= 0) return Promise.resolve(); return new Promise(function (r) { setTimeout(r, 200); }).then(function () { return waitIdle(left - 1); }); }
+  return waitIdle(25).then(function () { return flushAutosave(); }).then(function (ok) {
+    if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
+    return applyNoteSnapshot(c, n, snap);
+  });
+}
+function versionPreview(h, i) {
+  var s = h.list[i]; if (!s) return;
+  var rows = (s.items || []).map(function (l, k) {
+    return '<div class="shrow" style="cursor:default"><span><b class="notr">' + (k + 1) + '. ' + esc(l.name) + '</b><span class="s notr">× ' + esc(l.qty || 1) + (l.note ? ' · ' + esc(l.note) : '') + '</span></span></div>';
+  }).join('');
+  openSheet('<h3>Version history</h3><div class="hint" style="margin:0 0 8px"><span class="notr">' + esc(histWhen(s.at)) + '</span> · ' + (s.items || []).length + ' items' +
+    ((s.photos || []).length ? ' · ' + s.photos.length + ' photos' : '') + '</div>' +
+    '<div class="notr" style="font-weight:800;font-size:16px;margin-bottom:4px">' + esc(s.title || '') + '</div>' +
+    (String(s.text || '').trim() ? '<div class="hint notr" style="margin:0 0 8px">' + esc(s.text) + '</div>' : '') +
+    (rows || '<div class="empty">No items in this version.</div>') +
+    '<button class="btn" id="hvRestore" style="margin-top:10px">Restore this version</button><button class="btn sec" id="hvBack" style="margin-top:8px">Back</button><div id="hvMsg" class="msg hidden"></div>');
+  $('hvBack').onclick = function () { openNoteHistory(h.c, h.n); };
+  $('hvRestore').onclick = function () { var b = this; b.disabled = true; b.textContent = 'Restoring…';
+    restoreNoteVersion(h.c, h.n, s).then(function (missing) { closeSheet(); if (custOpen === h.c) renderOverview(); toast(missing ? 'Some photos from that version are no longer on the server.' : 'Restored this version.'); },
+      function (er) { if ($('hvMsg')) msg($('hvMsg'), er.message || 'Not saved yet. Check the connection and try again.'); if ($('hvRestore')) { $('hvRestore').disabled = false; $('hvRestore').textContent = 'Restore this version'; } }); };
+}
+function openNoteHistory(c, n) {
+  var list = loadHist(n.id); histOpen = { c: c, n: n, list: list };
+  var head = '<h3>Version history</h3><div class="hint notr" style="margin:0 0 8px">' + esc(n.title) + '</div>';
+  if (!list.length) { openSheet(head + '<div class="empty">No saved versions yet. A version is kept on this phone each time the note saves.</div>'); return; }
+  openSheet(head + '<div class="hint" style="margin:0 0 8px">Kept on this phone, last 20 saves.</div>' + list.map(function (s, i) {
+    var cnt = (s.items || []).length, ph = (s.photos || []).length;
+    return '<button class="crow2" data-hv="' + i + '"><b class="notr">' + esc(histWhen(s.at)) + '</b><span class="s">' + cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + '</span></button>';
+  }).join(''));
+  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-hv]'); if (!b || !histOpen) return; versionPreview(histOpen, +b.dataset.hv); };
 }
 function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
