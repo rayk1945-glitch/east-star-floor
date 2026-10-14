@@ -164,7 +164,7 @@
   .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
-  .clbtns { display:flex; gap:8px; margin-top:8px; } .clbtns .btn { flex:1; margin-top:0; } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
+  .clbtns { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; } .clbtns .btn { flex:1 1 calc(50% - 8px); width:auto; margin-top:0; min-height:44px; font-size:15px; padding:0 10px; text-decoration:none; } .clbtns .btn.sec { border:1.5px solid var(--accent); } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
   .sendto { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .sendto select { flex:1; min-width:0; min-height:40px; font-size:14px; }
   .shbtn.on { border-color:#1A8BC9; color:#0b5f8f; background:#eef7fc; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
@@ -444,7 +444,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014c"></script>
+<script src="i18n.js?v=20261014d"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -494,7 +494,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014c';
+var PAGE_VER = '20261014d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -965,13 +965,43 @@ function shareText(c) {
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
 /** "Share with client": a read-only, no-login link to this project (client.html?c=TOKEN). The server sends no prices,
- *  stock, shelves, contact info or voice notes for it. Make / copy / text it, replace it, or stop it. */
+ *  stock, shelves, contact info or voice notes for it. After the link exists: email, text, copy, and share. */
 function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t + (window.I18N && I18N.lang() === 'zh' ? '&l=zh' : ''); }   // &l=zh: the client page starts in Chinese when shared from 中文
+function clT(s) { return window.I18N ? I18N.t(s) : s; }
+var CL_NOTE = 'Hi, here is the project we put together for you. Open the link to see your items and photos. No sign-in needed.';
+var CL_STORE = 'San Francisco: 1945 Carroll Ave, (415) 467-2888 · Fremont: 48460 Kato Road, (510) 257-4888 · Mon – Sat 8:30 AM – 5:30 PM · eaststarusa.com';
+function clientEmailOf(c) {
+  var list = [c && c.email, c && c.phone, c && c.name, c && c.city], i, m;
+  for (i = 0; i < list.length; i++) { m = String(list[i] || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i); if (m) return m[0]; }
+  return '';
+}
+function clientPhoneOf(c) {
+  var raw = String(c && c.phone || '').trim();
+  if (!raw || /@/.test(raw)) return '';
+  var n = raw.replace(/[^\d+]/g, ''), digits = n.replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15 ? n : '';
+}
+function smsIsIos() { var ua = navigator.userAgent || ''; return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); }
+/** iOS: sms:?&body= or sms:NUMBER&body= . Android: sms:?body= or sms:NUMBER?body= . */
+function smsHref(phone, body) {
+  var b = encodeURIComponent(body), n = phone || '';
+  if (smsIsIos()) return n ? 'sms:' + n + '&body=' + b : 'sms:?&body=' + b;
+  return n ? 'sms:' + n + '?body=' + b : 'sms:?body=' + b;
+}
+function mailHref(email, subject, body) { return 'mailto:' + (email || '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body); }
+function clientShareBits(c, u) {
+  var id = (c.num != null && c.num !== '') ? c.num : (c.id || '');
+  var note = clT(CL_NOTE), store = clT(CL_STORE), subject = clT('Your East Star project #' + id);
+  return { id: id, subject: subject, note: note, emailBody: note + '\n\n' + u + '\n\n' + store, smsBody: note + '\n\n' + u, email: clientEmailOf(c), phone: clientPhoneOf(c) };
+}
 function openClientLink(c) {
-  var t = c.clientToken, u = t ? clientUrl(t) : '';
+  var t = c.clientToken, u = t ? clientUrl(t) : '', bits = t ? clientShareBits(c, u) : null;
   openSheet('<h3>Share with client</h3><div class="hint" style="margin:0 0 10px">A read-only page of <b>' + esc(projLabel(c)) + '</b> for your client: all notes, items, qty, item notes and photos, plus our store addresses. <b>No prices, totals, stock or shelf locations.</b> No sign-in needed: anyone with the link can see it.</div>' +
     (t ? '<input id="clUrl" readonly value="' + esc(u) + '" style="font-size:13px">' +
-      '<div class="clbtns"><button class="btn" id="clCopy">Copy link</button>' + (navigator.share ? '<button class="btn sec" id="clShare">Share… (text it)</button>' : '') + '</div>' +
+      '<div class="clbtns"><a class="btn" id="clEmail" href="' + esc(mailHref(bits.email, bits.subject, bits.emailBody)) + '">Email</a>' +
+      '<a class="btn" id="clText" href="' + esc(smsHref(bits.phone, bits.smsBody)) + '">Text</a>' +
+      '<button class="btn" id="clCopy" type="button">Copy link</button>' +
+      (navigator.share ? '<button class="btn sec" id="clShare" type="button">Share…</button>' : '') + '</div>' +
       '<div class="clrow"><a class="link" id="clOpen" href="' + esc(u) + '" target="_blank" rel="noopener">Preview</a><span style="flex:1"></span><button class="link" id="clNew">New link</button><button class="link" id="clStop" style="color:#7f1d1d">Stop client link</button></div>'
       : '<button class="btn" id="clMake">Make client link</button>') + '<div id="clMsg" class="msg hidden"></div>');
   function run(op, b) { if (b) b.disabled = true;
@@ -981,7 +1011,7 @@ function openClientLink(c) {
   if ($('clCopy')) $('clCopy').onclick = function () { var b = this;
     (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).catch(function () { var i = $('clUrl'); i.select(); document.execCommand('copy'); })
       .then(function () { b.textContent = 'Copied ✓'; toast('Client link copied'); }); };
-  if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: 'East Star Max · ' + (c.name || projLabel(c)), text: 'Your project at East Star Max:', url: u }).catch(function () {}); };
+  if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: bits.subject, text: bits.emailBody, url: u }).catch(function () {}); };
   if ($('clNew')) $('clNew').onclick = function () { if (confirm('Make a new link? The old link stops working right away.')) run('new', this).then(function (r) { if (r) toast('New client link (old one stopped)'); }); };
   if ($('clStop')) $('clStop').onclick = function () { if (confirm('Stop the client link? Anyone who has it can no longer open this project.')) run('stop', this).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); };
 }

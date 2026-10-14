@@ -60,7 +60,9 @@
     'Project not found.': '找不到这个项目。', 'This project has no note yet. Tap + Add note.': '这个项目还没有笔记。点 + 添加笔记。', 'That note is gone.': '这个笔记已不存在。',
     'Name is required.': '必须填写姓名。', 'This project is full': '这个项目已满', 'Copy as project': '复制成项目',
     // client link sheet
-    'Make client link': '生成客户链接', 'Copy link': '复制链接', 'Copied ✓': '已复制 ✓', 'Share… (text it)': '分享…（发短信）', 'Preview': '预览', 'New link': '新链接', 'Stop client link': '停用客户链接',
+    'Make client link': '生成客户链接', 'Copy link': '复制链接', 'Copied ✓': '已复制 ✓', 'Share… (text it)': '分享…（发短信）', 'Email': '邮件', 'Text': '短信', 'Share…': '分享…', 'Preview': '预览', 'New link': '新链接', 'Stop client link': '停用客户链接',
+    'Hi, here is the project we put together for you. Open the link to see your items and photos. No sign-in needed.': '你好，这是我们为你准备的项目。打开链接即可查看商品和照片，无需登录。',
+    'San Francisco: 1945 Carroll Ave, (415) 467-2888 · Fremont: 48460 Kato Road, (510) 257-4888 · Mon – Sat 8:30 AM – 5:30 PM · eaststarusa.com': '旧金山：1945 Carroll Ave，(415) 467-2888 · Fremont：48460 Kato Road，(510) 257-4888 · 周一至周六 8:30 – 17:30 · eaststarusa.com',
     'Client link ready': '客户链接已生成', 'Client link copied': '客户链接已复制', 'Client link stopped': '客户链接已停用', 'New client link (old one stopped)': '已生成新链接（旧链接已停用）',
     'No prices, totals, stock or shelf locations.': '不含任何价格、总价、库存或货架位置。', 'No sign-in needed: anyone with the link can see it.': '无需登录：有链接的人都能看到。',
     'Make a new link? The old link stops working right away.': '生成新链接？旧链接会立即失效。', 'Stop the client link? Anyone who has it can no longer open this project.': '停用客户链接？有这个链接的人将无法再打开这个项目。',
@@ -131,7 +133,7 @@
   // ---------------------------------------------------------------- phrases / patterns inside longer texts (applied in order)
   var PH = [
     [/^Send plan to /, '图纸发给 '], [/^Send to /, '发送给 '], [/^Sent to /, '已发送给 '], [/\. Request /g, '。请求 '], [/^Request /, '请求 '],
-    [/^Reading (\d+) of (\d+)/, '正在读取第 $1 张，共 $2 张'],
+    [/^Reading (\d+) of (\d+)/, '正在读取第 $1 张，共 $2 张'], [/^Your East Star project #(\d+)/, '你的 East Star 项目 #$1'], [/^Your East Star project #/, '你的 East Star 项目 #'],
     [/ items\. The quote comes back to East Star Max\./, ' 件商品。报价会回复给劍鋒高級建材 Max。'], [/^Saved as /, '已保存为 '], [/ but the bot did not answer \(/, '，但机器人没有回应（'],
     [/\)\. Re-send it below or from History\./, '）。可在下面或历史中重新发送。'], [/\)\. Re-send it from History\./, '）。可在历史中重新发送。'],
     [/^Re-sent /, '已重新发送 '], [/^Re-send failed: /, '重新发送失败：'], [/ again \(same request ID\)\?$/, ' 再发一次（同一个请求编号）？'],
