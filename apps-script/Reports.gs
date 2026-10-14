@@ -2,40 +2,72 @@
  * Reported inventory (missing stock) for the East Star floor app.
  *
  * Drop this file into the EXISTING Apps Script project that already serves the
- * floor /exec URL (do not create a second web app). Then, after the request
- * is authenticated and `session` exists, add this to the existing action
- * router (use that file's own JSON helper — the names below are the usual ones):
+ * floor /exec URL (do not create a second web app). Use that file's own JSON
+ * helper. reportAction_ returns null for every other action.
  *
- *   if (action === 'reportMissing' || action === 'listReports' || action === 'resolveReport') {
- *     try {
- *       return json({ ok: true, data: reportAction_(action, body, session) });
- *     } catch (err) {
- *       return json({ ok: false, error: err && err.message ? err.message : String(err) });
- *     }
- *   }
+ * 1) Bots, same place as clientView, BEFORE the staff sign-in check.
+ *    No staff session token. Same POST as clientView: text/plain JSON to the
+ *    /exec URL, redirect followed, no cookies.
  *
- * reportAction_ returns null for every other action, so this also works:
+ *      if (action === 'listReports' && !body.token) {
+ *        try {
+ *          return json({ ok: true, data: reportAction_('listReports', body, null) });
+ *        } catch (err) {
+ *          return json({ ok: false, error: err && err.message ? err.message : String(err) });
+ *        }
+ *      }
  *
- *   var reported = reportAction_(action, body, session);
- *   if (reported) return json({ ok: true, data: reported });
+ *    Request:  {"action":"listReports","status":"open"}
+ *    Response: {"ok":true,"data":{"reports":[
+ *      {"item":"","desc":"","qty":1,"store":"SF","reporter":"","date":"","note":"","id":""}
+ *    ]}}
+ *    date is Pacific Time, yyyy-MM-dd'T'HH:mm:ss. status other than open is refused.
+ *    Creating or resolving a report still requires a staff session.
  *
- * The client treats the feature as supported only when listReports returns
- * { supported: true, reports: [ ... ] }. Until then the app hides it.
+ * 2) Staff app, AFTER the request is authenticated and session exists:
  *
- * Storage is a sheet tab named "Reports". A container-bound script uses the
+ *      if (action === 'reportMissing' || action === 'listReports' || action === 'resolveReport') {
+ *        try {
+ *          return json({ ok: true, data: reportAction_(action, body, session) });
+ *        } catch (err) {
+ *          return json({ ok: false, error: err && err.message ? err.message : String(err) });
+ *        }
+ *      }
+ *
+ *    The signed-in list is { supported: true, reports: [...] } with who/when/status.
+ *    The floor app hides the feature until that shape comes back.
+ *
+ * Storage is a sheet tab named "Reports" (every report, including resolved).
+ * Open reports are also mirrored to a tab named "Reported Missing" (item, desc,
+ * qty, store, reporter, date, note, id). A container-bound script uses the
  * active spreadsheet. Otherwise set script property REPORTS_SHEET_ID to that
- * spreadsheet's id. The tab is created on the first call.
+ * spreadsheet's id. Tabs are created on the first call.
  *
  * The reporter and the resolver are session.name. The client cannot set them.
  * NetSuite item data is never written.
  */
 var REPORT_HEADERS_ = ['id', 'item', 'desc', 'qty', 'store', 'who', 'when', 'note', 'status', 'resolvedBy', 'resolvedAt'];
+var REPORT_PUBLIC_HEADERS_ = ['item', 'desc', 'qty', 'store', 'reporter', 'date', 'note', 'id'];
 
 function reportAction_(action, body, session) {
   if (action !== 'listReports' && action !== 'reportMissing' && action !== 'resolveReport') return null;
-  if (!session || !String(session.name || '').trim()) throw new Error('Please sign in.');
   body = body || {};
-  if (action === 'listReports') return { supported: true, reports: withReportsLock_(readReports_) };
+  var signedIn = !!(session && String(session.name || '').trim());
+  if (action === 'listReports' && !signedIn) {
+    return withReportsLock_(function () {
+      var rows = readReports_();
+      writeMirror_(rows);
+      return reportBotList_(rows, body);
+    });
+  }
+  if (!signedIn) throw new Error('Please sign in.');
+  if (action === 'listReports') {
+    return withReportsLock_(function () {
+      var rows = readReports_();
+      writeMirror_(rows);
+      return { supported: true, reports: rows };
+    });
+  }
   if (action === 'reportMissing') return { supported: true, report: withReportsLock_(function () { return reportMissing_(body, session); }) };
   return { supported: true, report: withReportsLock_(function () { return resolveReport_(body, session); }) };
 }
@@ -109,6 +141,56 @@ function readReports_() {
   return out;
 }
 
+/** Pacific Time yyyy-MM-dd'T'HH:mm:ss. A string, so the sheet does not shift the clock. */
+function reportDate_(ms) {
+  if (!ms) return '';
+  return Utilities.formatDate(new Date(ms), 'America/Los_Angeles', "yyyy-MM-dd'T'HH:mm:ss");
+}
+
+function reportPublic_(r) {
+  return {
+    item: r.item,
+    desc: r.desc,
+    qty: r.qty,
+    store: r.store,
+    reporter: r.who,
+    date: reportDate_(r.when),
+    note: r.note,
+    id: r.id
+  };
+}
+
+/** Bot read: open reports only. Same fields as the Reported Missing sheet. */
+function reportBotList_(rows, body) {
+  var status = String(body && body.status != null ? body.status : 'open').trim().toLowerCase();
+  if (status !== 'open') throw new Error('status must be open.');
+  var open = [];
+  for (var i = 0; i < rows.length; i++) if (rows[i].status === 'open') open.push(rows[i]);
+  open.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
+  var reports = [];
+  for (var j = 0; j < open.length; j++) reports.push(reportPublic_(open[j]));
+  return { reports: reports };
+}
+
+/** Open reports only, on a tab a person or a bot's spreadsheet reader can open. */
+function writeMirror_(rows) {
+  var book = reportsBook_();
+  var sh = book.getSheetByName('Reported Missing');
+  if (!sh) sh = book.insertSheet('Reported Missing');
+  var open = [];
+  for (var i = 0; i < rows.length; i++) if (rows[i].status === 'open') open.push(rows[i]);
+  open.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
+  var values = [REPORT_PUBLIC_HEADERS_];
+  for (var j = 0; j < open.length; j++) {
+    var p = reportPublic_(open[j]);
+    values.push([p.item, p.desc, p.qty, p.store, p.reporter, p.date, p.note, p.id]);
+  }
+  sh.clear();
+  sh.getRange(1, 1, values.length, REPORT_PUBLIC_HEADERS_.length).setValues(values);
+  sh.getRange(1, 1, 1, REPORT_PUBLIC_HEADERS_.length).setFontWeight('bold');
+  sh.setFrozenRows(1);
+}
+
 function reportWholeQty_(v) {
   if (typeof v === 'number' && isFinite(v) && Math.floor(v) === v) return v;
   var s = String(v == null ? '' : v).trim().replace(/,/g, '');
@@ -144,6 +226,7 @@ function reportMissing_(body, session) {
     resolvedAt: 0
   };
   reportsSheet_().appendRow([rep.id, rep.item, rep.desc, rep.qty, rep.store, rep.who, rep.when, rep.note, rep.status, '', '']);
+  writeMirror_(readReports_());
   return rep;
 }
 
@@ -162,6 +245,7 @@ function resolveReport_(body, session) {
     rep.status = 'resolved';
     rep.resolvedBy = who;
     rep.resolvedAt = at;
+    writeMirror_(readReports_());
     return rep;
   }
   throw new Error('Report not found.');
