@@ -68,6 +68,8 @@
     'The bot is not set up yet. Ask admin.': '机器人还没设置好。请联系管理员。',
     'Confirm the client email. The bot will draft the message for approval.': '请确认客户邮箱。机器人会起草邮件，等你批准。',
     'Enter the client email.': '请填写客户的邮箱。',
+    '+ Add 2nd contact': '+ 添加第二联系人', 'Contact 1': '联系人 1', 'Contact 2': '联系人 2', 'Both': '两位都发', 'Recipients': '收件人',
+    'Homeowner': '业主', 'Contractor': '承包商', 'Designer': '设计师', 'Other': '其他', 'Type a role': '填写身份',
     'Could not reach the bot.': '无法联系机器人。', 'The bot webhook must be https.': '机器人的 Webhook 必须使用 https。',
     'No prices, totals, stock or shelf locations.': '不含任何价格、总价、库存或货架位置。', 'No sign-in needed: anyone with the link can see it.': '无需登录：有链接的人都能看到。',
     'Make a new link? The old link stops working right away.': '生成新链接？旧链接会立即失效。', 'Stop the client link? Anyone who has it can no longer open this project.': '停用客户链接？有这个链接的人将无法再打开这个项目。',

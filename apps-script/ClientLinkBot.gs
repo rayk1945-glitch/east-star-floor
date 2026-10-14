@@ -18,12 +18,15 @@
  * Request (text/plain JSON, same as the other staff actions; token is the
  * staff session and is NOT forwarded to the bot):
  *   {"action":"sendClientLinkToBot","token":"…","projectId":"","projectName":"",
- *    "clientName":"","clientEmail":"","clientPhone":"","link":"","sender":"","note":""}
+ *    "clientName":"","clientEmail":"","clientPhone":"","link":"","sender":"","note":"",
+ *    "contacts":[{"name":"","role":"","phone":"","email":""}]}
  *
  * Webhook POST body (Content-Type application/json, Authorization: BOT_WEBHOOK_AUTH):
  *   {"projectId":"","projectName":"","clientName":"","clientEmail":"","clientPhone":"",
- *    "link":"","sender":"","note":""}
- * sender is session.name. The client cannot set it.
+ *    "link":"","sender":"","note":"","contacts":[{"name":"","role":"","phone":"","email":""}]}
+ * sender is session.name. The client cannot set it. contacts is the chosen
+ * recipients (one or two). If the request has no contacts array, one contact is
+ * built from clientName, clientPhone, and clientEmail. The session token is not forwarded.
  */
 function sendClientLinkToBotResponse_(body, session) {
   try {
@@ -54,7 +57,8 @@ function sendClientLinkToBot_(body, session) {
     clientPhone: String(body.clientPhone || ''),
     link: String(body.link || ''),
     sender: String(session.name || ''),
-    note: String(body.note || '')
+    note: String(body.note || ''),
+    contacts: botContacts_(body)
   };
   var res;
   try {
@@ -71,4 +75,15 @@ function sendClientLinkToBot_(body, session) {
   var code = res.getResponseCode();
   if (code < 200 || code >= 300) throw new Error('The bot did not accept the link (' + code + ').');
   return { sent: true };
+}
+
+function botContacts_(body) {
+  var raw = body && Array.isArray(body.contacts) ? body.contacts : [], list = [], i, x;
+  for (i = 0; i < raw.length && list.length < 2; i++) {
+    x = raw[i];
+    if (!x || typeof x !== 'object') continue;
+    list.push({ name: String(x.name || ''), role: String(x.role || ''), phone: String(x.phone || ''), email: String(x.email || '') });
+  }
+  if (!list.length) list.push({ name: String(body.clientName || ''), role: '', phone: String(body.clientPhone || ''), email: String(body.clientEmail || '') });
+  return list;
 }
