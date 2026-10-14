@@ -316,11 +316,11 @@
   body.wh #custBar, body.wh .toplinks .plan, body.wh #adminBtn, body.wh #bnav [data-go="cust"], body.wh #bnav [data-go="history"],
   body:not(.rmon) .rmfeat { display:none !important; }
   .rmbadge { display:inline-block; min-width:18px; margin-left:5px; padding:0 5px; border-radius:999px; background:#b91c1c; color:#fff; font-size:11px; line-height:18px; text-align:center; }
-  /* Open missing reports, between the SF and FRE qty chips. Same gate as Report missing: hidden until listReports says supported. */
+  /* One short chip per store with open missing reports, right after that store's qty chip. Hidden until listReports says supported. */
   .locstock { align-items: center; }
   .locstock button.rmmiss { appearance:none; -webkit-appearance:none; margin:0; border:1px solid #e0b15a; background:var(--warn-bg); color:var(--warn-fg);
-    cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; text-align:left; border-radius:999px; padding:6px 10px; min-height:36px;
-    max-width:100%; min-width:0; white-space:normal; align-self:center; }
+    cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; text-align:center; border-radius:999px; padding:6px 10px; min-height:36px;
+    white-space:nowrap; align-self:center; }
   .rmrow { border-top:1px solid var(--line); padding:10px 0; } .rmrow:first-child { border-top:0; } .rmrow .rmmeta { font-size:12.5px; color:var(--muted); margin-top:2px; } .rmrow .rmnote { font-size:13px; margin-top:4px; } .rmrow .actions { margin-top:6px; }
   .rmseg { display:flex; gap:6px; margin:6px 0 10px; } .rmseg button { flex:1; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; } .rmseg button.active { background:var(--navy,#1f2937); color:#fff; border-color:var(--navy,#1f2937); }
   body.wh [onclick^="addItem"], body.wh #tcAdd, body.wh #priceBar { display:none !important; }
@@ -1454,25 +1454,12 @@ function loadRequestIntoForm(rid, clone, btn) {
 }
 // ---------------- reported missing (Reports.gs on the server). Hidden unless listReports answers supported:true.
 var meName = '', rmList = [], rmResolved = false, RM_STORE_KEY = 'esRmStore';
-/** SF / FRE (or the full city name) so the warning chip can sit between those two qty chips. */
+/** SF / FRE (or the full city name) so a missing chip can follow that store's qty chip. */
 function locStoreKey(label) {
   var s = String(label || '').trim().toUpperCase().replace(/\./g, '');
   if (s === 'SF' || s === 'SAN FRANCISCO') return 'SF';
   if (s === 'FRE' || s === 'FREMONT') return 'FRE';
   return '';
-}
-/** Index in the stock-chip list: between SF and FRE, else just after SF or just before FRE, else at the end. */
-function rmMissAt(locs) {
-  var sf = -1, fre = -1, i, k;
-  for (i = 0; i < locs.length; i++) {
-    k = locStoreKey(locs[i][0]);
-    if (k === 'SF' && sf < 0) sf = i;
-    if (k === 'FRE' && fre < 0) fre = i;
-  }
-  if (sf >= 0 && fre >= 0) return Math.max(sf, fre);
-  if (sf >= 0) return sf + 1;
-  if (fre >= 0) return fre;
-  return locs.length;
 }
 function rmOpenFor(name) {
   var key = String(name || '').trim();
@@ -1480,44 +1467,45 @@ function rmOpenFor(name) {
   return rmList.filter(function (r) { return r && r.status !== 'resolved' && String(r.item || '').trim() === key; });
 }
 function rmStoreRank(s) { return s === 'SF' ? 0 : s === 'FRE' ? 1 : 2; }
-/** Month/day in Pacific Time, e.g. 10/13. */
-function rmMd(ms) {
-  var d = new Date(Number(ms));
-  if (!ms || isNaN(d.getTime())) return '';
-  try {
-    var m = '', day = '', parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', month: 'numeric', day: 'numeric' }).formatToParts(d);
-    for (var i = 0; i < parts.length; i++) { if (parts[i].type === 'month') m = parts[i].value; if (parts[i].type === 'day') day = parts[i].value; }
-    return m && day ? m + '/' + day : '';
-  } catch (e) { return (d.getMonth() + 1) + '/' + d.getDate(); }
-}
-/** "⚠ Missing · SF 2 · FRE 6 · reported 10/13" — open reports only, qty summed per store, latest date. */
-function rmChipLabel(rows) {
-  var sum = {}, order = [], latest = 0, i, r, st, w;
+/** Open qty summed per store. Blank store becomes "—". */
+function rmSums(name) {
+  var sum = {}, i, r, st, rows = rmOpenFor(name);
   for (i = 0; i < rows.length; i++) {
     r = rows[i]; st = String(r.store || '').trim().toUpperCase() || '—';
-    if (sum[st] == null) { sum[st] = 0; order.push(st); }
-    sum[st] += Number(r.qty) || 0;
-    w = Number(r.when) || 0; if (w > latest) latest = w;
+    sum[st] = (sum[st] || 0) + (Number(r.qty) || 0);
   }
-  order.sort(function (a, b) { return rmStoreRank(a) - rmStoreRank(b) || (a < b ? -1 : a > b ? 1 : 0); });
-  var text = '⚠ Missing';
-  if (order.length) text += ' · ' + order.map(function (s) { return s + ' ' + qty(sum[s]); }).join(' · ');
-  var day = rmMd(latest); if (day) text += ' · reported ' + day;
-  return text;
+  return sum;
 }
-function rmMissChip(name) {
-  var rows = rmOpenFor(name);
-  if (!rows.length) return '';
-  return '<button type="button" class="chip rmmiss rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '">' + esc(rmChipLabel(rows)) + '</button>';
+function rmMissBtn(name, store, n) {
+  return '<button type="button" class="chip rmmiss rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '">' + esc(store + ' missing ' + qty(n)) + '</button>';
 }
-/** Stock-by-store row, including the missing chip when this item has open reports. Empty when there is nothing to show. */
+/** Stock key for a loc label: SF/FRE aliases, otherwise the label itself when it matches a report store. */
+function rmLocKey(label, sums) {
+  var key = locStoreKey(label);
+  if (key) return key;
+  var raw = String(label || '').trim().toUpperCase();
+  return raw && sums[raw] != null ? raw : '';
+}
+/** Stock-by-store row. Each store's missing chip sits right after that store's qty chip. A store with reports but no qty chip still gets a chip. */
 function locStockHtml(it) {
-  var locs = locList(it && it.loc), chips = locs.map(function (l) {
-    return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>';
-  }), miss = rmMissChip(it && it.name);
-  if (miss) chips.splice(rmMissAt(locs), 0, miss);
+  var name = it && it.name || '', locs = locList(it && it.loc), sums = rmSums(name), placed = {}, chips = [], i, l, key;
+  for (i = 0; i < locs.length; i++) {
+    l = locs[i]; key = rmLocKey(l[0], sums);
+    chips.push({ key: key, html: '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>' });
+    if (key && sums[key] != null && !placed[key]) {
+      chips.push({ key: key, html: rmMissBtn(name, key, sums[key]) });
+      placed[key] = 1;
+    }
+  }
+  Object.keys(sums).filter(function (s) { return !placed[s]; }).sort(function (a, b) {
+    return rmStoreRank(a) - rmStoreRank(b) || (a < b ? -1 : a > b ? 1 : 0);
+  }).forEach(function (s) {
+    var at = chips.length, j;
+    for (j = 0; j < chips.length; j++) if (chips[j].key && rmStoreRank(chips[j].key) > rmStoreRank(s)) { at = j; break; }
+    chips.splice(at, 0, { key: s, html: rmMissBtn(name, s, sums[s]) });
+  });
   if (!chips.length) return '';
-  return '<div class="shelf locstock"><span class="loclbl">Stock by store</span>' + chips.join('') + '</div>';
+  return '<div class="shelf locstock"><span class="loclbl">Stock by store</span>' + chips.map(function (c) { return c.html; }).join('') + '</div>';
 }
 /** Rewrite the stock row on cards already on screen (load, new report, mark found, delete). */
 function rmSyncCards() {

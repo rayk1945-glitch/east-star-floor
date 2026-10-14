@@ -161,9 +161,7 @@
     [/^Not in the item list: /, '不在商品清单中：'], [/\. Remove and re-add them\./, '。请删除后重新添加。'], [/^Your project at East Star Building Supply:/, '你在劍鋒高級建材的项目：'],
     [/^Updated /, '更新于 '], [/^Mon – Sat 8:30 AM – 5:30 PM/, '周一至周六 8:30 – 17:30'],
     // passwords, rename, fingerprint / Face ID
-    [/^⚠ Missing · (.+) · reported (\d{1,2}\/\d{1,2})$/, '⚠ 缺货 · $1 · 报告于 $2'],
-    [/^⚠ Missing · reported (\d{1,2}\/\d{1,2})$/, '⚠ 缺货 · 报告于 $1'],
-    [/^⚠ Missing · (.+)$/, '⚠ 缺货 · $1'], [/^⚠ Missing$/, '⚠ 缺货'],
+    [/^(\S+) missing ([\d,]+)$/, '$1 缺货 $2'],
     [/ · temporary password/, ' · 临时密码'], [/ · fingerprint \/ Face ID on (\d+) devices?/, ' · 指纹/面容：$1 台设备'], [/^Password reset for /, '已重设密码：'], [/\. Give them the temporary password in person\./, '。请当面把临时密码告诉对方。'], [/^Reset password for /, '重设密码：'], [/^Wrong name or password\. (\d+) tries left before a (\d+)-minute lock\./, '姓名或密码错误。再错 $1 次将锁定 $2 分钟。'], [/^This account is locked after too many wrong passwords\. Try again in (\d+) minutes\./, '错误密码次数太多，账号已锁定。请 $1 分钟后再试。'], [/^Too many wrong passwords, so this account is locked for (\d+) minutes\./, '错误密码次数太多，账号已锁定 $1 分钟。'], [/^Renamed (.+) to (.+)\. They sign in as (.+) now\.$/, '已将 $1 改名为 $2。对方现在用 $3 登录。'], [/^Rename (?=\S)/, '改名：'], [/^Remove fingerprint \/ Face ID for (.+) on all (\d+) saved devices?\?/, '移除 $1 在全部 $2 台设备上的指纹/面容登录？'], [/They sign in with their password and can turn it on again\./, '对方用密码登录，可以再次开启。'], [/^Removed (\d+) saved devices? for /, '已移除 $1 台已保存设备：'],
   ];
 
