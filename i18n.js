@@ -80,6 +80,7 @@
     'Note deleted': '笔记已删除', 'Sharing saved': '分享设置已保存', 'Not shared any more': '已取消分享', 'Everyone on my team': '我团队的所有人',
     'every staff login of this account, now and later': '这个账户现在和以后的所有员工', 'No other staff logins yet.': '还没有其他员工账号。', 'Save sharing': '保存分享设置',
     'the team': '团队', 'your whole team': '你的整个团队', 'shared': '已分享', 'Cloning…': '复制中…', 'Creating…': '创建中…', 'Working…': '处理中…', 'Loading…': '加载中…', 'Editing…': '编辑中…',
+    'Unsaved changes…': '还有未保存的修改…', 'Nothing was copied.': '没有复制任何内容。', 'Name is too long.': '名字太长。', 'Note is too long.': '备注太长。', 'Optional note': '可选备注',
     'Project not found.': '找不到这个项目。', 'This project has no note yet. Tap + Add note.': '这个项目还没有笔记。点 + 添加笔记。', 'That note is gone.': '这个笔记已不存在。',
     'Name is required.': '必须填写姓名。', 'This project is full': '这个项目已满', 'Copy as project': '复制成项目',
     // client link sheet
