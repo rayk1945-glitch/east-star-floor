@@ -25,7 +25,7 @@
     'On hand': '现货', 'On order': '已订购', 'Incoming': '在途', 'After ctnrs': '到柜后', 'retail': '零售价', 'per piece': '每片', 'Price': '价格',
     'Add to note': '加入笔记', 'Tile calculator': '瓷砖计算器', '▦ Tile calculator': '▦ 瓷砖计算器', 'discontinued': '已停产', 'partly received': '部分到货',
     'Adding to:': '添加到：', 'Adding to': '添加到', 'pick a project': '选择项目', 'change': '更换', '+ New project': '+ 新项目', 'New project with the next number': '用下一个编号新建项目',
-    'Clear search': '清除搜索', 'Dismiss': '关闭', 'Edit': '编辑', 'Remove': '删除', 'Delete': '删除', 'Cancel': '取消', 'Select all': '全选', 'Select': '选择',
+    'Clear search': '清除搜索', 'Dismiss': '关闭', 'Close': '关闭', 'Photo': '照片', 'Edit': '编辑', 'Remove': '删除', 'Delete': '删除', 'Cancel': '取消', 'Select all': '全选', 'Select': '选择',
     'Only the owner or an admin can delete this.': '只有所有者或管理员可以删除。',
     'Install': '安装', 'Upload': '上传', 'Now': '现在', 'None': '无', 'None yet.': '暂无。',
     'Search: matte black faucet, 12x24 white, 15714…': '搜索：哑光黑龙头、12x24 白色、15714…',
