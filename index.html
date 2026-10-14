@@ -97,9 +97,14 @@
   .stat { background:#f3f4f6; border-radius:8px; padding:3px 2px; text-align:center; line-height:1.15; }
   .stat b { display:block; font-size:13.5px; font-variant-numeric:tabular-nums; }
   .stat span { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .missb { display:inline-block; margin:0; padding:2px 8px; border-radius:999px; background:#7f1d1d; color:#fff; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; line-height:1.35; }
+  .missb { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; margin:0; padding:2px 4px 2px 8px; border-radius:999px; background:#7f1d1d; color:#fff; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; line-height:1.35; }
+  .missb .missgo { border:0; background:#fff; color:#7f1d1d; font:inherit; font-size:12px; font-weight:800; border-radius:999px; padding:3px 8px; min-height:28px; cursor:pointer; }
+  .missb .missgo.missx { background:transparent; color:#fff; text-decoration:underline; min-height:28px; padding:3px 4px; }
   .missrow { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
   .lsub .missb { font-size:12px; margin:0; vertical-align:middle; }
+  .rpacts { display:flex; gap:8px; margin-top:8px; }
+  .rpacts .btn { flex:1; }
+  .rpacts .danger { color:#b42318; border-color:#f1b8b2; }
   .actions button.miss { color:#7f1d1d; border-color:#f1b8b2; }
   .rpcheck { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; margin:4px 0 8px; }
   .rpcheck input { width:18px; height:18px; min-height:0; flex:none; }
@@ -437,9 +442,9 @@
     <div class="page" id="p-reported">
       <div class="card">
         <div class="sec-h"><h2>Reported inventory</h2><button class="link" id="rpRefresh" type="button">Refresh</button></div>
-        <p class="hint" style="margin-top:0">Open reports of stock missing at a store. NetSuite on-hand is not changed.</p>
+        <p class="hint" style="margin-top:0">Open reports of stock missing at a store. NetSuite on-hand is not changed. Found reports move to History.</p>
+        <div class="seg2" id="rpMode"><button type="button" data-mode="open" class="active">Missing</button><button type="button" data-mode="history">History</button></div>
         <div class="seg2" id="rpStore"><button type="button" data-st="all" class="active">All</button><button type="button" data-st="SF">SF</button><button type="button" data-st="FRE">FRE</button></div>
-        <label class="rpcheck"><input type="checkbox" id="rpDone"> Show resolved</label>
         <button class="btn sec" id="rpExport" type="button" style="width:100%">Export CSV</button>
       </div>
       <div class="card"><div id="rpList"><div class="empty">No open reports.</div></div></div>
@@ -477,7 +482,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014c"></script>
+<script src="i18n.js?v=20261014d"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -530,7 +535,7 @@ var localData = null, dataP = null, dataChecked = 0;
  * so a phone could keep running an old page after an upload. version.json is fetched uncached (cache-busting query)
  * on open, whenever the app comes forward, and every 20s while it stays open. A newer release reloads the page
  * once (after the current save finishes). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014c';
+var PAGE_VER = '20261014d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -703,7 +708,7 @@ function closeSheet() { if (window.lineFlush) { var f = lineFlush; lineFlush = n
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
 // ---------------- reported inventory (missing stock). Hidden until listReports returns supported:true.
-var reportsOn = false, reportRows = [], reportStore = 'all', reportShowDone = false, reportsPainted = false;
+var reportsOn = false, reportRows = [], reportStore = 'all', reportMode = 'open', reportsPainted = false, reportBusy = {};
 function normReport(r) {
   r = r || {};
   return { id: String(r.id || ''), item: String(r.item || ''), desc: String(r.desc || ''), qty: Number(r.qty) || 0,
@@ -725,9 +730,22 @@ function missBadges(name) {
   var rows = reportRows.filter(function (r) { return r.status === 'open' && r.item === name; });
   rows.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
   if (!rows.length) return '';
-  return '<span class="missrow">' + rows.map(function (r) {
-    return '<span class="missb"><span>Missing</span> <span class="notr">' + esc(qty(r.qty)) + ' · ' + esc(r.who) + ' · ' + esc(reportDay(r.when)) + '</span></span>';
+  var me = repName();
+  return '<span class="missrow" data-mitem="' + esc(name) + '">' + rows.map(function (r) {
+    var mine = me && r.who === me;
+    return '<span class="missb"><span>Missing</span> <span class="notr">' + esc(qty(r.qty)) + ' · ' + esc(r.who) + ' · ' + esc(reportDay(r.when)) + '</span>' +
+      '<button type="button" class="missgo" data-found="' + esc(r.id) + '">Found</button>' +
+      (mine ? '<button type="button" class="missgo missx" data-rdel="' + esc(r.id) + '">Delete</button>' : '') + '</span>';
   }).join('') + '</span>';
+}
+function paintReportsLocal() {
+  document.querySelectorAll('.missrow').forEach(function (wrap) {
+    var html = missBadges(wrap.getAttribute('data-mitem'));
+    if (!html) wrap.remove();
+    else wrap.outerHTML = html;
+  });
+  if (custOpen && $('cdItems')) renderPicked();
+  if ($('p-reported') && $('p-reported').classList.contains('on')) renderReports();
 }
 function loadReports() {
   if (!session) return Promise.resolve(false);
@@ -749,25 +767,37 @@ function refreshReportSurfaces() {
 }
 function reportView() {
   return reportRows.filter(function (r) {
-    if (!reportShowDone && r.status !== 'open') return false;
+    if ((reportMode === 'history') !== (r.status === 'resolved')) return false;
     if (reportStore !== 'all' && r.store !== reportStore) return false;
     return true;
-  }).sort(function (a, b) { return (b.when || 0) - (a.when || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+  }).sort(function (a, b) {
+    var ka = reportMode === 'history' ? (a.resolvedAt || a.when || 0) : (a.when || 0);
+    var kb = reportMode === 'history' ? (b.resolvedAt || b.when || 0) : (b.when || 0);
+    return kb - ka || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  });
 }
 function renderReports() {
   var el = $('rpList'); if (!el) return;
   if (!reportsOn) { el.innerHTML = '<div class="empty">No open reports.</div>'; return; }
   var rows = reportView();
-  if (!rows.length) { el.innerHTML = '<div class="empty">' + (reportShowDone || reportStore !== 'all' ? 'No reports for this filter.' : 'No open reports.') + '</div>'; return; }
+  var me = repName();
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">' + (reportStore !== 'all' ? 'No reports for this filter.' : reportMode === 'history' ? 'No history yet.' : 'No open reports.') + '</div>';
+    return;
+  }
   el.innerHTML = rows.map(function (r) {
     var done = r.status === 'resolved';
+    var mine = me && r.who === me;
     var who = '<span class="notr">' + esc(r.who) + '</span> · <span class="notr">' + esc(reportDay(r.when)) + '</span>';
-    if (done) who += ' · <span>Resolved</span> <span class="notr">' + esc(r.resolvedBy) + '</span> · <span class="notr">' + esc(reportDay(r.resolvedAt)) + '</span>';
+    if (done) who += ' · <span>Found</span> <span class="notr">' + esc(r.resolvedBy) + '</span> · <span class="notr">' + esc(reportDay(r.resolvedAt)) + '</span>';
     return '<div class="rprow' + (done ? ' done' : '') + '"><div class="rtop"><b class="notr">' + esc(r.item) + '</b><span class="rpstore notr">' + esc(r.store) + '</span><b class="qty notr">' + qty(r.qty) + '</b></div>' +
       (r.desc ? '<div class="rpdesc notr">' + esc(r.desc) + '</div>' : '') +
       (r.note ? '<div class="rpnote notr">' + esc(r.note) + '</div>' : '') +
       '<div class="rpwho">' + who + '</div>' +
-      (done ? '' : '<button class="btn sec" type="button" data-resolve="' + esc(r.id) + '" style="margin-top:8px">Resolved</button>') + '</div>';
+      ((done && !mine) ? '' : '<div class="rpacts">' +
+      (done ? '' : '<button class="btn sec" type="button" data-found="' + esc(r.id) + '">Found</button>') +
+      (mine ? '<button class="btn sec danger" type="button" data-rdel="' + esc(r.id) + '">Delete</button>' : '') +
+      '</div>') + '</div>';
   }).join('');
 }
 function csvCell(v) { var s = v == null ? '' : String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
@@ -826,33 +856,91 @@ $('rpStore').addEventListener('click', function (e) {
   Array.prototype.forEach.call($('rpStore').children, function (x) { x.classList.toggle('active', x === b); });
   renderReports();
 });
-$('rpDone').addEventListener('change', function () { reportShowDone = $('rpDone').checked; renderReports(); });
+$('rpMode').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-mode]'); if (!b) return;
+  reportMode = b.dataset.mode === 'history' ? 'history' : 'open';
+  Array.prototype.forEach.call($('rpMode').children, function (x) { x.classList.toggle('active', x === b); });
+  renderReports();
+});
 $('rpRefresh').onclick = function () { var b = this; b.disabled = true; loadReports().then(refreshReportSurfaces).then(function () { b.disabled = false; }, function () { b.disabled = false; }); };
 $('rpExport').onclick = exportReports;
-function sendResolve(id, name) {
+function reportById(id) { for (var i = 0; i < reportRows.length; i++) if (reportRows[i].id === id) return reportRows[i]; return null; }
+function commitFound(id, name) {
+  var row = reportById(id);
+  if (!row || row.status !== 'open' || reportBusy[id]) return;
+  reportBusy[id] = true;
+  var snap = { status: row.status, resolvedBy: row.resolvedBy, resolvedAt: row.resolvedAt };
+  row.status = 'resolved';
+  row.resolvedBy = name || repName();
+  row.resolvedAt = Date.now();
+  paintReportsLocal();
+  toast('Found');
   var body = { id: id };
   if (name) body.name = name;
-  return api('resolveReport', body).then(function () { return loadReports(); }).then(refreshReportSurfaces);
+  api('resolveReport', body).then(function () { return loadReports(); }).then(refreshReportSurfaces).catch(function (er) {
+    row.status = snap.status; row.resolvedBy = snap.resolvedBy; row.resolvedAt = snap.resolvedAt;
+    if (reportRows.indexOf(row) < 0) reportRows.push(row);
+    paintReportsLocal();
+    toast(er.message);
+  }).then(function () { delete reportBusy[id]; });
 }
-$('rpList').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-resolve]'); if (!b || !reportsOn) return;
-  var id = b.getAttribute('data-resolve');
-  if (!confirm('Mark this report resolved?')) return;
-  if (!repName()) {
-    openSheet('<h3>Resolved</h3><p class="hint" style="margin-top:0">Name is required.</p><label class="f" for="rzWho">Name</label><input id="rzWho" maxlength="80" autocomplete="name"><button class="btn" id="rzSend" type="button" style="width:100%">Resolved</button><div id="rzMsg" class="msg err hidden"></div>');
-    $('rzWho').focus();
-    $('rzSend').onclick = function () {
-      var who = String($('rzWho').value || '').trim();
-      if (!who) { msg($('rzMsg'), 'Name is required.'); return; }
-      if (who.length > 80) { msg($('rzMsg'), 'Name is too long.'); return; }
-      this.disabled = true;
-      sendResolve(id, who).then(closeSheet).catch(function (er) { this.disabled = false; msg($('rzMsg'), er.message); }.bind(this));
-    };
-    return;
-  }
-  b.disabled = true;
-  sendResolve(id).catch(function (er) { b.disabled = false; toast(er.message); });
-});
+function foundReport(id) {
+  if (!id || reportBusy[id] || !reportById(id) || reportById(id).status !== 'open') return;
+  if (!confirm('Mark this as found?')) return;
+  if (repName()) { commitFound(id, ''); return; }
+  openSheet('<h3>Found</h3><p class="hint" style="margin-top:0">Name is required.</p><label class="f" for="rzWho">Name</label><input id="rzWho" maxlength="80" autocomplete="name"><button class="btn" id="rzSend" type="button" style="width:100%">Found</button><div id="rzMsg" class="msg err hidden"></div>');
+  $('rzWho').focus();
+  $('rzSend').onclick = function () {
+    var who = String($('rzWho').value || '').trim();
+    if (!who) { msg($('rzMsg'), 'Name is required.'); return; }
+    if (who.length > 80) { msg($('rzMsg'), 'Name is too long.'); return; }
+    this.disabled = true;
+    closeSheet();
+    commitFound(id, who);
+  };
+}
+function commitDelete(id, name) {
+  var idx = -1;
+  reportRows.forEach(function (r, i) { if (r.id === id) idx = i; });
+  if (idx < 0 || reportBusy[id]) return;
+  var row = reportRows[idx];
+  reportBusy[id] = true;
+  reportRows.splice(idx, 1);
+  paintReportsLocal();
+  toast('Deleted');
+  var body = { id: id };
+  if (name) body.name = name;
+  api('deleteReport', body).then(function () { return loadReports(); }).then(refreshReportSurfaces).catch(function (er) {
+    if (!reportById(id)) reportRows.splice(idx, 0, row);
+    paintReportsLocal();
+    toast(er.message);
+  }).then(function () { delete reportBusy[id]; });
+}
+function deleteReported(id) {
+  var row = reportById(id);
+  if (!id || reportBusy[id] || !row) return;
+  if (repName() && row.who !== repName()) { toast('Only the reporter can delete this report.'); return; }
+  if (!confirm('Delete this report?')) return;
+  if (repName()) { commitDelete(id, ''); return; }
+  openSheet('<h3>Delete</h3><p class="hint" style="margin-top:0">Name is required.</p><label class="f" for="rzWho">Name</label><input id="rzWho" maxlength="80" autocomplete="name"><button class="btn" id="rzSend" type="button" style="width:100%">Delete</button><div id="rzMsg" class="msg err hidden"></div>');
+  $('rzWho').focus();
+  $('rzSend').onclick = function () {
+    var who = String($('rzWho').value || '').trim();
+    if (!who) { msg($('rzMsg'), 'Name is required.'); return; }
+    if (who.length > 80) { msg($('rzMsg'), 'Name is too long.'); return; }
+    this.disabled = true;
+    closeSheet();
+    commitDelete(id, who);
+  };
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-found],[data-rdel]');
+  if (!b || !reportsOn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (b.hasAttribute('data-found')) foundReport(b.getAttribute('data-found'));
+  else deleteReported(b.getAttribute('data-rdel'));
+}, true);
 
 // ---------------- item cards (search)
 var shown = {};          // name -> item (for buttons)

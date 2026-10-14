@@ -25,11 +25,13 @@
  *    reporter is always set: session.name, or body.name when the session has no name.
  *    status "open" (default) returns open rows. "resolved" and "all" also work.
  *    A resolved row adds resolver and resolved (same date format). Both are kept.
- *    Creating or resolving a report still requires a staff session.
+ *    Creating, marking found (resolveReport), or deleting still requires a staff session.
+ *    deleteReport removes the row. Only the reporter (session.name, or body.name
+ *    when the session has no name) may delete. Anyone signed in may mark found.
  *
  * 2) Staff app, AFTER the request is authenticated and session exists:
  *
- *      if (action === 'reportMissing' || action === 'listReports' || action === 'resolveReport') {
+ *      if (action === 'reportMissing' || action === 'listReports' || action === 'resolveReport' || action === 'deleteReport') {
  *        try {
  *          return json({ ok: true, data: reportAction_(action, body, session) });
  *        } catch (err) {
@@ -53,17 +55,16 @@ var REPORT_HEADERS_ = ['id', 'item', 'desc', 'qty', 'store', 'who', 'when', 'not
 var REPORT_PUBLIC_HEADERS_ = ['item', 'desc', 'qty', 'store', 'reporter', 'date', 'note', 'id'];
 
 function reportAction_(action, body, session) {
-  if (action !== 'listReports' && action !== 'reportMissing' && action !== 'resolveReport') return null;
+  if (action !== 'listReports' && action !== 'reportMissing' && action !== 'resolveReport' && action !== 'deleteReport') return null;
   body = body || {};
-  var signedIn = !!(session && String(session.name || '').trim());
-  if (action === 'listReports' && !signedIn) {
+  if (action === 'listReports' && !session) {
     return withReportsLock_(function () {
       var rows = readReports_();
       writeMirror_(rows);
       return reportBotList_(rows, body);
     });
   }
-  if (!signedIn) throw new Error('Please sign in.');
+  if (!session) throw new Error('Please sign in.');
   if (action === 'listReports') {
     return withReportsLock_(function () {
       var rows = readReports_();
@@ -72,6 +73,7 @@ function reportAction_(action, body, session) {
     });
   }
   if (action === 'reportMissing') return { supported: true, report: withReportsLock_(function () { return reportMissing_(body, session); }) };
+  if (action === 'deleteReport') return { supported: true, deleted: withReportsLock_(function () { return deleteReport_(body, session); }) };
   return { supported: true, report: withReportsLock_(function () { return resolveReport_(body, session); }) };
 }
 
@@ -267,6 +269,24 @@ function resolveReport_(body, session) {
     rep.resolvedAt = at;
     writeMirror_(readReports_());
     return rep;
+  }
+  throw new Error('Report not found.');
+}
+
+/** Removes the row. Only the reporter may delete a mistaken report. */
+function deleteReport_(body, session) {
+  var id = String(body.id == null ? '' : body.id).trim();
+  if (!id) throw new Error('Report not found.');
+  var who = reportPerson_(session, body);
+  var sh = reportsSheet_();
+  var values = sh.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]) !== id) continue;
+    var rep = reportFromRow_(values[i]);
+    if (rep.who !== who) throw new Error('Only the reporter can delete this report.');
+    sh.deleteRow(i + 1);
+    writeMirror_(readReports_());
+    return { id: id };
   }
   throw new Error('Report not found.');
 }
