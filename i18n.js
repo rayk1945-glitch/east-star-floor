@@ -32,6 +32,10 @@
     'Send report': '提交报告', 'Cancel': '取消', 'Qty must be a whole number from 1 to 9999.': '数量必须是 1 到 9999 的整数。', 'Reported missing. Thanks!': '已报告缺货，谢谢！',
     'Mark found': '已找到', 'Found': '已找到', 'Found by': '找到人', 'No open reports.': '没有未解决的缺货报告。', 'No found reports yet.': '还没有已找到的报告。',
     'See all reports': '查看全部报告', 'Open missing reports': '查看缺货报告',
+    'Scan for model #': '识别型号', 'Loading reader…': '正在加载识别…', 'Reading text from the photo…': '正在从照片读取文字…',
+    'Add these items?': '添加这些商品？', "Uncheck any you don't want.": '不需要的请取消勾选。', 'Not in the item list': '不在商品清单中',
+    'No text found in this photo.': '这张照片里没有读到文字。', 'No model numbers found in this photo.': '这张照片里没有找到型号。',
+    'No matching items. Search the numbers below.': '没有匹配的商品。可搜索下面的号码。', 'Tap a number to search it.': '点号码即可搜索。',
     'Delete this report?': '删除这条报告？', 'Report deleted.': '报告已删除。', 'Marked found.': '已标记为找到。', 'qty': '数量', 'Still missing': '仍缺货',
     // projects / notes
     'Back to projects': '返回项目列表', '+ Add contact info': '+ 添加联系信息', 'Hide contact info ▴': '收起联系信息 ▴', 'Address': '地址', 'Phone': '电话',
@@ -127,6 +131,7 @@
   // ---------------------------------------------------------------- phrases / patterns inside longer texts (applied in order)
   var PH = [
     [/^Send plan to /, '图纸发给 '], [/^Send to /, '发送给 '], [/^Sent to /, '已发送给 '], [/\. Request /g, '。请求 '], [/^Request /, '请求 '],
+    [/^Reading (\d+) of (\d+)/, '正在读取第 $1 张，共 $2 张'],
     [/ items\. The quote comes back to East Star Max\./, ' 件商品。报价会回复给劍鋒高級建材 Max。'], [/^Saved as /, '已保存为 '], [/ but the bot did not answer \(/, '，但机器人没有回应（'],
     [/\)\. Re-send it below or from History\./, '）。可在下面或历史中重新发送。'], [/\)\. Re-send it from History\./, '）。可在历史中重新发送。'],
     [/^Re-sent /, '已重新发送 '], [/^Re-send failed: /, '重新发送失败：'], [/ again \(same request ID\)\?$/, ' 再发一次（同一个请求编号）？'],
