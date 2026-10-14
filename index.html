@@ -97,9 +97,9 @@
   .stat { background:#f3f4f6; border-radius:8px; padding:3px 2px; text-align:center; line-height:1.15; }
   .stat b { display:block; font-size:13.5px; font-variant-numeric:tabular-nums; }
   .stat span { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .missb { display:inline-block; margin-top:3px; padding:1px 5px; border-radius:999px; background:#7f1d1d; color:#fff; font-size:9px; font-weight:700; letter-spacing:0; text-transform:none; line-height:1.25; }
-  .stat .missb, .stat.good .missb, .stat.bad .missb { display:block; margin:3px auto 0; max-width:100%; color:#fff; text-transform:none; letter-spacing:0; font-size:9px; white-space:normal; }
-  .lsub .missb { font-size:11px; margin:0 0 0 4px; vertical-align:middle; }
+  .missb { display:inline-block; margin:0; padding:2px 8px; border-radius:999px; background:#7f1d1d; color:#fff; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; line-height:1.35; }
+  .missrow { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .lsub .missb { font-size:12px; margin:0; vertical-align:middle; }
   .actions button.miss { color:#7f1d1d; border-color:#f1b8b2; }
   .rpcheck { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; margin:4px 0 8px; }
   .rpcheck input { width:18px; height:18px; min-height:0; flex:none; }
@@ -477,7 +477,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014b"></script>
+<script src="i18n.js?v=20261014c"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -530,7 +530,7 @@ var localData = null, dataP = null, dataChecked = 0;
  * so a phone could keep running an old page after an upload. version.json is fetched uncached (cache-busting query)
  * on open, whenever the app comes forward, and every 20s while it stays open. A newer release reloads the page
  * once (after the current save finishes). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014b';
+var PAGE_VER = '20261014c';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -710,12 +710,25 @@ function normReport(r) {
     store: String(r.store || ''), who: String(r.who || ''), when: Number(r.when) || 0, note: String(r.note || ''),
     status: r.status === 'resolved' ? 'resolved' : 'open', resolvedBy: String(r.resolvedBy || ''), resolvedAt: Number(r.resolvedAt) || 0 };
 }
-function missQty(name) {
-  var n = 0; if (!reportsOn || !name) return 0;
-  reportRows.forEach(function (r) { if (r.status === 'open' && r.item === name) n += Number(r.qty) || 0; });
-  return n;
+function reportDay(ms) {
+  if (!ms) return '';
+  try {
+    var fmt = function (t, opt) { var g = {}; new Intl.DateTimeFormat('en-US', opt).formatToParts(new Date(t)).forEach(function (p) { g[p.type] = p.value; }); return g; };
+    var g = fmt(ms, { timeZone: 'America/Los_Angeles', month: 'numeric', day: 'numeric', year: 'numeric' });
+    var y = fmt(Date.now(), { timeZone: 'America/Los_Angeles', year: 'numeric' }).year;
+    return g.month + '/' + g.day + (g.year === y ? '' : '/' + String(g.year).slice(-2));
+  } catch (e) { var d = new Date(ms); return (d.getMonth() + 1) + '/' + d.getDate(); }
 }
-function missBadge(name) { var n = missQty(name); if (!n) return ''; return '<span class="missb">Reported missing (' + qty(n) + ')</span>'; }
+function repName() { return session && String(session.name || '').trim() || ''; }
+function missBadges(name) {
+  if (!reportsOn || !name) return '';
+  var rows = reportRows.filter(function (r) { return r.status === 'open' && r.item === name; });
+  rows.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
+  if (!rows.length) return '';
+  return '<span class="missrow">' + rows.map(function (r) {
+    return '<span class="missb"><span>Missing</span> <span class="notr">' + esc(qty(r.qty)) + ' · ' + esc(r.who) + ' · ' + esc(reportDay(r.when)) + '</span></span>';
+  }).join('') + '</span>';
+}
 function loadReports() {
   if (!session) return Promise.resolve(false);
   return api('listReports', { includeResolved: true }).then(function (r) {
@@ -748,8 +761,8 @@ function renderReports() {
   if (!rows.length) { el.innerHTML = '<div class="empty">' + (reportShowDone || reportStore !== 'all' ? 'No reports for this filter.' : 'No open reports.') + '</div>'; return; }
   el.innerHTML = rows.map(function (r) {
     var done = r.status === 'resolved';
-    var who = '<span class="notr">' + esc(r.who) + '</span> · ' + esc(whenTxt(r.when));
-    if (done) who += ' · <span>Resolved</span>' + (r.resolvedBy ? ' <span class="notr">' + esc(r.resolvedBy) + '</span>' : '') + (r.resolvedAt ? ' · ' + esc(whenTxt(r.resolvedAt)) : '');
+    var who = '<span class="notr">' + esc(r.who) + '</span> · <span class="notr">' + esc(reportDay(r.when)) + '</span>';
+    if (done) who += ' · <span>Resolved</span> <span class="notr">' + esc(r.resolvedBy) + '</span> · <span class="notr">' + esc(reportDay(r.resolvedAt)) + '</span>';
     return '<div class="rprow' + (done ? ' done' : '') + '"><div class="rtop"><b class="notr">' + esc(r.item) + '</b><span class="rpstore notr">' + esc(r.store) + '</span><b class="qty notr">' + qty(r.qty) + '</b></div>' +
       (r.desc ? '<div class="rpdesc notr">' + esc(r.desc) + '</div>' : '') +
       (r.note ? '<div class="rpnote notr">' + esc(r.note) + '</div>' : '') +
@@ -759,10 +772,11 @@ function renderReports() {
 }
 function csvCell(v) { var s = v == null ? '' : String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
 function reportsCsv() {
-  var lines = ['item,desc,qty,store,who,when,note,status'];
+  var lines = ['item,desc,qty,store,who,when,note,status,resolvedBy,resolved'];
   reportView().forEach(function (r) {
     var when = r.when ? new Date(r.when).toISOString() : '';
-    lines.push([r.item, r.desc, r.qty, r.store, r.who, when, r.note, r.status].map(csvCell).join(','));
+    var resolved = r.resolvedAt ? new Date(r.resolvedAt).toISOString() : '';
+    lines.push([r.item, r.desc, r.qty, r.store, r.who, when, r.note, r.status, r.resolvedBy || '', resolved].map(csvCell).join(','));
   });
   return lines.join('\r\n');
 }
@@ -777,11 +791,13 @@ function openReportMissing(name, desc) {
   name = String(name);
   if (desc == null) { var it = shown[name]; if (it) desc = it.desc; else { var row = itemRow(name); desc = row ? row[1] : ''; } }
   desc = String(desc || '').slice(0, 200);
+  var known = repName();
   openSheet('<h3>Report missing</h3><div class="name notr" style="font-weight:700">' + esc(name) + '</div>' +
     '<div class="notr" style="font-size:13px;color:var(--muted);margin:2px 0 8px">' + esc(desc) + '</div>' +
     '<p class="hint" style="margin-top:0">NetSuite on-hand is not changed.</p>' +
     '<label class="f" for="rmQty">Qty missing</label><input id="rmQty" inputmode="numeric" value="1">' +
     '<label class="f">Store</label><div class="seg2" id="rmStore"><button type="button" data-st="SF" class="active">SF</button><button type="button" data-st="FRE">FRE</button></div>' +
+    (known ? '<label class="f">Name</label><div class="notr" id="rmWho" style="font-weight:700;margin-bottom:8px">' + esc(known) + '</div>' : '<label class="f" for="rmWho">Name</label><input id="rmWho" maxlength="80" autocomplete="name">') +
     '<label class="f" for="rmNote">Optional note</label><textarea id="rmNote" rows="2" maxlength="300" placeholder="Optional note"></textarea>' +
     '<button class="btn" id="rmSend" type="button" style="width:100%">Report missing</button><div id="rmMsg" class="msg err hidden"></div>');
   var store = 'SF';
@@ -793,8 +809,13 @@ function openReportMissing(name, desc) {
     if (!(q >= 1 && q <= 9999)) { msg($('rmMsg'), 'Qty must be a whole number from 1 to 9999.'); return; }
     var note = String($('rmNote').value || '');
     if (note.length > 300) { msg($('rmMsg'), 'Note is too long.'); return; }
+    var who = known || String($('rmWho').value || '').trim();
+    if (!who) { msg($('rmMsg'), 'Name is required.'); return; }
+    if (who.length > 80) { msg($('rmMsg'), 'Name is too long.'); return; }
+    var payload = { item: name, desc: desc, qty: q, store: store, note: note.trim() };
+    if (!known) payload.name = who;
     this.disabled = true;
-    api('reportMissing', { item: name, desc: desc, qty: q, store: store, note: note.trim() }).then(function () {
+    api('reportMissing', payload).then(function () {
       closeSheet(); toast('Reported missing'); return loadReports();
     }).then(refreshReportSurfaces).catch(function (er) { var b = $('rmSend'); if (b) b.disabled = false; if ($('rmMsg')) msg($('rmMsg'), er.message); });
   };
@@ -808,12 +829,29 @@ $('rpStore').addEventListener('click', function (e) {
 $('rpDone').addEventListener('change', function () { reportShowDone = $('rpDone').checked; renderReports(); });
 $('rpRefresh').onclick = function () { var b = this; b.disabled = true; loadReports().then(refreshReportSurfaces).then(function () { b.disabled = false; }, function () { b.disabled = false; }); };
 $('rpExport').onclick = exportReports;
+function sendResolve(id, name) {
+  var body = { id: id };
+  if (name) body.name = name;
+  return api('resolveReport', body).then(function () { return loadReports(); }).then(refreshReportSurfaces);
+}
 $('rpList').addEventListener('click', function (e) {
   var b = e.target.closest('[data-resolve]'); if (!b || !reportsOn) return;
+  var id = b.getAttribute('data-resolve');
   if (!confirm('Mark this report resolved?')) return;
+  if (!repName()) {
+    openSheet('<h3>Resolved</h3><p class="hint" style="margin-top:0">Name is required.</p><label class="f" for="rzWho">Name</label><input id="rzWho" maxlength="80" autocomplete="name"><button class="btn" id="rzSend" type="button" style="width:100%">Resolved</button><div id="rzMsg" class="msg err hidden"></div>');
+    $('rzWho').focus();
+    $('rzSend').onclick = function () {
+      var who = String($('rzWho').value || '').trim();
+      if (!who) { msg($('rzMsg'), 'Name is required.'); return; }
+      if (who.length > 80) { msg($('rzMsg'), 'Name is too long.'); return; }
+      this.disabled = true;
+      sendResolve(id, who).then(closeSheet).catch(function (er) { this.disabled = false; msg($('rzMsg'), er.message); }.bind(this));
+    };
+    return;
+  }
   b.disabled = true;
-  api('resolveReport', { id: b.getAttribute('data-resolve') }).then(function () { return loadReports(); }).then(refreshReportSurfaces)
-    .catch(function (er) { b.disabled = false; toast(er.message); });
+  sendResolve(id).catch(function (er) { b.disabled = false; toast(er.message); });
 });
 
 // ---------------- item cards (search)
@@ -850,10 +888,10 @@ function card(it) {
     '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
     '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
-    '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b>' + missBadge(it.name) + '<span>On hand</span></div>' +
+    '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
-    '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
+    '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' + missBadges(it.name) +
     '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (locList(it.loc).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + locList(it.loc).map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
     '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
@@ -1452,7 +1490,7 @@ function renderPicked() {
     return '<div class="pline' + (it.length > 1 ? ' hasord' : '') + '" data-lid="' + esc(l.id) + '">' + (it.length > 1 ? ordHtml(i, it.length) : '') +
       '<div class="lbody"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
       '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(desc) + '</span>' +
-      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadge(l.name) + '</span>' +
+      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadges(l.name) + '</span>' +
         (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') + '</span>' : '') +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       lineVariants(l.name) +

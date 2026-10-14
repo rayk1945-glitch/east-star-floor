@@ -21,7 +21,10 @@
  *    Response: {"ok":true,"data":{"reports":[
  *      {"item":"","desc":"","qty":1,"store":"SF","reporter":"","date":"","note":"","id":""}
  *    ]}}
- *    date is Pacific Time, yyyy-MM-dd'T'HH:mm:ss. status other than open is refused.
+ *    date is Pacific Time, yyyy-MM-dd'T'HH:mm:ss, and is always set.
+ *    reporter is always set: session.name, or body.name when the session has no name.
+ *    status "open" (default) returns open rows. "resolved" and "all" also work.
+ *    A resolved row adds resolver and resolved (same date format). Both are kept.
  *    Creating or resolving a report still requires a staff session.
  *
  * 2) Staff app, AFTER the request is authenticated and session exists:
@@ -148,7 +151,7 @@ function reportDate_(ms) {
 }
 
 function reportPublic_(r) {
-  return {
+  var row = {
     item: r.item,
     desc: r.desc,
     qty: r.qty,
@@ -158,17 +161,34 @@ function reportPublic_(r) {
     note: r.note,
     id: r.id
   };
+  if (r.status === 'resolved') {
+    row.resolver = r.resolvedBy || '';
+    row.resolved = reportDate_(r.resolvedAt);
+  }
+  return row;
 }
 
-/** Bot read: open reports only. Same fields as the Reported Missing sheet. */
+/** Logged-in rep wins. With no rep name, body.name is required. body.who is ignored. */
+function reportPerson_(session, body) {
+  var who = session && String(session.name || '').trim();
+  if (!who) who = String(body && body.name != null ? body.name : '').trim();
+  if (!who) throw new Error('Name is required.');
+  if (who.length > 80) throw new Error('Name is too long.');
+  return who.slice(0, 80);
+}
+
+/** Bot read. status open (default), resolved, or all. Newest first. */
 function reportBotList_(rows, body) {
   var status = String(body && body.status != null ? body.status : 'open').trim().toLowerCase();
-  if (status !== 'open') throw new Error('status must be open.');
-  var open = [];
-  for (var i = 0; i < rows.length; i++) if (rows[i].status === 'open') open.push(rows[i]);
-  open.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
+  if (status !== 'open' && status !== 'resolved' && status !== 'all') throw new Error('status must be open, resolved, or all.');
+  var picked = [];
+  for (var i = 0; i < rows.length; i++) {
+    if (status !== 'all' && rows[i].status !== status) continue;
+    picked.push(rows[i]);
+  }
+  picked.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
   var reports = [];
-  for (var j = 0; j < open.length; j++) reports.push(reportPublic_(open[j]));
+  for (var j = 0; j < picked.length; j++) reports.push(reportPublic_(picked[j]));
   return { reports: reports };
 }
 
@@ -211,7 +231,7 @@ function reportMissing_(body, session) {
   note = note.trim();
   var desc = String(body.desc == null ? '' : body.desc).trim();
   if (desc.length > 200) desc = desc.slice(0, 200);
-  var who = String(session.name).trim().slice(0, 80);
+  var who = reportPerson_(session, body);
   var rep = {
     id: 'R' + Utilities.getUuid().replace(/-/g, '').slice(0, 12),
     item: item,
@@ -239,7 +259,7 @@ function resolveReport_(body, session) {
     if (String(values[i][0]) !== id) continue;
     var rep = reportFromRow_(values[i]);
     if (rep.status === 'resolved') return rep;
-    var who = String(session.name).trim().slice(0, 80);
+    var who = reportPerson_(session, body);
     var at = Date.now();
     sh.getRange(i + 1, 9, 1, 3).setValues([['resolved', who, at]]);
     rep.status = 'resolved';
