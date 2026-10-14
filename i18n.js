@@ -31,6 +31,7 @@
     'Report missing': '报告缺货', 'Reported missing': '缺货报告', 'Missing': '缺货', 'Qty missing': '缺货数量', 'Store': '门店', 'Note (optional)': '备注（可选）', 'Where you looked, who asked…': '找过哪里、谁要的…',
     'Send report': '提交报告', 'Cancel': '取消', 'Qty must be a whole number from 1 to 9999.': '数量必须是 1 到 9999 的整数。', 'Reported missing. Thanks!': '已报告缺货，谢谢！',
     'Mark found': '已找到', 'Found': '已找到', 'Found by': '找到人', 'No open reports.': '没有未解决的缺货报告。', 'No found reports yet.': '还没有已找到的报告。',
+    'See all reports': '查看全部报告', 'Open missing reports': '查看缺货报告',
     'Delete this report?': '删除这条报告？', 'Report deleted.': '报告已删除。', 'Marked found.': '已标记为找到。', 'qty': '数量', 'Still missing': '仍缺货',
     // projects / notes
     'Back to projects': '返回项目列表', '+ Add contact info': '+ 添加联系信息', 'Hide contact info ▴': '收起联系信息 ▴', 'Address': '地址', 'Phone': '电话',
@@ -160,6 +161,9 @@
     [/^Not in the item list: /, '不在商品清单中：'], [/\. Remove and re-add them\./, '。请删除后重新添加。'], [/^Your project at East Star Building Supply:/, '你在劍鋒高級建材的项目：'],
     [/^Updated /, '更新于 '], [/^Mon – Sat 8:30 AM – 5:30 PM/, '周一至周六 8:30 – 17:30'],
     // passwords, rename, fingerprint / Face ID
+    [/^⚠ Missing · (.+) · reported (\d{1,2}\/\d{1,2})$/, '⚠ 缺货 · $1 · 报告于 $2'],
+    [/^⚠ Missing · reported (\d{1,2}\/\d{1,2})$/, '⚠ 缺货 · 报告于 $1'],
+    [/^⚠ Missing · (.+)$/, '⚠ 缺货 · $1'], [/^⚠ Missing$/, '⚠ 缺货'],
     [/ · temporary password/, ' · 临时密码'], [/ · fingerprint \/ Face ID on (\d+) devices?/, ' · 指纹/面容：$1 台设备'], [/^Password reset for /, '已重设密码：'], [/\. Give them the temporary password in person\./, '。请当面把临时密码告诉对方。'], [/^Reset password for /, '重设密码：'], [/^Wrong name or password\. (\d+) tries left before a (\d+)-minute lock\./, '姓名或密码错误。再错 $1 次将锁定 $2 分钟。'], [/^This account is locked after too many wrong passwords\. Try again in (\d+) minutes\./, '错误密码次数太多，账号已锁定。请 $1 分钟后再试。'], [/^Too many wrong passwords, so this account is locked for (\d+) minutes\./, '错误密码次数太多，账号已锁定 $1 分钟。'], [/^Renamed (.+) to (.+)\. They sign in as (.+) now\.$/, '已将 $1 改名为 $2。对方现在用 $3 登录。'], [/^Rename (?=\S)/, '改名：'], [/^Remove fingerprint \/ Face ID for (.+) on all (\d+) saved devices?\?/, '移除 $1 在全部 $2 台设备上的指纹/面容登录？'], [/They sign in with their password and can turn it on again\./, '对方用密码登录，可以再次开启。'], [/^Removed (\d+) saved devices? for /, '已移除 $1 台已保存设备：'],
   ];
 
