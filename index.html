@@ -97,6 +97,23 @@
   .stat { background:#f3f4f6; border-radius:8px; padding:3px 2px; text-align:center; line-height:1.15; }
   .stat b { display:block; font-size:13.5px; font-variant-numeric:tabular-nums; }
   .stat span { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .missb { display:inline-block; margin-top:3px; padding:1px 5px; border-radius:999px; background:#7f1d1d; color:#fff; font-size:9px; font-weight:700; letter-spacing:0; text-transform:none; line-height:1.25; }
+  .stat .missb, .stat.good .missb, .stat.bad .missb { color:#fff; text-transform:none; letter-spacing:0; font-size:9px; }
+  .lsub .missb { font-size:11px; margin:0 0 0 4px; vertical-align:middle; }
+  .actions button.miss { color:#7f1d1d; border-color:#f1b8b2; }
+  .rpcheck { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; margin:4px 0 8px; }
+  .rpcheck input { width:18px; height:18px; min-height:0; flex:none; }
+  .rprow { padding:12px 0; border-bottom:1px solid var(--line); }
+  .rprow:last-child { border-bottom:0; }
+  .rprow.done { opacity:.62; }
+  .rprow .rtop { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+  .rprow .rtop .qty { margin-left:auto; font-variant-numeric:tabular-nums; }
+  .rpstore { font-size:12px; font-weight:700; background:#eef0f3; border-radius:999px; padding:1px 8px; }
+  .rpdesc { font-size:13px; color:#374151; margin-top:2px; }
+  .rpnote { font-size:13px; margin-top:4px; white-space:pre-wrap; word-break:break-word; }
+  .rpwho { font-size:12.5px; color:var(--muted); margin-top:4px; }
+  #p-reported .sec-h { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  #p-reported .sec-h h2 { text-transform:none; letter-spacing:0; font-size:18px; color:var(--text); }
   .stat.good { background:var(--ok-bg); color:var(--ok-fg); } .stat.bad { background:var(--err-bg); color:var(--err-fg); }
   .stat.inc { background:var(--info-bg); color:var(--info-fg); }
   .shelf { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -416,6 +433,17 @@
       </div>
       <div class="card"><div id="hMeta" class="hint" style="margin:0 0 4px"></div><div id="hList"><div class="spinner"></div></div></div>
     </div>
+    <!-- REPORTED INVENTORY: hidden until listReports returns supported:true -->
+    <div class="page" id="p-reported">
+      <div class="card">
+        <div class="sec-h"><h2>Reported inventory</h2><button class="link" id="rpRefresh" type="button">Refresh</button></div>
+        <p class="hint" style="margin-top:0">Open reports of stock missing at a store. NetSuite on-hand is not changed.</p>
+        <div class="seg2" id="rpStore"><button type="button" data-st="all" class="active">All</button><button type="button" data-st="SF">SF</button><button type="button" data-st="FRE">FRE</button></div>
+        <label class="rpcheck"><input type="checkbox" id="rpDone"> Show resolved</label>
+        <button class="btn sec" id="rpExport" type="button" style="width:100%">Export CSV</button>
+      </div>
+      <div class="card"><div id="rpList"><div class="empty">No open reports.</div></div></div>
+    </div>
     <!-- ADMIN (separate page) -->
     <div class="page" id="p-admin">
       <div class="card"><div class="crumb"><button class="back" data-go="search">‹</button>Admin: accounts</div>
@@ -443,12 +471,13 @@
     <button data-go="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
     <button data-go="cust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2.5h8.5A1.5 1.5 0 0 1 21 10v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><path d="M8 13.5h8M8 16.5h5"/></svg>Project<span class="badge hidden" id="custBadge"></span></button>
     <button data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
+    <button data-go="reported" id="navReported" class="hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.8 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.8a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Reported</button>
   </nav>
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261013d"></script>
+<script src="i18n.js?v=20261014b"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -501,7 +530,7 @@ var localData = null, dataP = null, dataChecked = 0;
  * so a phone could keep running an old page after an upload. version.json is fetched uncached (cache-busting query)
  * on open, whenever the app comes forward, and every 20s while it stays open. A newer release reloads the page
  * once (after the current save finishes). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261013d';
+var PAGE_VER = '20261014b';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -563,16 +592,18 @@ document.addEventListener('visibilitychange', function () {
   if (document.hidden) { flushAutosave(); return; }   // backgrounded: save now, but only if something changed
   checkPageVersion(); if (!session) return;
   if (priceState.prices && localData && !localData.noPrices && pricedCopyExpired()) priceWindowEnded();        // the phone slept through the end of price hours
-  else if (Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
+  else if (Date.now() - dataChecked > 30 * 60000) checkData();
+  loadReports().then(refreshReportSurfaces); });   // new sync while the app stays open; reports refresh when the app comes forward
 window.addEventListener('pagehide', function () { unloadFlush = true; flushAutosave(); });
 window.addEventListener('pageshow', function () { unloadFlush = false; });
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
-function signedOut() { wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
+function signedOut() { reportsOn = false; reportsPainted = false; reportRows = []; var nr = $('navReported'); if (nr) nr.classList.add('hidden'); wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
 
 // ---------------- navigation
 function go(p, quiet) {
-  if (session && session.role === 'warehouse' && p !== 'search') p = 'search';     // warehouse: Search only
+  if (p === 'reported' && !reportsOn) p = 'search';   // hidden until the server supports reported inventory
+  if (session && session.role === 'warehouse' && p !== 'search' && p !== 'reported') p = 'search';     // warehouse: Search + reported inventory
   if (p !== 'cust' && $('p-cust') && $('p-cust').classList.contains('on') && custOpen) flushAutosave();   // leaving the project: save if dirty
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
@@ -584,6 +615,7 @@ function go(p, quiet) {
     else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; newCustomerOpen(); } }
   if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
   if (p === 'history') loadHistory();
+  if (p === 'reported') renderReports();
   if (p === 'admin') adminLoad();
 }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (!b) return;
@@ -596,6 +628,7 @@ function enterApp() {
   if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
+  loadReports().then(refreshReportSurfaces);
   sizeChrome(); setTimeout(a2hsShow, 1500);
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
@@ -669,6 +702,120 @@ function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHT
 function closeSheet() { if (window.lineFlush) { var f = lineFlush; lineFlush = null; f(); } $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
+// ---------------- reported inventory (missing stock). Hidden until listReports returns supported:true.
+var reportsOn = false, reportRows = [], reportStore = 'all', reportShowDone = false, reportsPainted = false;
+function normReport(r) {
+  r = r || {};
+  return { id: String(r.id || ''), item: String(r.item || ''), desc: String(r.desc || ''), qty: Number(r.qty) || 0,
+    store: String(r.store || ''), who: String(r.who || ''), when: Number(r.when) || 0, note: String(r.note || ''),
+    status: r.status === 'resolved' ? 'resolved' : 'open', resolvedBy: String(r.resolvedBy || ''), resolvedAt: Number(r.resolvedAt) || 0 };
+}
+function missQty(name) {
+  var n = 0; if (!reportsOn || !name) return 0;
+  reportRows.forEach(function (r) { if (r.status === 'open' && r.item === name) n += Number(r.qty) || 0; });
+  return n;
+}
+function missBadge(name) { var n = missQty(name); if (!n) return ''; return '<span class="missb">Reported missing (' + qty(n) + ')</span>'; }
+function loadReports() {
+  if (!session) return Promise.resolve(false);
+  return api('listReports', { includeResolved: true }).then(function (r) {
+    if (r && r.supported === true && Array.isArray(r.reports)) { reportsOn = true; reportRows = r.reports.map(normReport); }
+    else { reportsOn = false; reportRows = []; }   // {} or any payload without the flag: hide the feature
+    return reportsOn;
+  }).catch(function () { return reportsOn; });   // network / unexpected error: leave the flag as it was
+}
+function refreshReportSurfaces() {
+  var nav = $('navReported'); if (nav) nav.classList.toggle('hidden', !reportsOn);
+  if (!reportsOn && $('p-reported') && $('p-reported').classList.contains('on')) go('search');
+  if (reportsOn || reportsPainted) {   // repaint badges only once the server has actually answered with support
+    if (sQ) { var my = ++seq; searchPage(sQ, my, 0); }
+    if (custOpen && $('cdItems')) renderPicked();
+  }
+  if ($('p-reported') && $('p-reported').classList.contains('on')) renderReports();
+  reportsPainted = reportsOn;
+}
+function reportView() {
+  return reportRows.filter(function (r) {
+    if (!reportShowDone && r.status !== 'open') return false;
+    if (reportStore !== 'all' && r.store !== reportStore) return false;
+    return true;
+  }).sort(function (a, b) { return (b.when || 0) - (a.when || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+}
+function renderReports() {
+  var el = $('rpList'); if (!el) return;
+  if (!reportsOn) { el.innerHTML = '<div class="empty">No open reports.</div>'; return; }
+  var rows = reportView();
+  if (!rows.length) { el.innerHTML = '<div class="empty">' + (reportShowDone || reportStore !== 'all' ? 'No reports for this filter.' : 'No open reports.') + '</div>'; return; }
+  el.innerHTML = rows.map(function (r) {
+    var done = r.status === 'resolved';
+    var who = '<span class="notr">' + esc(r.who) + '</span> · ' + esc(whenTxt(r.when));
+    if (done) who += ' · <span>Resolved</span>' + (r.resolvedBy ? ' <span class="notr">' + esc(r.resolvedBy) + '</span>' : '') + (r.resolvedAt ? ' · ' + esc(whenTxt(r.resolvedAt)) : '');
+    return '<div class="rprow' + (done ? ' done' : '') + '"><div class="rtop"><b class="notr">' + esc(r.item) + '</b><span class="rpstore notr">' + esc(r.store) + '</span><b class="qty notr">' + qty(r.qty) + '</b></div>' +
+      (r.desc ? '<div class="rpdesc notr">' + esc(r.desc) + '</div>' : '') +
+      (r.note ? '<div class="rpnote notr">' + esc(r.note) + '</div>' : '') +
+      '<div class="rpwho">' + who + '</div>' +
+      (done ? '' : '<button class="btn sec" type="button" data-resolve="' + esc(r.id) + '" style="margin-top:8px">Resolved</button>') + '</div>';
+  }).join('');
+}
+function csvCell(v) { var s = v == null ? '' : String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function reportsCsv() {
+  var lines = ['item,desc,qty,store,who,when,note,status'];
+  reportView().forEach(function (r) {
+    var when = r.when ? new Date(r.when).toISOString() : '';
+    lines.push([r.item, r.desc, r.qty, r.store, r.who, when, r.note, r.status].map(csvCell).join(','));
+  });
+  return lines.join('\r\n');
+}
+function exportReports() {
+  var blob = new Blob([reportsCsv()], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reported-inventory.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
+}
+function openReportMissing(name, desc) {
+  if (!reportsOn || !name) return;
+  name = String(name);
+  if (desc == null) { var it = shown[name]; if (it) desc = it.desc; else { var row = itemRow(name); desc = row ? row[1] : ''; } }
+  desc = String(desc || '').slice(0, 200);
+  openSheet('<h3>Report missing</h3><div class="name notr" style="font-weight:700">' + esc(name) + '</div>' +
+    '<div class="notr" style="font-size:13px;color:var(--muted);margin:2px 0 8px">' + esc(desc) + '</div>' +
+    '<p class="hint" style="margin-top:0">NetSuite on-hand is not changed.</p>' +
+    '<label class="f" for="rmQty">Qty missing</label><input id="rmQty" inputmode="numeric" value="1">' +
+    '<label class="f">Store</label><div class="seg2" id="rmStore"><button type="button" data-st="SF" class="active">SF</button><button type="button" data-st="FRE">FRE</button></div>' +
+    '<label class="f" for="rmNote">Optional note</label><textarea id="rmNote" rows="2" maxlength="300" placeholder="Optional note"></textarea>' +
+    '<button class="btn" id="rmSend" type="button" style="width:100%">Report missing</button><div id="rmMsg" class="msg err hidden"></div>');
+  var store = 'SF';
+  $('rmQty').focus();
+  $('rmStore').onclick = function (e) { var b = e.target.closest('[data-st]'); if (!b) return; store = b.dataset.st;
+    Array.prototype.forEach.call($('rmStore').children, function (x) { x.classList.toggle('active', x === b); }); };
+  $('rmSend').onclick = function () {
+    var q = parseInt(String($('rmQty').value).replace(/,/g, ''), 10);
+    if (!(q >= 1 && q <= 9999)) { msg($('rmMsg'), 'Qty must be a whole number from 1 to 9999.'); return; }
+    var note = String($('rmNote').value || '');
+    if (note.length > 300) { msg($('rmMsg'), 'Note is too long.'); return; }
+    this.disabled = true;
+    api('reportMissing', { item: name, desc: desc, qty: q, store: store, note: note.trim() }).then(function () {
+      closeSheet(); toast('Reported missing'); return loadReports();
+    }).then(refreshReportSurfaces).catch(function (er) { var b = $('rmSend'); if (b) b.disabled = false; if ($('rmMsg')) msg($('rmMsg'), er.message); });
+  };
+}
+$('rpStore').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-st]'); if (!b) return;
+  reportStore = b.dataset.st;
+  Array.prototype.forEach.call($('rpStore').children, function (x) { x.classList.toggle('active', x === b); });
+  renderReports();
+});
+$('rpDone').addEventListener('change', function () { reportShowDone = $('rpDone').checked; renderReports(); });
+$('rpRefresh').onclick = function () { var b = this; b.disabled = true; loadReports().then(refreshReportSurfaces).then(function () { b.disabled = false; }, function () { b.disabled = false; }); };
+$('rpExport').onclick = exportReports;
+$('rpList').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-resolve]'); if (!b || !reportsOn) return;
+  if (!confirm('Mark this report resolved?')) return;
+  b.disabled = true;
+  api('resolveReport', { id: b.getAttribute('data-resolve') }).then(function () { return loadReports(); }).then(refreshReportSurfaces)
+    .catch(function (er) { b.disabled = false; toast(er.message); });
+});
+
 // ---------------- item cards (search)
 var shown = {};          // name -> item (for buttons)
 function perSqft(it) { var fb = floorOf(it); if (fb) return fb.sf && it.price ? it.price / fb.sf : null; if (it.cat === 'Flooring') return null; return it.tile && it.tile.sqftPc && it.price ? it.price / it.tile.sqftPc : null; }
@@ -703,13 +850,14 @@ function card(it) {
     '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
     '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
-    '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b><span>On hand</span></div>' +
+    '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b>' + missBadge(it.name) + '<span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
     '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (locList(it.loc).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + locList(it.loc).map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
     '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
+    (reportsOn ? '<button type="button" class="miss" onclick="openReportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' : '') +
     (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
 }
 
@@ -1304,13 +1452,14 @@ function renderPicked() {
     return '<div class="pline' + (it.length > 1 ? ' hasord' : '') + '" data-lid="' + esc(l.id) + '">' + (it.length > 1 ? ordHtml(i, it.length) : '') +
       '<div class="lbody"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
       '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(desc) + '</span>' +
-      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b></span>' +
+      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadge(l.name) + '</span>' +
         (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') + '</span>' : '') +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
       '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
-      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div></div>';
+      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
+      (reportsOn ? '<button type="button" class="link ltc" data-rmiss="1">Report missing</button>' : '') + '</div></div>';
   }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
   it.forEach(rememberLine);
   if (!ordPending && !varBusy && !lineDrag) ordBase[n.id] = noteOrderKey(n);
@@ -1678,6 +1827,7 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
   if (mv) { moveItem(l, mv.dataset.lord === 'up' ? -1 : 1); return; }
   if (t.closest('[data-vf]')) { switchLineFinish(l, t.closest('[data-vf]').dataset.vf); return; }
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
+  if (t.closest('[data-rmiss]')) { var rr = itemRow(l.name); openReportMissing(l.name, rr ? rr[1] : (l.desc || '')); return; }
   if (t.closest('[data-lfc]')) { var r1 = itemRow(l.name); if (isFloorRow(r1)) floorCalcFor(itemFromRow(r1), { c: custOpen, n: curNote(), line: l }); return; }
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l); markLine(l); }
@@ -2145,7 +2295,7 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
         if (u.me) { session.name = r.name; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); setHeader(session); } loadUsers(); })
       .catch(function (er) { msg($('rnMsg'), er.message); g.disabled = false; }); }; }
   else if (k === 'role') { var RL = { admin: 'Full admin', account_admin: 'Account admin', staff: 'Staff', warehouse: 'Warehouse' };
-    openSheet('<h3>Change role for ' + esc(u.name) + '</h3><p class="hint">Full admin: everything, every account. Account admin: their own account and its staff. Staff: search, prices, projects. Warehouse: search and stock only, never prices. It takes effect on their next tap; they stay signed in.</p>' +
+    openSheet('<h3>Change role for ' + esc(u.name) + '</h3><p class="hint">Full admin: everything, every account. Account admin: their own account and its staff. Staff: search, prices, projects. Warehouse: search, stock, and reported missing inventory, never prices. It takes effect on their next tap; they stay signed in.</p>' +
       '<label class="f">Role</label><select id="rlSel">' + Object.keys(RL).map(function (r) { return '<option value="' + r + '"' + (r === u.role ? ' selected' : '') + '>' + RL[r] + '</option>'; }).join('') + '</select><button class="btn" id="rlGo">Change role</button><div id="rlMsg" class="msg hidden"></div>');
     $('rlGo').onclick = function () { var r = $('rlSel').value, g = this; if (r === u.role) { closeSheet(); return; }
       if (!confirm('Change ' + u.name + ' from ' + RL[u.role] + ' to ' + RL[r] + '?' + (r === 'admin' ? '\n\nA full admin can see every project, change webhooks and manage every login.' : '') + (u.me ? '\n\nThis is your own login. You lose full admin right away.' : ''))) return;
