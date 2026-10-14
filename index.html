@@ -97,28 +97,6 @@
   .stat { background:#f3f4f6; border-radius:8px; padding:3px 2px; text-align:center; line-height:1.15; }
   .stat b { display:block; font-size:13.5px; font-variant-numeric:tabular-nums; }
   .stat span { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .missb { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; margin:0; padding:2px 4px 2px 8px; border-radius:999px; background:#7f1d1d; color:#fff; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; line-height:1.35; }
-  .missb .missgo { border:0; background:#fff; color:#7f1d1d; font:inherit; font-size:12px; font-weight:800; border-radius:999px; padding:3px 8px; min-height:28px; cursor:pointer; }
-  .missb .missgo.missx { background:transparent; color:#fff; text-decoration:underline; min-height:28px; padding:3px 4px; }
-  .missrow { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
-  .lsub .missb { font-size:12px; margin:0; vertical-align:middle; }
-  .rpacts { display:flex; gap:8px; margin-top:8px; }
-  .rpacts .btn { flex:1; }
-  .rpacts .danger { color:#b42318; border-color:#f1b8b2; }
-  .actions button.miss { color:#7f1d1d; border-color:#f1b8b2; }
-  .rpcheck { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; margin:4px 0 8px; }
-  .rpcheck input { width:18px; height:18px; min-height:0; flex:none; }
-  .rprow { padding:12px 0; border-bottom:1px solid var(--line); }
-  .rprow:last-child { border-bottom:0; }
-  .rprow.done { opacity:.62; }
-  .rprow .rtop { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
-  .rprow .rtop .qty { margin-left:auto; font-variant-numeric:tabular-nums; }
-  .rpstore { font-size:12px; font-weight:700; background:#eef0f3; border-radius:999px; padding:1px 8px; }
-  .rpdesc { font-size:13px; color:#374151; margin-top:2px; }
-  .rpnote { font-size:13px; margin-top:4px; white-space:pre-wrap; word-break:break-word; }
-  .rpwho { font-size:12.5px; color:var(--muted); margin-top:4px; }
-  #p-reported .sec-h { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  #p-reported .sec-h h2 { text-transform:none; letter-spacing:0; font-size:18px; color:var(--text); }
   .stat.good { background:var(--ok-bg); color:var(--ok-fg); } .stat.bad { background:var(--err-bg); color:var(--err-fg); }
   .stat.inc { background:var(--info-bg); color:var(--info-fg); }
   .shelf { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -174,7 +152,7 @@
   .ncard .cur, .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; }
   .cbar .cbnew { margin-left:auto; border:1px solid var(--line-strong) !important; background:#fff !important; border-radius:999px; padding:4px 10px !important; font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; }
   .cbar .cnt + .cbnew { margin-left:6px; }
-  .savest { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:55; border-radius:999px; padding:7px 14px; font-size:13.5px; font-weight:700; border:0; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; }
+  .savest { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:55; border-radius:999px; padding:7px 14px; font-size:13.5px; font-weight:700; border:0; box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .savest.saving { background:#eef2f7; color:#334155; } .savest.ok { background:var(--ok-bg); color:var(--ok-fg); } .savest.bad { background:#fde8e6; color:#8a1c12; cursor:pointer; }
   .pline .ltc { display:block; margin:6px 0 0 2px; font-size:13.5px; font-weight:600; color:#1e3a6e; text-decoration:underline; background:none; border:0; padding:2px 0; }
   .nhead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:2px 2px 8px; }
@@ -185,7 +163,7 @@
   .nhead .ndnew { margin-left:auto; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 12px; font-weight:700; font-size:13.5px; color:#1f2937; white-space:nowrap; }
   .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
-  .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); flex-wrap:wrap; } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
+  .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
   .clbtns { display:flex; gap:8px; margin-top:8px; } .clbtns .btn { flex:1; margin-top:0; } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
   .sendto { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .sendto select { flex:1; min-width:0; min-height:40px; font-size:14px; }
   .shbtn.on { border-color:#1A8BC9; color:#0b5f8f; background:#eef7fc; }
@@ -204,8 +182,7 @@
   .proj .ngroup { box-shadow:none; border:1px solid var(--line-strong); margin-bottom:8px; padding:12px; } .proj .ngroup.open { border:2px solid #1f2937; }
   .proj .addnote { margin:0; min-height:46px; } .proj .pvoice { margin:0 0 8px; } .proj .vbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .proj .vbar .recbtn { min-height:40px; padding:0 14px; font-size:14px; }
   .proj .vtog { margin-left:auto; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; }
-  .proj #cdVoice { margin-top:8px; } .proj #cdSaveAll { margin:10px 0 0; } .proj #cdSaveMsg { margin-top:4px; }
-  .qrow { display:flex; gap:8px; align-items:stretch; margin-top:10px; } .qrow .btn { flex:1; min-width:0; margin-top:0; white-space:normal; line-height:1.2; padding:8px 12px; text-align:center; }
+  .proj #cdVoice { margin-top:8px; } .proj #cdQuote { margin-top:10px; } .proj #cdSaveAll { margin:10px 0 0; } .proj #cdSaveMsg { margin-top:4px; }
   .addnote { display:block; width:100%; margin:0 0 12px; min-height:50px; border:2px dashed #94a3b8; border-radius:14px; background:#fff; font:inherit; font-size:16px; font-weight:700; color:#1f2937; cursor:pointer; }
   .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
@@ -225,16 +202,6 @@
   .pline .n { flex:1; min-width:0; } .pline .n b { display:block; font-size:15px; word-break:break-word; } .pline .n span { display:block; font-size:12.5px; color:var(--muted); }
   .pline .n .ln { font-size:11px; font-weight:800; color:#8a93a0; margin-right:4px; }
   .pline .x { border:0; background:#eef0f3; border-radius:999px; width:40px; height:40px; font-size:18px; cursor:pointer; flex:none; } .pline .x.lmenu { margin-right:-4px; font-weight:800; color:#374151; }
-  .pline.hasord { display:flex; gap:8px; align-items:flex-start; }
-  .pline .lbody { flex:1; min-width:0; }
-  .pline .ord { display:flex; flex-direction:column; gap:4px; flex:none; }
-  .pline .ord button { width:44px; height:44px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
-  .pline .ord .ordh { cursor:grab; touch-action:none; background:var(--accent); color:#fff; }
-  .ordhint { margin:0 0 8px; font-size:13.5px; font-weight:700; color:var(--accent); }
-  .pline .ord button:disabled { opacity:.28; cursor:default; }
-  .pline.dragging { position:relative; z-index:3; background:#fff; box-shadow:0 8px 20px rgba(16,24,40,.18); border-radius:12px; }
-  .pline.dragging .ordh { cursor:grabbing; }
-  body.linedrag { user-select:none; -webkit-user-select:none; }
   .ngmenu { flex:none; width:40px; height:40px; border:0; border-radius:999px; background:#eef0f3; font:inherit; font-size:18px; font-weight:800; color:#374151; cursor:pointer; }
   .ngroup { position:relative; } .ngmenu.abs { position:absolute; top:6px; right:6px; } .ngroup .nghead .t { padding-right:44px; }
   .mvh { font-size:12.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:12px 0 6px; }
@@ -287,16 +254,9 @@
   .trimgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .trimgrid label { font-size:12.5px; font-weight:700; color:#374151; } .trimgrid input { min-height:40px; padding:8px; text-align:center; }
   .twocol { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .schips { display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; margin:0 -2px; scrollbar-width:none; } .schips::-webkit-scrollbar { display:none; }
-  .schips .flab { flex:none; align-self:center; font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
   .schips button { flex:none; border:1px solid var(--line-strong); background:#fff; color:#111; border-radius:999px; padding:6px 11px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
-  .vsw { margin:2px 0 8px; } .vsw .vlab { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 4px; }
-  .vsw .schips button { min-height:40px; } .pline .vsw { margin:8px 0 0; }
-  .vmiss { font-size:13px; background:var(--err-bg); color:var(--err-fg); border-radius:10px; padding:8px 10px; margin-top:6px; word-break:break-word; }
-  .lsub { display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:3px; font-size:12.5px; font-weight:700; }
-  .lsub .good { color:var(--ok-fg); } .lsub .bad { color:var(--err-fg); } .lsub .muted { color:var(--muted); font-weight:600; }
   .schips button small { color:var(--muted); font-weight:500; margin-left:4px; } .schips button.on { background:#111; color:#fff; border-color:#111; } .schips button.on small { color:#ddd; }
   .schips.sub button { font-size:12.5px; padding:4px 10px; background:#f4f4f5; } .schips.sub button.on { background:#374151; border-color:#374151; }
-  .schips.fin button { min-height:40px; padding:6px 12px; }
   .schips .sep { flex:none; width:1px; background:var(--line-strong); margin:4px 2px; }
   .dym { font-size:14px; margin:6px 2px 10px; } .dym button { border:0; background:#e9f0fb; color:#1e3a6e; border-radius:999px; padding:5px 10px; margin:3px 4px 0 0; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
   .closest { background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
@@ -354,6 +314,10 @@
   .pkbtn { width:100%; margin-top:10px; background:#fff !important; color:var(--text) !important; border:1px solid var(--line-strong) !important; }
   /* warehouse role: search + stock only (the server also refuses everything else and never sends prices) */
   body.wh #custBar, body.wh .toplinks .plan, body.wh #adminBtn, body.wh #bnav [data-go="cust"], body.wh #bnav [data-go="history"],
+  body:not(.rmon) .rmfeat { display:none !important; }
+  .rmbadge { display:inline-block; min-width:18px; margin-left:5px; padding:0 5px; border-radius:999px; background:#b91c1c; color:#fff; font-size:11px; line-height:18px; text-align:center; }
+  .rmrow { border-top:1px solid var(--line); padding:10px 0; } .rmrow:first-child { border-top:0; } .rmrow .rmmeta { font-size:12.5px; color:var(--muted); margin-top:2px; } .rmrow .rmnote { font-size:13px; margin-top:4px; } .rmrow .actions { margin-top:6px; }
+  .rmseg { display:flex; gap:6px; margin:6px 0 10px; } .rmseg button { flex:1; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; } .rmseg button.active { background:var(--navy,#1f2937); color:#fff; border-color:var(--navy,#1f2937); }
   body.wh [onclick^="addItem"], body.wh #tcAdd, body.wh #priceBar { display:none !important; }
   .signin-logo{display:block;width:min(260px,72%);height:auto;margin:0 auto 14px}
   .hd-logo{height:34px;width:auto;vertical-align:middle;margin-right:6px}
@@ -386,7 +350,7 @@
 <section id="app" class="hidden">
   <header><div class="head-in">
     <div class="toprow"><h1><img src="logo.png" alt="East Star" class="hd-logo" width="640" height="272"><span class="hd-txt">East Star</span> <small id="hdName" class="notr"></small></h1>
-      <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
+      <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button class="rmfeat" id="rmBtn" title="Reported missing" aria-label="Reported missing">Missing<span class="rmbadge hidden" id="rmBadge"></span></button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
   </div></header>
   <main>
     <!-- SEARCH -->
@@ -438,17 +402,6 @@
       </div>
       <div class="card"><div id="hMeta" class="hint" style="margin:0 0 4px"></div><div id="hList"><div class="spinner"></div></div></div>
     </div>
-    <!-- REPORTED INVENTORY: hidden until listReports returns supported:true -->
-    <div class="page" id="p-reported">
-      <div class="card">
-        <div class="sec-h"><h2>Reported inventory</h2><button class="link" id="rpRefresh" type="button">Refresh</button></div>
-        <p class="hint" style="margin-top:0">Open reports of stock missing at a store. NetSuite on-hand is not changed. Found reports move to History.</p>
-        <div class="seg2" id="rpMode"><button type="button" data-mode="open" class="active">Missing</button><button type="button" data-mode="history">History</button></div>
-        <div class="seg2" id="rpStore"><button type="button" data-st="all" class="active">All</button><button type="button" data-st="SF">SF</button><button type="button" data-st="FRE">FRE</button></div>
-        <button class="btn sec" id="rpExport" type="button" style="width:100%">Export CSV</button>
-      </div>
-      <div class="card"><div id="rpList"><div class="empty">No open reports.</div></div></div>
-    </div>
     <!-- ADMIN (separate page) -->
     <div class="page" id="p-admin">
       <div class="card"><div class="crumb"><button class="back" data-go="search">‹</button>Admin: accounts</div>
@@ -476,13 +429,12 @@
     <button data-go="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
     <button data-go="cust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2.5h8.5A1.5 1.5 0 0 1 21 10v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><path d="M8 13.5h8M8 16.5h5"/></svg>Project<span class="badge hidden" id="custBadge"></span></button>
     <button data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
-    <button data-go="reported" id="navReported" class="hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.8 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.8a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Reported</button>
   </nav>
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014e"></script>
+<script src="i18n.js?v=20261013a"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -509,9 +461,7 @@ function api(action, data) {
 }
 function serverApi(action, data) {
   var body = Object.assign({}, data || {}, { action: action }); if (session) body.token = session.token;
-  var opts = { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' };
-  if (unloadFlush) opts.keepalive = true;   // page is going away: a normal fetch can be cancelled before it leaves the phone
-  return fetch(API_URL, opts)
+  return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('Unexpected server reply (HTTP ' + r.status + ').'); }
       if (!j.ok) { var er = new Error(noteWords(j.error || 'Something went wrong.')); if (j.auth) signedOut(); throw er; } return j.data; }); },
       function () { throw new Error('No connection to the server. Check your internet and try again.'); });
@@ -532,21 +482,18 @@ var LOCAL_ACTIONS = {
   containers: function (b) { return containersSummary_(b); } };
 var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
- * so a phone could keep running an old page after an upload. version.json is fetched uncached (cache-busting query)
- * on open, whenever the app comes forward, and every 20s while it stays open. A newer release reloads the page
- * once (after the current save finishes). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014e';
+ * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
+ * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
+var PAGE_VER = '20261013a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
     if (!v || !v.page || v.page === PAGE_VER) return;
     if (sessionStorage.getItem('esReloadedFor') === v.page) return;   // never loop if the CDN still serves the old page
-    if (window.saveQ && (Object.keys(saveQ).length || isAutosaveDirty())) return;   // retry on the next check
     sessionStorage.setItem('esReloadedFor', v.page); location.reload();
   }).catch(function () {});
 }
 checkPageVersion();
-setInterval(checkPageVersion, 20000);
 var CAN_LOCAL = (function () { try { new RegExp('(?<=[0-9])(?=[A-Z])'); return typeof DecompressionStream === 'function' && !!window.indexedDB && typeof searchBundle_ === 'function'; } catch (e) { return false; } })();
 function idb(mode, fn) { return new Promise(function (res, rej) { var o = indexedDB.open('esFloorData', 1);
   o.onupgradeneeded = function () { o.result.createObjectStore('kv'); };
@@ -591,25 +538,18 @@ function pcWipe() { try { Object.keys(localStorage).forEach(function (k) { if (k
 /** Cache the open project as it is now (notes still being created on the phone are left out). */
 function pcSave(c) { c = c || custOpen; if (!c || !c.notes) return; var o = {}; Object.keys(c).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = c[k]; });
   o.notes = c.notes.filter(function (n) { return String(n.id).indexOf('tmp-') !== 0; }); pcPut('c:' + c.id, o); }
-function projPending(id) { return Object.keys(saveQ).some(function (k) { return k.indexOf(':' + id) > 0 || k.indexOf('note:') === 0 || k.indexOf('newnote:' + id) === 0; }) || (custOpen && custOpen.id === id && isAutosaveDirty()); }
+function projPending(id) { return Object.keys(saveQ).some(function (k) { return k.indexOf(':' + id) > 0 || k.indexOf('note:') === 0 || k.indexOf('newnote:' + id) === 0; }) || noteDirty; }
 function wipeLocalData() { pcWipe(); localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
-document.addEventListener('visibilitychange', function () {
-  if (document.hidden) { flushAutosave(); return; }   // backgrounded: save now, but only if something changed
-  checkPageVersion(); if (!session) return;
+document.addEventListener('visibilitychange', function () { if (!document.hidden) checkPageVersion(); if (document.hidden || !session) return;
   if (priceState.prices && localData && !localData.noPrices && pricedCopyExpired()) priceWindowEnded();        // the phone slept through the end of price hours
-  else if (Date.now() - dataChecked > 30 * 60000) checkData();
-  loadReports().then(refreshReportSurfaces); });   // new sync while the app stays open; reports refresh when the app comes forward
-window.addEventListener('pagehide', function () { unloadFlush = true; flushAutosave(); });
-window.addEventListener('pageshow', function () { unloadFlush = false; });
+  else if (Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
-function signedOut() { reportsOn = false; reportsPainted = false; reportRows = []; var nr = $('navReported'); if (nr) nr.classList.add('hidden'); wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
+function signedOut() { wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
 
 // ---------------- navigation
 function go(p, quiet) {
-  if (p === 'reported' && !reportsOn) p = 'search';   // hidden until the server supports reported inventory
-  if (session && session.role === 'warehouse' && p !== 'search' && p !== 'reported') p = 'search';     // warehouse: Search + reported inventory
-  if (p !== 'cust' && $('p-cust') && $('p-cust').classList.contains('on') && custOpen) flushAutosave();   // leaving the project: save if dirty
+  if (session && session.role === 'warehouse' && p !== 'search') p = 'search';     // warehouse: Search only
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   window.scrollTo(0, 0);
@@ -620,7 +560,6 @@ function go(p, quiet) {
     else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; newCustomerOpen(); } }
   if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
   if (p === 'history') loadHistory();
-  if (p === 'reported') renderReports();
   if (p === 'admin') adminLoad();
 }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (!b) return;
@@ -633,7 +572,6 @@ function enterApp() {
   if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
-  loadReports().then(refreshReportSurfaces);
   sizeChrome(); setTimeout(a2hsShow, 1500);
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
@@ -643,6 +581,7 @@ function setHeader(m) {
   document.body.classList.toggle('wh', m.role === 'warehouse');
   var nb = $('naBox'); if (nb) nb.classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));   // add / edit accounts: admin + account admins
   var ra = $('stRoleAdmin'); if (ra) { var full = m.role === 'admin'; ra.hidden = !full; ra.disabled = !full; ra.classList.toggle('hidden', !full); if (!full && $('stRole').value === 'admin') $('stRole').value = 'staff'; }
+  meName = m.name || ''; rmProbe();
   var hn = $('hdName'); if (hn) hn.textContent = m.name || '';
   $('planBot').textContent = m.bot || 'the bot'; $('plSend').textContent = m.bot ? 'Send to ' + m.bot : 'Send';
   if (m.bot && session && session.bot !== m.bot) { session.bot = m.bot; try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {} }   // "Send to" may point this login at another bot
@@ -707,241 +646,6 @@ function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHT
 function closeSheet() { if (window.lineFlush) { var f = lineFlush; lineFlush = null; f(); } $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
-// ---------------- reported inventory (missing stock). Hidden until listReports returns supported:true.
-var reportsOn = false, reportRows = [], reportStore = 'all', reportMode = 'open', reportsPainted = false, reportBusy = {};
-function normReport(r) {
-  r = r || {};
-  return { id: String(r.id || ''), item: String(r.item || ''), desc: String(r.desc || ''), qty: Number(r.qty) || 0,
-    store: String(r.store || ''), who: String(r.who || ''), when: Number(r.when) || 0, note: String(r.note || ''),
-    status: r.status === 'resolved' ? 'resolved' : 'open', resolvedBy: String(r.resolvedBy || ''), resolvedAt: Number(r.resolvedAt) || 0 };
-}
-function reportDay(ms) {
-  if (!ms) return '';
-  try {
-    var fmt = function (t, opt) { var g = {}; new Intl.DateTimeFormat('en-US', opt).formatToParts(new Date(t)).forEach(function (p) { g[p.type] = p.value; }); return g; };
-    var g = fmt(ms, { timeZone: 'America/Los_Angeles', month: 'numeric', day: 'numeric', year: 'numeric' });
-    var y = fmt(Date.now(), { timeZone: 'America/Los_Angeles', year: 'numeric' }).year;
-    return g.month + '/' + g.day + (g.year === y ? '' : '/' + String(g.year).slice(-2));
-  } catch (e) { var d = new Date(ms); return (d.getMonth() + 1) + '/' + d.getDate(); }
-}
-function repName() { return session && String(session.name || '').trim() || ''; }
-function missBadges(name) {
-  if (!reportsOn || !name) return '';
-  var rows = reportRows.filter(function (r) { return r.status === 'open' && r.item === name; });
-  rows.sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
-  if (!rows.length) return '';
-  var me = repName();
-  return '<span class="missrow" data-mitem="' + esc(name) + '">' + rows.map(function (r) {
-    var mine = me && r.who === me;
-    return '<span class="missb"><span>Missing</span> <span class="notr">' + esc(qty(r.qty)) + ' · ' + esc(r.who) + ' · ' + esc(reportDay(r.when)) + '</span>' +
-      '<button type="button" class="missgo" data-found="' + esc(r.id) + '">Found</button>' +
-      (mine ? '<button type="button" class="missgo missx" data-rdel="' + esc(r.id) + '">Delete</button>' : '') + '</span>';
-  }).join('') + '</span>';
-}
-function paintReportsLocal() {
-  document.querySelectorAll('.missrow').forEach(function (wrap) {
-    var html = missBadges(wrap.getAttribute('data-mitem'));
-    if (!html) wrap.remove();
-    else wrap.outerHTML = html;
-  });
-  if (custOpen && $('cdItems')) renderPicked();
-  if ($('p-reported') && $('p-reported').classList.contains('on')) renderReports();
-}
-function loadReports() {
-  if (!session) return Promise.resolve(false);
-  return api('listReports', { includeResolved: true }).then(function (r) {
-    if (r && r.supported === true && Array.isArray(r.reports)) { reportsOn = true; reportRows = r.reports.map(normReport); }
-    else { reportsOn = false; reportRows = []; }   // {} or any payload without the flag: hide the feature
-    return reportsOn;
-  }).catch(function () { return reportsOn; });   // network / unexpected error: leave the flag as it was
-}
-function refreshReportSurfaces() {
-  var nav = $('navReported'); if (nav) nav.classList.toggle('hidden', !reportsOn);
-  if (!reportsOn && $('p-reported') && $('p-reported').classList.contains('on')) go('search');
-  if (reportsOn || reportsPainted) {   // repaint badges only once the server has actually answered with support
-    if (sQ) { var my = ++seq; searchPage(sQ, my, 0); }
-    if (custOpen && $('cdItems')) renderPicked();
-  }
-  if ($('p-reported') && $('p-reported').classList.contains('on')) renderReports();
-  reportsPainted = reportsOn;
-}
-function reportView() {
-  return reportRows.filter(function (r) {
-    if ((reportMode === 'history') !== (r.status === 'resolved')) return false;
-    if (reportStore !== 'all' && r.store !== reportStore) return false;
-    return true;
-  }).sort(function (a, b) {
-    var ka = reportMode === 'history' ? (a.resolvedAt || a.when || 0) : (a.when || 0);
-    var kb = reportMode === 'history' ? (b.resolvedAt || b.when || 0) : (b.when || 0);
-    return kb - ka || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  });
-}
-function renderReports() {
-  var el = $('rpList'); if (!el) return;
-  if (!reportsOn) { el.innerHTML = '<div class="empty">No open reports.</div>'; return; }
-  var rows = reportView();
-  var me = repName();
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty">' + (reportStore !== 'all' ? 'No reports for this filter.' : reportMode === 'history' ? 'No history yet.' : 'No open reports.') + '</div>';
-    return;
-  }
-  el.innerHTML = rows.map(function (r) {
-    var done = r.status === 'resolved';
-    var mine = me && r.who === me;
-    var who = '<span class="notr">' + esc(r.who) + '</span> · <span class="notr">' + esc(reportDay(r.when)) + '</span>';
-    if (done) who += ' · <span>Found</span> <span class="notr">' + esc(r.resolvedBy) + '</span> · <span class="notr">' + esc(reportDay(r.resolvedAt)) + '</span>';
-    return '<div class="rprow' + (done ? ' done' : '') + '"><div class="rtop"><b class="notr">' + esc(r.item) + '</b><span class="rpstore notr">' + esc(r.store) + '</span><b class="qty notr">' + qty(r.qty) + '</b></div>' +
-      (r.desc ? '<div class="rpdesc notr">' + esc(r.desc) + '</div>' : '') +
-      (r.note ? '<div class="rpnote notr">' + esc(r.note) + '</div>' : '') +
-      '<div class="rpwho">' + who + '</div>' +
-      ((done && !mine) ? '' : '<div class="rpacts">' +
-      (done ? '' : '<button class="btn sec" type="button" data-found="' + esc(r.id) + '">Found</button>') +
-      (mine ? '<button class="btn sec danger" type="button" data-rdel="' + esc(r.id) + '">Delete</button>' : '') +
-      '</div>') + '</div>';
-  }).join('');
-}
-function csvCell(v) { var s = v == null ? '' : String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-function reportsCsv() {
-  var lines = ['item,desc,qty,store,who,when,note,status,resolvedBy,resolved'];
-  reportView().forEach(function (r) {
-    var when = r.when ? new Date(r.when).toISOString() : '';
-    var resolved = r.resolvedAt ? new Date(r.resolvedAt).toISOString() : '';
-    lines.push([r.item, r.desc, r.qty, r.store, r.who, when, r.note, r.status, r.resolvedBy || '', resolved].map(csvCell).join(','));
-  });
-  return lines.join('\r\n');
-}
-function exportReports() {
-  var blob = new Blob([reportsCsv()], { type: 'text/csv;charset=utf-8' });
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reported-inventory.csv';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
-}
-function openReportMissing(name, desc) {
-  if (!reportsOn || !name) return;
-  name = String(name);
-  if (desc == null) { var it = shown[name]; if (it) desc = it.desc; else { var row = itemRow(name); desc = row ? row[1] : ''; } }
-  desc = String(desc || '').slice(0, 200);
-  var known = repName();
-  openSheet('<h3>Report missing</h3><div class="name notr" style="font-weight:700">' + esc(name) + '</div>' +
-    '<div class="notr" style="font-size:13px;color:var(--muted);margin:2px 0 8px">' + esc(desc) + '</div>' +
-    '<p class="hint" style="margin-top:0">NetSuite on-hand is not changed.</p>' +
-    '<label class="f" for="rmQty">Qty missing</label><input id="rmQty" inputmode="numeric" value="1">' +
-    '<label class="f">Store</label><div class="seg2" id="rmStore"><button type="button" data-st="SF" class="active">SF</button><button type="button" data-st="FRE">FRE</button></div>' +
-    (known ? '<label class="f">Name</label><div class="notr" id="rmWho" style="font-weight:700;margin-bottom:8px">' + esc(known) + '</div>' : '<label class="f" for="rmWho">Name</label><input id="rmWho" maxlength="80" autocomplete="name">') +
-    '<label class="f" for="rmNote">Optional note</label><textarea id="rmNote" rows="2" maxlength="300" placeholder="Optional note"></textarea>' +
-    '<button class="btn" id="rmSend" type="button" style="width:100%">Report missing</button><div id="rmMsg" class="msg err hidden"></div>');
-  var store = 'SF';
-  $('rmQty').focus();
-  $('rmStore').onclick = function (e) { var b = e.target.closest('[data-st]'); if (!b) return; store = b.dataset.st;
-    Array.prototype.forEach.call($('rmStore').children, function (x) { x.classList.toggle('active', x === b); }); };
-  $('rmSend').onclick = function () {
-    var q = parseInt(String($('rmQty').value).replace(/,/g, ''), 10);
-    if (!(q >= 1 && q <= 9999)) { msg($('rmMsg'), 'Qty must be a whole number from 1 to 9999.'); return; }
-    var note = String($('rmNote').value || '');
-    if (note.length > 300) { msg($('rmMsg'), 'Note is too long.'); return; }
-    var who = known || String($('rmWho').value || '').trim();
-    if (!who) { msg($('rmMsg'), 'Name is required.'); return; }
-    if (who.length > 80) { msg($('rmMsg'), 'Name is too long.'); return; }
-    var payload = { item: name, desc: desc, qty: q, store: store, note: note.trim() };
-    if (!known) payload.name = who;
-    this.disabled = true;
-    api('reportMissing', payload).then(function () {
-      closeSheet(); toast('Reported missing'); return loadReports();
-    }).then(refreshReportSurfaces).catch(function (er) { var b = $('rmSend'); if (b) b.disabled = false; if ($('rmMsg')) msg($('rmMsg'), er.message); });
-  };
-}
-$('rpStore').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-st]'); if (!b) return;
-  reportStore = b.dataset.st;
-  Array.prototype.forEach.call($('rpStore').children, function (x) { x.classList.toggle('active', x === b); });
-  renderReports();
-});
-$('rpMode').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-mode]'); if (!b) return;
-  reportMode = b.dataset.mode === 'history' ? 'history' : 'open';
-  Array.prototype.forEach.call($('rpMode').children, function (x) { x.classList.toggle('active', x === b); });
-  renderReports();
-});
-$('rpRefresh').onclick = function () { var b = this; b.disabled = true; loadReports().then(refreshReportSurfaces).then(function () { b.disabled = false; }, function () { b.disabled = false; }); };
-$('rpExport').onclick = exportReports;
-function reportById(id) { for (var i = 0; i < reportRows.length; i++) if (reportRows[i].id === id) return reportRows[i]; return null; }
-function commitFound(id, name) {
-  var row = reportById(id);
-  if (!row || row.status !== 'open' || reportBusy[id]) return;
-  reportBusy[id] = true;
-  var snap = { status: row.status, resolvedBy: row.resolvedBy, resolvedAt: row.resolvedAt };
-  row.status = 'resolved';
-  row.resolvedBy = name || repName();
-  row.resolvedAt = Date.now();
-  paintReportsLocal();
-  toast('Found');
-  var body = { id: id };
-  if (name) body.name = name;
-  api('resolveReport', body).then(function () { return loadReports(); }).then(refreshReportSurfaces).catch(function (er) {
-    row.status = snap.status; row.resolvedBy = snap.resolvedBy; row.resolvedAt = snap.resolvedAt;
-    if (reportRows.indexOf(row) < 0) reportRows.push(row);
-    paintReportsLocal();
-    toast(er.message);
-  }).then(function () { delete reportBusy[id]; });
-}
-function foundReport(id) {
-  if (!id || reportBusy[id] || !reportById(id) || reportById(id).status !== 'open') return;
-  if (!confirm('Mark this as found?')) return;
-  if (repName()) { commitFound(id, ''); return; }
-  openSheet('<h3>Found</h3><p class="hint" style="margin-top:0">Name is required.</p><label class="f" for="rzWho">Name</label><input id="rzWho" maxlength="80" autocomplete="name"><button class="btn" id="rzSend" type="button" style="width:100%">Found</button><div id="rzMsg" class="msg err hidden"></div>');
-  $('rzWho').focus();
-  $('rzSend').onclick = function () {
-    var who = String($('rzWho').value || '').trim();
-    if (!who) { msg($('rzMsg'), 'Name is required.'); return; }
-    if (who.length > 80) { msg($('rzMsg'), 'Name is too long.'); return; }
-    this.disabled = true;
-    closeSheet();
-    commitFound(id, who);
-  };
-}
-function commitDelete(id, name) {
-  var idx = -1;
-  reportRows.forEach(function (r, i) { if (r.id === id) idx = i; });
-  if (idx < 0 || reportBusy[id]) return;
-  var row = reportRows[idx];
-  reportBusy[id] = true;
-  reportRows.splice(idx, 1);
-  paintReportsLocal();
-  toast('Deleted');
-  var body = { id: id };
-  if (name) body.name = name;
-  api('deleteReport', body).then(function () { return loadReports(); }).then(refreshReportSurfaces).catch(function (er) {
-    if (!reportById(id)) reportRows.splice(idx, 0, row);
-    paintReportsLocal();
-    toast(er.message);
-  }).then(function () { delete reportBusy[id]; });
-}
-function deleteReported(id) {
-  var row = reportById(id);
-  if (!id || reportBusy[id] || !row) return;
-  if (repName() && row.who !== repName()) { toast('Only the reporter can delete this report.'); return; }
-  if (!confirm('Delete this report?')) return;
-  if (repName()) { commitDelete(id, ''); return; }
-  openSheet('<h3>Delete</h3><p class="hint" style="margin-top:0">Name is required.</p><label class="f" for="rzWho">Name</label><input id="rzWho" maxlength="80" autocomplete="name"><button class="btn" id="rzSend" type="button" style="width:100%">Delete</button><div id="rzMsg" class="msg err hidden"></div>');
-  $('rzWho').focus();
-  $('rzSend').onclick = function () {
-    var who = String($('rzWho').value || '').trim();
-    if (!who) { msg($('rzMsg'), 'Name is required.'); return; }
-    if (who.length > 80) { msg($('rzMsg'), 'Name is too long.'); return; }
-    this.disabled = true;
-    closeSheet();
-    commitDelete(id, who);
-  };
-}
-document.addEventListener('click', function (e) {
-  var b = e.target.closest('[data-found],[data-rdel]');
-  if (!b || !reportsOn) return;
-  e.preventDefault();
-  e.stopPropagation();
-  if (b.hasAttribute('data-found')) foundReport(b.getAttribute('data-found'));
-  else deleteReported(b.getAttribute('data-rdel'));
-}, true);
-
 // ---------------- item cards (search)
 var shown = {};          // name -> item (for buttons)
 function perSqft(it) { var fb = floorOf(it); if (fb) return fb.sf && it.price ? it.price / fb.sf : null; if (it.cat === 'Flooring') return null; return it.tile && it.tile.sqftPc && it.price ? it.price / it.tile.sqftPc : null; }
@@ -979,11 +683,11 @@ function card(it) {
     '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
-    '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' + missBadges(it.name) +
+    '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
     '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (locList(it.loc).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + locList(it.loc).map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
     '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
-    (reportsOn ? '<button type="button" class="miss" onclick="openReportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' : '') +
+    '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
     (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
 }
 
@@ -1047,11 +751,7 @@ function renderSearchFilters(r) {
   var cl = fc.cats.filter(function (c) { return c[0] !== sF.cat; }); if (sF.cat) cl.unshift([sF.cat, (fc.cats.filter(function (c) { return c[0] === sF.cat; })[0] || [0, 0])[1]]);   // tapped chip first, never disappears
   var cats = cl.length > 1 || sF.cat ? '<div class="schips">' + cl.map(function (c) { return chip('cat', c[0], c[0], c[1]); }).join('') + '</div>' : '';
   var sizes = (sF.cat === 'Tile' || sF.cat === 'Flooring') && fc.sizes.length > 1 ? '<div class="schips sub">' + fc.sizes.map(function (z) { return chip('size', z[0], z[0], z[1]); }).join('') + '</div>' : '';
-  var fins = fc.finishes || [], namedF = fins.filter(function (x) { return x[2]; }), useF = namedF.length >= 2 ? namedF : fins;
-  useF = useF.slice(0, 14);
-  if (sF.finish && !useF.some(function (x) { return x[0] === sF.finish; })) useF.unshift([sF.finish, 0, 1]);
-  var finishes = useF.length > 1 ? '<div class="schips sub fin"><span class="flab">Finish</span>' + useF.map(function (z) { return chip('finish', z[0], z[0], z[1]); }).join('') + '</div>' : '';
-  $('sfilt').innerHTML = cats + finishes + sizes + '<div class="schips sub tog">' + top + '</div>';
+  $('sfilt').innerHTML = cats + sizes + '<div class="schips sub tog">' + top + '</div>';
 }
 $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
   var k = b.dataset.sk, v = k === 'inStock' ? true : b.dataset.sv;
@@ -1145,7 +845,7 @@ var newBusy = false;
 function newCustomer() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
   return api('customerSave', { customer: { tax: 'SF' } }).then(function (c) { newBusy = false; setCur(c, c.notes[0]); return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
 /** "+ New" from Search / the bar: create, make it the current note, open it. */
-function newCustomerOpen() { flushAutosave(); newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); scrollToNote(c.notes[0].id); toast('New ' + projLabel(c) + ' (adding here)'); }).catch(function () { renderCustBar(); }); }
+function newCustomerOpen() { newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); scrollToNote(c.notes[0].id); toast('New ' + projLabel(c) + ' (adding here)'); }).catch(function () { renderCustBar(); }); }
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
@@ -1193,7 +893,7 @@ function addToNote(lines) {
   var c = curCust; toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
   lines.reduce(function (pr, l) { return pr.then(function () { return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: l }); }); }, Promise.resolve())
     .then(function (r) { if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
-      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); rememberNoteVersion(n); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); } } })
+      var n = noteOf(c.id, r.noteId); if (n) { n.items = r.items; Object.assign(n, { updated: r.note.updated, updated_by: r.note.updated_by }); if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); } } })
     .catch(function (er) { toast('Not added: ' + er.message); if (/^project not found|note is gone/i.test(er.message)) setCur(null); });
 }
 function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' }); }
@@ -1221,7 +921,6 @@ function listHtml(l, q, put) { var h = l.length ? l.map(custRowHtml).join('') : 
   if (put) $('hList').innerHTML = h; return h; }
 // ---- one customer: slim info line (collapsed; a brand-new customer opens expanded), note cards, voice notes
 function openCust(id, pre, noteId) {
-  if (custOpen && custOpen.id && custOpen.id !== id) flushAutosave();   // switching projects: save the one we're leaving if it changed
   if (!$('p-cust').classList.contains('on')) go('cust', true);
   var d = $('cuDetail'); window.scrollTo(0, 0);
   if (!pre || !pre.notes) infoOpen = false;
@@ -1299,7 +998,6 @@ function keepTyped() { var n = curNote(); if (n && $('nTitle') && noteDirty) { n
 function renderOverview() {
   keepTyped();
   var c = custOpen, canShare = c.mine || session.role === 'admin';
-  rememberInfo(c);
   if (noteOpenId && !curNote()) noteOpenId = null;
   $('cuDetail').innerHTML = '<div class="proj" id="cdProj"><div class="phead">' +
       '<div class="nhead"><button class="back" id="cdBack" aria-label="Back to projects">‹</button><b id="cdTitle">' + esc(projLabel(c)) + '</b>' +
@@ -1311,27 +1009,23 @@ function renderOverview() {
       '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
-      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button><button class="shbtn" id="cdCloneProj">Clone project</button></div></div>' +
+      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
     '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
       '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div>' +
-      '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
+      '<button class="btn sec" id="cdQuote">Quote this note</button><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
-  $('cdBack').onclick = function () { flushAutosave(); loadCustList(); };
-  $('ndNew').onclick = function () { this.disabled = true; flushAutosave(); newCustomerOpen(); };
-  $('cdInfoT').onclick = function () { infoOpen = !infoOpen; renderOverview(); };
+  $('cdBack').onclick = function () { flushInfo(); flushNote(); loadCustList(); };
+  $('ndNew').onclick = function () { this.disabled = true; flushInfo(); flushNote(); newCustomerOpen(); };
+  $('cdInfoT').onclick = function () { flushInfo(); infoOpen = !infoOpen; renderOverview(); };
   [['cdName', 'name'], ['cdPhone', 'phone'], ['cdCity', 'city']].forEach(function (f) { var el = $(f[0]);
-    el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); });
+    el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); el.addEventListener('blur', flushInfo); });
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
-  $('cdClient').onclick = function () { openClientLink(c); };
-  $('cdCloneProj').onclick = function () { var src = c;
-    askCopyName(src, 'Clone project', 'Copies every note, with items, order, and photos. This project stays as it is.', function (name) {
-      return makeProjectCopy(src, name).then(function (dest) { return cloneNotesInto(src, (src.notes || []).slice(), dest); }).then(showCopied);
-    }); };
-  $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); };
+  $('cdClient').onclick = function () { flushInfo(); flushNote(); openClientLink(c); };
+  $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); flushInfo(); };
   $('cdNewNote').onclick = function () { addNoteNow(c); };
-  $('cdSaveAll').onclick = saveProject; $('cdQuote').onclick = quoteCust; $('cdQuoteAll').onclick = quoteProject;
+  $('cdSaveAll').onclick = saveProject; $('cdQuote').onclick = quoteCust;
   $('cdRec').onclick = toggleRec;
   $('cdVoiceT').onclick = function () { voiceOpen = !voiceOpen; renderVoice(); };
   if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?')) return;
@@ -1342,7 +1036,7 @@ function renderOverview() {
  *  like every other save). When the real id comes back it replaces the temp id everywhere; edits made meanwhile wait for it. */
 function addNoteNow(c) {
   if ((c.notes || []).length >= 12) { toast('Max 12 notes per project.'); return; }
-  flushAutosave();
+  flushNote();
   var titles = c.notes.map(function (t) { return t.title; }), k = c.notes.length + 1; while (titles.indexOf('Note ' + k) >= 0) k++;
   var tmp = 'tmp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), n = { id: tmp, title: 'Note ' + k, text: '', items: [], photos: [], updated: 0, updated_by: '' }, done;
   tmpNotes[tmp] = new Promise(function (r) { done = r; });
@@ -1378,9 +1072,9 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
   }).join('') : '<div class="ngroup"><div class="empty" style="padding:14px">No notes yet. Tap + Add note.</div></div>';
   quoteBtn();
   var n = curNote(); if (!n) return;
-  rememberNote(n);
   if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + projLabel(c) + ' · ' + n.title); };
   $('nTitle').addEventListener('input', function () { queueNote(); quoteBtn(); }); $('nText').addEventListener('input', queueNote);
+  $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote);
   $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
   $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
     api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
@@ -1390,47 +1084,13 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
 document.addEventListener('click', function (e) { if (!custOpen || !e.target.closest('#cdNotes')) return;
   var nm = e.target.closest('[data-nmenu]'); if (nm) { noteMenu(nm.dataset.nmenu); return; }
   var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]'); if (!b && !x) return;
-  var id = b ? b.dataset.nopen : null; flushAutosave().then(function () { noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
+  var id = b ? b.dataset.nopen : null; flushNote().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
 function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
-// ---- autosave: contact info, note title/text, qty, line notes, finish switches and reorder
-// wait SAVE_AFTER (10s) after the LAST real change, then save once. A reverted edit cancels the timer.
-// Nothing is sent when nothing changed — including hide, quote, Save project, and switching notes.
-// Failed saves stay in saveQ and retry (tap "Not saved, tap to retry", back online, and every 20s). That retry is not a heartbeat.
-var SAVE_AFTER = 10000, batchT = null, batchGen = 0, unloadFlush = false;
+// ---- autosave everywhere: customer info (1 s after typing / on leaving a box / tax tap), note title + text, item qty,
+// item notes, removals. Every save goes through saveQ: one pending save per thing (the newest wins), failed saves are
+// kept and retried (tap "Not saved, tap to retry", when the phone is back online, and every 20 s).
 var saveQ = {}, saveRun = {}, saveFail = null, saveOkT = null;
-var lineHold = {}, lineBase = {}, nameBase = {}, varHold = null;
-var noteDirty = false;
-function lineKey(l) { return (l ? l.qty : '') + '\n' + (l && l.note || ''); }
-function infoChanged(c) {
-  if (!c) return false;
-  var b = c._baseInfo; if (!b) return !!c._infoDirty;
-  return (c.name || '') !== (b.name || '') || (c.phone || '') !== (b.phone || '') || (c.city || '') !== (b.city || '') || (c.tax || 'SF') !== (b.tax || 'SF');
-}
-function noteChanged(n) {
-  if (!n || n._baseTitle == null) return false;
-  return (n.title || '') !== n._baseTitle || (n.text || '') !== (n._baseText || '');
-}
-function isAutosaveDirty() {
-  return !!(noteDirty || ordPending || varHold || (lineHold && Object.keys(lineHold).length) || infoChanged(custOpen));
-}
-function rememberInfo(c) { if (c && !c._baseInfo) c._baseInfo = { name: c.name || '', phone: c.phone || '', city: c.city || '', tax: c.tax || 'SF' }; }
-function rememberNote(n) { if (n && n._baseTitle == null) { n._baseTitle = n.title || ''; n._baseText = n.text || ''; } }
-function rememberLine(l) { if (!l || l.id == null) return; if (!(l.id in lineBase)) lineBase[l.id] = lineKey(l); if (!(l.id in nameBase)) nameBase[l.id] = l.name; }
-function noteById(id) { return custOpen && (custOpen.notes || []).filter(function (n) { return n.id === id; })[0]; }
-function snapshotInputs() {
-  var c = custOpen, n = curNote();
-  if (c && $('cdName')) { c.name = $('cdName').value; c.phone = $('cdPhone').value; c.city = $('cdCity').value; }
-  rememberInfo(c); if (c) c._infoDirty = infoChanged(c);
-  if (n && $('nTitle')) { n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; }
-  rememberNote(n); if (n) noteDirty = noteChanged(n);
-}
-function scheduleAutosave() {
-  if (!isAutosaveDirty()) { clearTimeout(batchT); batchT = null; saveState(); return; }
-  batchGen++; clearTimeout(batchT);
-  batchT = setTimeout(function () { flushAutosave(); }, SAVE_AFTER);
-  saveState();
-}
 function autoSave(key, fn) { saveQ[key] = fn; return runSave(key); }
 function runSave(key) {
   var fn = saveQ[key]; if (!fn) return Promise.resolve();
@@ -1440,334 +1100,61 @@ function runSave(key) {
   saveState(); return p;
 }
 function retrySaves() { saveFail = null; Object.keys(saveQ).forEach(runSave); }
-function saveState() { var el = $('saveSt'), pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length, dirty = isAutosaveDirty();
-  if (!el) { el = document.createElement('button'); el.id = 'saveSt'; el.className = 'savest hidden'; el.type = 'button'; el.onclick = function () { if (saveFail) retrySaves(); }; document.body.appendChild(el); }
+function saveState() { var el = $('saveSt'), pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length;
+  if (!el) { el = document.createElement('button'); el.id = 'saveSt'; el.className = 'savest hidden'; el.onclick = function () { if (saveFail) retrySaves(); }; document.body.appendChild(el); }
   clearTimeout(saveOkT);
   if (pend && saveFail && !busy) { el.className = 'savest bad'; el.textContent = 'Not saved, tap to retry'; el.title = saveFail; }
   else if (busy) { el.className = 'savest saving'; el.textContent = 'Saving…'; }
-  else if (dirty) { el.className = 'savest saving'; el.textContent = 'Unsaved changes…'; }
-  else if (!pend) { saveFail = null;
-    if (!el.classList.contains('hidden') && el.textContent !== 'Unsaved changes…') { el.className = 'savest ok'; el.textContent = 'Saved'; saveOkT = setTimeout(function () { el.className = 'savest hidden'; }, 1200); }
-    else el.className = 'savest hidden'; }
-  if ($('cdSaved')) $('cdSaved').textContent = (custOpen && infoChanged(custOpen)) ? 'Unsaved changes…' : (saveQ['info:' + (custOpen && custOpen.id)] ? (saveFail ? 'Not saved yet' : 'Saving…') : 'Saved');
+  else if (!pend) { saveFail = null; if (!el.classList.contains('hidden')) { el.className = 'savest ok'; el.textContent = 'Saved'; saveOkT = setTimeout(function () { el.className = 'savest hidden'; }, 1200); } }
+  if ($('cdSaved')) $('cdSaved').textContent = saveQ['info:' + (custOpen && custOpen.id)] ? (saveFail ? 'Not saved yet' : 'Saving…') : 'Saved';
 }
 window.addEventListener('online', retrySaves);
 setInterval(function () { if (saveFail && Object.keys(saveQ).length) retrySaves(); }, 20000);
-window.addEventListener('beforeunload', function (e) {
-  if (isAutosaveDirty() || Object.keys(saveQ).length) { unloadFlush = true; flushAutosave(); e.preventDefault(); e.returnValue = ''; setTimeout(function () { unloadFlush = false; }, 1500); }
-});
-function drainSaves(left) { left = left == null ? 20 : left;
-  var extra = Promise.resolve();
-  if (ordPending && curNote() && !varBusy) { clearTimeout(ordTimer); extra = runOrderSave(curNote()) || Promise.resolve(); }
-  return extra.then(function () { return Promise.all(Object.keys(saveQ).map(runSave)); }).then(function () {
-    return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k] || Promise.resolve(); }));
-  }).then(function () {
-    if (left > 0 && (Object.keys(saveQ).length || Object.keys(saveRun).length || varBusy || ordPending)) return new Promise(function (r) { setTimeout(r, 60); }).then(function () { return drainSaves(left - 1); });
-  }); }
-/** Save whatever actually changed, right now. Resolves true when the queue is idle and nothing is still dirty. No request when clean. */
-function flushAutosave(left) {
-  left = left == null ? 4 : left;
-  snapshotInputs();
-  if (!isAutosaveDirty()) {
-    clearTimeout(batchT); batchT = null; saveState();
-    if (!Object.keys(saveQ).length && !Object.keys(saveRun).length && !varBusy) return Promise.resolve(true);
-    return drainSaves().then(function () { saveState(); return !Object.keys(saveQ).length && !varBusy && !isAutosaveDirty(); });
-  }
-  clearTimeout(batchT); batchT = null;
-  enqueueDirty();
-  return drainSaves().then(function () {
-    if (isAutosaveDirty() && left > 0) return flushAutosave(left - 1);
-    if (isAutosaveDirty() && !batchT) scheduleAutosave();
-    saveState();
-    var ok = !Object.keys(saveQ).length && !varBusy && !isAutosaveDirty();
-    if (ok && custOpen) custOpen._savedAt = Date.now();
-    return ok;
-  });
-}
-function enqueueDirty() {
-  var c = custOpen, n = curNote(), covered = null, vskip = {};
-  if (ordPending && n && noteOrderKey(n) !== ordBase[n.id]) {
-    covered = n.id;
-    (n.items || []).forEach(function (l) { delete lineHold[l.id]; });
-    if (varHold && varHold.noteId === n.id) varHold = null;
-    runOrderSave(n);
-  } else if (ordPending) ordPending = false;
-  if (varHold && varHold.noteId !== covered) {
-    var vn = noteById(varHold.noteId), changed = [];
-    if (vn) {
-      Object.keys(varHold.ids).forEach(function (id) {
-        var l = (vn.items || []).filter(function (x) { return x.id === id; })[0];
-        if (l && l.name !== nameBase[l.id]) { changed.push(l); vskip[id] = 1; }
-        else delete varHold.ids[id];
-      });
-      if (!Object.keys(varHold.ids).length) varHold = null;
-      if (changed.length) saveNoteVariants(vn, changed);
-    } else varHold = null;
-  }
-  Object.keys(lineHold).forEach(function (id) {
-    if (vskip[id] || saveQ['line:' + id] || saveRun['line:' + id]) return;
-    var nid = lineHold[id]; if (!nid || nid === covered || saveQ['ord:' + nid] || saveRun['ord:' + nid]) return;
-    var nn = noteById(nid); if (!nn) { delete lineHold[id]; return; }
-    var l = (nn.items || []).filter(function (x) { return x.id === id; })[0];
-    if (l) setLine(l, nn); else delete lineHold[id];
-  });
-  if (infoChanged(c)) flushInfo();
-  if (noteDirty) flushNote();
-}
-function persistProject() { if (!custOpen) return Promise.resolve(false); return flushAutosave(); }
-function markProjectSaved(ok, say) { var b = $('cdSaveAll'), c = custOpen; if (!b || !c) return;
-  b.disabled = false; b.textContent = ok ? 'Saved ✓' : 'Save project';
-  if ($('cdSaveMsg')) $('cdSaveMsg').innerHTML = ok ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '<span class="missing">Not saved, tap to retry</span>';
-  if (ok && say) { toast('Saved ' + projLabel(c)); setTimeout(function () { if ($('cdSaveAll') && $('cdSaveAll').textContent === 'Saved ✓') $('cdSaveAll').textContent = 'Save project'; }, 2500); } }
-/** "Save project" flushes the pending batch now (no request when nothing changed). */
+window.addEventListener('beforeunload', function (e) { if (Object.keys(saveQ).length) { e.preventDefault(); e.returnValue = ''; } });
+// customer info
+var infoT = null;
+/** "Save project": save the contact info and the open note right now, then push every pending save (all notes, qty, line notes,
+ *  removals); shows "Saved" when the queue is empty, else "Not saved, tap to retry" (the queue keeps retrying as before). */
 function saveProject() { var c = custOpen, b = $('cdSaveAll'); if (!c || !b) return;
   b.disabled = true; b.textContent = 'Saving…'; $('cdSaveMsg').textContent = '';
-  flushAutosave().then(function (ok) { if (custOpen !== c || !$('cdSaveAll')) return; markProjectSaved(ok, true); }); }
-function queueInfo() {
-  var c = custOpen; if (!c) return;
-  rememberInfo(c); c._infoDirty = infoChanged(c);
-  if ($('cdSaved')) $('cdSaved').textContent = c._infoDirty ? 'Unsaved changes…' : 'Saved';
-  scheduleAutosave();
-}
-function flushInfo() {
-  var c = custOpen; if (!c) return Promise.resolve();
-  if ($('cdName')) { c.name = $('cdName').value; c.phone = $('cdPhone').value; c.city = $('cdCity').value; }
-  rememberInfo(c); c._infoDirty = infoChanged(c);
-  if (!c._infoDirty) return saveRun['info:' + c.id] || Promise.resolve();
-  if (!String(c.name || '').trim() && !c.num) { if ($('cdSaved')) $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
-  return autoSave('info:' + c.id, function () {
-    var name = String(c.name || '').trim(), phone = c.phone || '', city = c.city || '', tax = c.tax || 'SF';
-    return api('customerSave', { customer: { id: c.id, name: name, phone: phone, city: city, tax: tax } }).then(function (r) {
-      c.label = r.label; c.num = r.num;
-      if (String(c.name || '').trim() === name && (c.phone || '') === phone && (c.city || '') === city && (c.tax || 'SF') === tax) {
-        c._baseInfo = { name: name, phone: phone, city: city, tax: tax }; c._infoDirty = false;
-      } else c._infoDirty = infoChanged(c);
+  if (String(c.name || '').trim() || c.num) c._infoDirty = true; if (curNote() && $('nTitle')) noteDirty = true;
+  Promise.all([flushInfo(), flushNote()]).then(function () { return Promise.all(Object.keys(saveQ).map(runSave)); }).then(function () {
+    return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k]; })); }).then(function () {
+    if (custOpen !== c || !$('cdSaveAll')) return; var ok = !Object.keys(saveQ).length; if (ok) c._savedAt = Date.now(); b = $('cdSaveAll'); b.disabled = false;
+    b.textContent = ok ? 'Saved ✓' : 'Save project'; $('cdSaveMsg').innerHTML = ok ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '<span class="missing">Not saved, tap to retry</span>';
+    if (ok) { toast('Saved ' + projLabel(c)); setTimeout(function () { if ($('cdSaveAll') && $('cdSaveAll').textContent === 'Saved ✓') $('cdSaveAll').textContent = 'Save project'; }, 2500); } }); }
+function queueInfo() { clearTimeout(infoT); if (custOpen) custOpen._infoDirty = true; if ($('cdSaved')) $('cdSaved').textContent = 'Editing…'; infoT = setTimeout(flushInfo, 1000); }
+function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdName')) return Promise.resolve();
+  if (!String(c.name || '').trim() && !c.num) { $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
+  if (!c._infoDirty) return saveRun['info:' + c.id] || Promise.resolve(); c._infoDirty = false;
+  return autoSave('info:' + c.id, function () { var body = { id: c.id, name: String(c.name || '').trim(), phone: c.phone || '', city: c.city || '', tax: c.tax };
+    return api('customerSave', { customer: body }).then(function (r) { c.label = r.label; c.num = r.num;
       if (curCust && curCust.id === r.id && curCust.name !== r.label) { curCust.name = r.label; saveCur(); }
-      if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = projLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); }
-      pcSave(c); if (isAutosaveDirty() && !batchT) scheduleAutosave();
-    });
-  });
-}
-function queueNote() {
-  var n0 = curNote();
-  if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; }
-  rememberNote(n0); noteDirty = noteChanged(n0);
-  if ($('nSaved')) $('nSaved').textContent = noteDirty ? 'Unsaved changes…' : (n0 && n0.updated ? 'Saved ' + whenTxt(n0.updated) + (n0.updated_by ? ' by ' + n0.updated_by : '') : '');
-  scheduleAutosave();
-}
-function flushNote() {
-  var n = curNote(); if (n && $('nTitle')) { n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; }
-  rememberNote(n); if (n) noteDirty = noteChanged(n);
-  if (!noteDirty || !n) return Promise.resolve();
-  var c = custOpen, nid = n.id; if ($('nSaved')) $('nSaved').textContent = 'Saving…';
-  return autoSave('note:' + nid, function () {
-    var live = noteById(nid) || n, title = live.title, text = live.text;
-    return api('noteSave', { id: c.id, noteId: nid, title: title, text: text }).then(function (r) {
-      live.updated = r.note.updated; live.updated_by = r.note.updated_by;
-      if (live.title === title && (live.text || '') === (text || '')) { live._baseTitle = title || ''; live._baseText = text || ''; if (curNote() === live) noteDirty = false; }
-      else if (curNote() === live) noteDirty = true;
-      rememberNoteVersion(live);
-      if ($('nSaved') && noteOpenId === nid) $('nSaved').textContent = noteChanged(live) ? 'Unsaved changes…' : ('Saved ' + whenTxt(r.note.updated) + (r.note.updated_by ? ' by ' + r.note.updated_by : ''));
-      if (isCurNote(c.id, nid) && curCust && curCust.noteTitle !== r.note.title) { curCust.noteTitle = r.note.title; saveCur(); }
-      pcSave(c); if (isAutosaveDirty() && !batchT) scheduleAutosave();
-    });
-  }).then(function () { if (saveQ['note:' + nid] && $('nSaved') && noteOpenId === nid) $('nSaved').innerHTML = '<span class="missing">Not saved yet (will retry)</span>'; });
-}
+      if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = projLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); } }); }); }
+/** Note title/text autosave (debounced + on leaving the box); "Save project" saves everything at once. */
+var noteT = null, noteDirty = false;
+function queueNote() { var n0 = curNote(); if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; } noteDirty = true; clearTimeout(noteT);
+  $('nSaved').textContent = 'Editing…'; noteT = setTimeout(flushNote, 900); }
+function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
+  noteDirty = false; var c = custOpen; n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; $('nSaved').textContent = 'Saving…';
+  return autoSave('note:' + n.id, function () { var title = n.title, text = n.text;
+    return api('noteSave', { id: c.id, noteId: n.id, title: title, text: text }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by;
+      if ($('nSaved') && noteOpenId === n.id) $('nSaved').textContent = 'Saved ' + whenTxt(r.note.updated);
+      if (isCurNote(c.id, n.id) && curCust.noteTitle !== r.note.title) { curCust.noteTitle = r.note.title; saveCur(); } }); })
+    .then(function () { if (saveQ['note:' + n.id] && $('nSaved') && noteOpenId === n.id) $('nSaved').innerHTML = '<span class="missing">Not saved yet (will retry)</span>'; }); }
 function renderPicked() {
   var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) { keepTyped(); renderNoteCards(); } return; }
   var it = n.items || [];
   $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
-  $('cdItems').innerHTML = (it.length > 1 ? '<p class="ordhint">Drag the handle, or the arrows, to reorder.</p>' : '') + (it.length ? variantBar(n) : '') + (it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = (r && r[13]) || l.photo || '', pr = linePrice(l);
-    var desc = r ? String(r[1] || '').slice(0, 110) : (l.desc || '');
-    var oh = r ? r[3] : null, ohN = Number(oh);
-    return '<div class="pline' + (it.length > 1 ? ' hasord' : '') + '" data-lid="' + esc(l.id) + '">' + (it.length > 1 ? ordHtml(i, it.length) : '') +
-      '<div class="lbody"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
-      '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(desc) + '</span>' +
-      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadges(l.name) + '</span>' +
-        (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') + '</span>' : '') +
+  $('cdItems').innerHTML = it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
+    return '<div class="pline" data-lid="' + esc(l.id) + '"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
+      '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(l.desc || (r ? r[1] : '')) + '</span>' +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
-      lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
       '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
-      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
-      (reportsOn ? '<button type="button" class="link ltc" data-rmiss="1">Report missing</button>' : '') + '</div></div>';
-  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
-  it.forEach(rememberLine);
-  if (!ordPending && !varBusy && !lineDrag) ordBase[n.id] = noteOrderKey(n);
+      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') + '</div>';
+  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>';
   renderTotals();
-}
-// Finish families (search.js): same code prefix, last 3–4 characters differ. Chips only offer a finish that exists
-// on a sibling in the item list. "Finish" above the lines switches every line it can; the rest stay and are listed.
-var FINISH_RANK_ = ['Chrome', 'Polished Chrome', 'Polished Nickel', 'Brushed Nickel', 'Satin Nickel', 'SuperSteel', 'Brushed Bronze', 'Oil Rubbed Bronze', 'Venetian Bronze', 'Champagne Bronze', 'Brushed Brass', 'Unlacquered Brass', 'Polished Brass', 'Brushed Gold', 'Brushed Gold Optic', 'Brushed Black Chrome', 'Brushed Black', 'Brushed Graphite', 'Hard Graphite', 'Matte Black', 'Matte White', 'Stainless Steel', 'Gunmetal', 'Warm Sunset', 'Cool Sunrise'];
-var varMiss = null, varBusy = false;
-function sortFinishes(labels) { return labels.slice().sort(function (a, b) { var ia = FINISH_RANK_.indexOf(a), ib = FINISH_RANK_.indexOf(b); if (ia < 0) ia = 80; if (ib < 0) ib = 80; return ia - ib || (a < b ? -1 : a > b ? 1 : 0); }); }
-function variantSiblings(name) { return localData && typeof variantSiblings_ === 'function' ? variantSiblings_(localData, name) : []; }
-function finishLabelsOf(name) {
-  var sibs = variantSiblings(name), seen = {}, out = [], cur = '';
-  sibs.forEach(function (s) { if (s.name === name) cur = s.label; if (!s.label || seen[s.label]) return; seen[s.label] = 1; out.push(s.label); });
-  return { labels: sortFinishes(out), current: cur };
-}
-function noteFinishState(items) {
-  var seen = {}, labels = [], cur = '', mixed = false, any = false;
-  (items || []).forEach(function (l) {
-    var f = finishLabelsOf(l.name); if (f.labels.length < 2) return; any = true;
-    f.labels.forEach(function (lab) { if (!seen[lab]) { seen[lab] = 1; labels.push(lab); } });
-    if (!cur) cur = f.current; else if (cur !== f.current) mixed = true;
-  });
-  return { labels: sortFinishes(labels), current: any && !mixed ? cur : '' };
-}
-function variantBar(n) {
-  var st = noteFinishState(n.items); if (st.labels.length < 2) return '';
-  var miss = varMiss && varMiss.noteId === n.id ? varMiss.html : '';
-  return '<div class="vsw" id="vSwitch"><div class="vlab">Finish</div><div class="schips">' + st.labels.map(function (lab) {
-    return '<button type="button" data-vall="' + esc(lab) + '"' + (lab === st.current ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(lab) + '</button>';
-  }).join('') + '</div>' + miss + '</div>';
-}
-function lineVariants(name) {
-  var f = finishLabelsOf(name); if (f.labels.length < 2) return '';
-  return '<div class="vsw linev"><div class="schips">' + f.labels.map(function (lab) {
-    return '<button type="button" data-vf="' + esc(lab) + '"' + (lab === f.current ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(lab) + '</button>';
-  }).join('') + '</div></div>';
-}
-function applyVariantToLine(l, sibName) {
-  var r = itemRow(sibName); if (!r) return false;
-  l.name = r[0]; l.desc = String(r[1] || '').slice(0, 110); l.photo = r[13] || '';
-  return true;
-}
-function missHtml(label, names) {
-  var shown = names.slice(0, 12), more = names.length > 12 ? ' +' + (names.length - 12) + ' more' : '';
-  return '<div class="vmiss"><span>Could not switch to </span><b>' + esc(label) + '</b><span class="notr">: ' + esc(shown.join(', ')) + more + '</span></div>';
-}
-function switchNoteFinish(label) {
-  if (varBusy) return; var n = curNote(); if (!n || !localData) return;
-  var changed = [], missed = [];
-  (n.items || []).forEach(function (l) {
-    var sibs = variantSiblings(l.name);
-    if (sibs.length < 2) { missed.push(l.name); return; }
-    var pick = variantPick_(sibs, l.name, label);
-    if (pick === null) return;
-    if (!pick || !applyVariantToLine(l, pick.name)) missed.push(l.name);
-    else changed.push(l);
-  });
-  if (!changed.length && !missed.length) return;
-  varMiss = missed.length ? { noteId: n.id, html: missHtml(label, missed) } : null;
-  renderPicked(); syncCount();
-  if (!changed.length) { toast('Could not switch ' + missed.length + ' item' + (missed.length === 1 ? '' : 's')); return; }
-  toast('Switched ' + changed.length + ' item' + (changed.length === 1 ? '' : 's'));
-  queueVariant(n, changed);
-}
-function switchLineFinish(l, label) {
-  if (varBusy) return; var n = curNote(); if (!n || !l) return;
-  var pick = variantPick_(variantSiblings(l.name), l.name, label);
-  if (pick === null || !pick) return;
-  if (!applyVariantToLine(l, pick.name)) { toast('Could not switch 1 item'); return; }
-  varMiss = null; renderPicked(); syncCount(); toast('Switched 1 item');
-  queueVariant(n, [l]);
-}
-/** Queue a finish change with the other note edits. Switching back to the saved finish drops it. */
-function queueVariant(n, changed) {
-  if (!n || !changed || !changed.length) return;
-  changed.forEach(rememberLine);
-  if (!varHold || varHold.noteId !== n.id) varHold = { noteId: n.id, ids: {} };
-  changed.forEach(function (l) {
-    if (l.name === nameBase[l.id]) delete varHold.ids[l.id];
-    else varHold.ids[l.id] = l.name;
-    if (lineKey(l) === lineBase[l.id]) delete lineHold[l.id];
-    else lineHold[l.id] = n.id;
-  });
-  if (!Object.keys(varHold.ids).length) varHold = null;
-  scheduleAutosave();
-}
-/** Persist a finish switch with the same customerItem save the qty / line note already uses.
- *  set carries the new code, description and photo. If the server copy of the line keeps the old code,
- *  the lines are rewritten with remove + add (existing ops), in the same order, keeping qty and the line note. */
-function snapLines(n) { return (n.items || []).map(function (l) { return { id: l.id, name: l.name, desc: l.desc || '', qty: l.qty, note: l.note || '', photo: l.photo || '' }; }); }
-function saveNoteVariants(n, changed) {
-  var c = custOpen; if (!c || !n || !changed.length) return Promise.resolve();
-  var sent = changed.map(function (l) { return { id: l.id, name: l.name, qty: l.qty, note: l.note || '' }; });
-  changed.forEach(function (l) { delete saveQ['line:' + l.id]; });
-  var ids = {}; changed.forEach(function (l) { ids[l.id] = 1; });
-  var wait = changed.map(function (l) { return saveRun['line:' + l.id] || Promise.resolve(); });
-  varBusy = true;
-  var before = (n.items || []).map(function (l) { return l.id; }).join(',');
-  return Promise.all(wait).then(function () {
-    return autoSave('var:' + n.id, function () { return pushVariants(c, n, snapLines(n), ids); });
-  }).then(function () {
-    varBusy = false;
-    sent.forEach(function (s) {
-      var live = (n.items || []).filter(function (x) { return x.id === s.id; })[0];
-      if (!live) { delete lineHold[s.id]; return; }
-      if (live.name === s.name) nameBase[live.id] = live.name;
-      if (lineKey(live) === (s.qty + '\n' + s.note)) { lineBase[live.id] = lineKey(live); delete lineHold[live.id]; }
-    });
-    if (varHold && varHold.noteId === n.id) {
-      Object.keys(varHold.ids).forEach(function (id) {
-        var l = (n.items || []).filter(function (x) { return x.id === id; })[0];
-        if (!l || l.name === nameBase[id]) delete varHold.ids[id];
-      });
-      if (!Object.keys(varHold.ids).length) varHold = null;
-    }
-    var after = (n.items || []).map(function (l) { return l.id; }).join(',');
-    if (after !== before && custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
-    if (isCurNote(c.id, n.id)) syncCount();
-    rememberNoteVersion(n);
-    if (isAutosaveDirty() && !batchT) scheduleAutosave();
-  }, function (er) { varBusy = false; toast(er.message || 'Not saved yet'); if (isAutosaveDirty() && !batchT) scheduleAutosave(); });
-}
-function linesMatch(serverItems, snap, ids) {
-  var by = {}; (serverItems || []).forEach(function (x) { by[x.id] = x; });
-  return snap.every(function (l) { if (!ids[l.id]) return true; var s = by[l.id]; return s && s.name === l.name; });
-}
-function pushVariants(c, n, snap, ids) {
-  var changed = snap.filter(function (l) { return ids[l.id]; });
-  var chain = Promise.resolve(), saw = 0, bad = 0;
-  changed.forEach(function (l) {
-    chain = chain.then(function () {
-      var live = (n.items || []).filter(function (x) { return x.id === l.id; })[0] || l;
-      return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: l.id, qty: live.qty, note: live.note || '', name: live.name, desc: live.desc || '', photo: live.photo || '' })
-        .then(function (r) {
-          if (r && r.note) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }
-          if (r && r.items) { saw++; var s = r.items.filter(function (x) { return x.id === l.id; })[0]; if (!s || s.name !== l.name) bad++; }
-        }, function (er) { if (/sign in|signed out/i.test(er.message || '')) throw er; bad++; });
-    });
-  });
-  return chain.then(function () {
-    if (saw === changed.length && !bad) return;
-    return api('customerGet', { id: c.id }).then(function (fresh) {
-      var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
-      if (fn && linesMatch(fn.items, snap, ids)) { n.updated = fn.updated; n.updated_by = fn.updated_by; return; }
-      return rewriteItems(c, n, snap);
-    });
-  });
-}
-function rewriteItems(c, n, snap) {
-  var live = {}; (n.items || []).forEach(function (l) { live[l.id] = l; });
-  snap = snap.map(function (l) { var x = live[l.id]; return x ? { id: l.id, name: x.name, desc: x.desc || '', qty: x.qty, note: x.note || '', photo: x.photo || '' } : l; });
-  return api('customerGet', { id: c.id }).then(function (fresh) {
-    var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
-    if (!fn) throw new Error('That note is gone.');
-    if (linesMatch(fn.items, snap, snap.reduce(function (m, l) { m[l.id] = 1; return m; }, {})) && (fn.items || []).length === snap.length && snap.every(function (l, i) { return fn.items[i] && fn.items[i].name === l.name; })) {
-      n.items = fn.items; n.updated = fn.updated; n.updated_by = fn.updated_by; return;
-    }
-    var ids = (fn.items || []).map(function (l) { return l.id; }), chain = Promise.resolve(), last = null, i;
-    for (i = ids.length - 1; i >= 0; i--) {
-      (function (id) { chain = chain.then(function () {
-        return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: id }).catch(function (er) {
-          if (/not found|gone/i.test(er.message || '') && !/^project not found/i.test(er.message || '')) return; throw er;
-        });
-      }); })(ids[i]);
-    }
-    snap.forEach(function (l) {
-      chain = chain.then(function () {
-        return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' } })
-          .then(function (r) { last = r; });
-      });
-    });
-    return chain.then(function () {
-      if (last && last.items) n.items = last.items;
-      if (last && last.note) { n.updated = last.note.updated; n.updated_by = last.note.updated_by; }
-    });
-  });
 }
 function renderTotals() { var n = curNote(), el = $('cdTotals'); if (!el || !n) return; var it = n.items || [];
   if (!it.length || !priceState.prices) { el.innerHTML = ''; return; }
@@ -1779,14 +1166,13 @@ function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !
   $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
   el.innerHTML = ps.length ? ps.map(function (f) { return fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>'; }).join('') : '<span class="hint" style="margin:0">No photos yet.</span>';
   var c = custOpen; el.querySelectorAll('.ld[data-fid]').forEach(function (s) { var f = s.dataset.fid;
-    api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; keepPhotoBlob(f, r.data); var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
+    api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
   $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
 document.addEventListener('click', function (e) { var img = e.target.closest('#nPhotos img[data-fid]'); if (!img) return; var n = curNote(), c = custOpen, f = img.dataset.fid;
   openSheet('<h3>' + esc(n.title) + '</h3><img src="' + img.src + '" style="width:100%;border-radius:10px;margin-top:8px" alt=""><div class="mvh">Move to note</div><div class="mvrow">' + ((c.notes || []).filter(function (x) { return x.id !== n.id; }).map(function (x) { return '<button class="mvbtn" data-phmv="' + esc(x.id) + '"><span class="notr">' + esc(x.title) + '</span> <span>' + (x.photos || []).length + '/20</span></button>'; }).join('') || '<span class="hint" style="margin:0">Add another note first.</span>') + '</div><div id="phMsg" class="msg hidden"></div><div class="actions"><button id="phDel">Remove photo</button></div>');
   $('sheetBody').onclick = function (ev) { var b = ev.target.closest('[data-phmv]'); if (!b) return; $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = true; }); b.textContent = 'Working…';
     movePhoto(f, b.dataset.phmv).then(closeSheet, function (er) { msg($('phMsg'), er.message); $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = false; }); }); };
-  $('phDel').onclick = function () { this.disabled = true; if (img.src) { fileCache[f] = fileCache[f] || img.src; keepPhotoBlob(f, fileCache[f]); }
-    api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); rememberNoteVersion(n); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
+  $('phDel').onclick = function () { this.disabled = true; api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).then(function () { n.photos = n.photos.filter(function (x) { return x !== f; }); closeSheet(); renderNotePhotos(); }).catch(function (er) { toast(er.message); }); }; });
 /** Multi-photo upload (pick or drop up to 20 at once): shrunk on the phone, sent 2 at a time, progress "3/20".
  *  The server keeps MAX_NOTE_PHOTOS (12) per note, so only the free slots are sent. */
 var PH_BATCH = 20, PH_NOTE_MAX = 20, phBusy = false;
@@ -1803,8 +1189,8 @@ function uploadNotePhotos(files) { var c = custOpen, n = curNote(); if (!c || !n
   function prog() { var b = $('nPhProg'); if (b) { b.textContent = done < total ? 'Uploading ' + done + '/' + total : ''; b.style.display = done < total ? '' : 'none'; } }
   function dropPh() { var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }
   function one() { if (idx >= total) return Promise.resolve(); var f = files[idx++];
-    return shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; keepPhotoBlob(r.fileId, d.data); return r; }); })
-      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; rememberNoteVersion(n); }, function (er) { fail++; n._phErr = er.message; })
+    return shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
+      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; }, function (er) { fail++; n._phErr = er.message; })
       .then(function () { done++; dropPh(); if (noteOpenId === n.id) { renderNotePhotos(); for (var k = done; k < total; k++) $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); } prog(); return one(); }); }
   prog();
   Promise.all([one(), one()]).then(function () { phBusy = false; prog();
@@ -1827,153 +1213,24 @@ document.addEventListener('paste', function (e) { if (!custOpen || !noteOpenId |
 function movePhoto(f, toId) { var c = custOpen, n = curNote();
   return api('customerFileMove', { id: c.id, fileId: f, noteId: n.id, toNoteId: toId }).then(function (r) { n.photos = r.photos; n.updated = r.note.updated;
     var t = c.notes.filter(function (x) { return x.id === r.toNoteId; })[0]; if (t) { t.photos = r.toPhotos; t.updated = r.toNote.updated; }
-    rememberNoteVersion(n); if (t) rememberNoteVersion(t);
     renderNotePhotos(); renderNoteCards(); toast('Photo moved to ' + (t ? t.title : 'note')); }); }
-// Reorder inside one note. The server has no reorder call: the stored order is the order lines were added,
-// which is also the order the client link lists. A move is saved by rewriting the note (remove + add) through the same autosave queue.
-var ordBase = {}, ordPending = false, ordTimer = null, ordSwallow = false, lineDrag = null;
-function noteOrderKey(n) { return (n && n.items || []).map(function (l) { return l.id; }).join('\n'); }
-function ordHtml(i, n) {
-  return '<div class="ord"><button type="button" class="ordb" data-lord="up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-    '<button type="button" class="ordh" data-drag="1" aria-label="Drag to reorder"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M4 3h2.2v2.2H4zm5.8 0H12v2.2H9.8zM4 6.9h2.2v2.2H4zm5.8 0H12v2.2H9.8zM4 10.8h2.2V13H4zm5.8 0H12V13H9.8z"/></svg></button>' +
-    '<button type="button" class="ordb" data-lord="down" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button></div>';
-}
-function renumberLines() {
-  var rows = document.querySelectorAll('#cdItems .pline'), i, last = rows.length - 1;
-  for (i = 0; i < rows.length; i++) {
-    var s = rows[i].querySelector('.ln'); if (s) s.textContent = String(i + 1);
-    var up = rows[i].querySelector('[data-lord="up"]'), dn = rows[i].querySelector('[data-lord="down"]');
-    if (up) up.disabled = i === 0;
-    if (dn) dn.disabled = i === last;
-  }
-}
-function syncOrderFromDom() {
-  var n = curNote(); if (!n) return;
-  var by = {}; (n.items || []).forEach(function (l) { by[l.id] = l; });
-  var next = [], rows = document.querySelectorAll('#cdItems .pline'), i;
-  for (i = 0; i < rows.length; i++) { var l = by[rows[i].dataset.lid]; if (l) next.push(l); }
-  if (next.length === (n.items || []).length) n.items = next;
-}
-function moveItem(l, dir) {
-  if (varBusy || lineDrag) return;
-  var n = curNote(); if (!n) return;
-  var items = n.items || [], i = items.indexOf(l); if (i < 0) return;
-  var j = i + dir; if (j < 0 || j >= items.length) return;
-  items.splice(j, 0, items.splice(i, 1)[0]);
-  ordPending = noteOrderKey(n) !== ordBase[n.id]; renderPicked(); queueOrderSave(n);
-}
-function queueOrderSave(n) {
-  if (!n) return;
-  ordPending = noteOrderKey(n) !== ordBase[n.id];
-  scheduleAutosave();
-}
-function runOrderSave(n) {
-  var c = custOpen; if (!c || !n) return Promise.resolve();
-  if (noteOrderKey(n) === ordBase[n.id]) { ordPending = false; saveState(); return Promise.resolve(); }
-  if (varBusy) { ordTimer = setTimeout(function () { runOrderSave(n); }, 250); return Promise.resolve(); }
-  (n.items || []).forEach(function (l) { delete saveQ['line:' + l.id]; });
-  varBusy = true; ordPending = false;
-  var nid = n.id;
-  var wait = (n.items || []).map(function (l) { return saveRun['line:' + l.id] || Promise.resolve(); });
-  return Promise.all(wait).then(function () {
-    return autoSave('ord:' + nid, function () {
-      var beforeIds = noteOrderKey(n);
-      return rewriteItems(c, n, snapLines(n)).then(function () {
-        Object.keys(lineHold).forEach(function (id) { if (lineHold[id] === nid) delete lineHold[id]; });
-        (n.items || []).forEach(function (l) { lineBase[l.id] = lineKey(l); nameBase[l.id] = l.name; });
-        if (varHold && varHold.noteId === nid) varHold = null;
-        ordBase[n.id] = noteOrderKey(n); ordPending = false;
-        rememberNoteVersion(n);
-        if (noteOrderKey(n) !== beforeIds && custOpen === c && noteOpenId === n.id && $('cdItems') && !lineDrag) renderPicked();
-        if (isAutosaveDirty() && !batchT) scheduleAutosave();
-      });
-    });
-  }).then(function () { varBusy = false; if (ordPending) queueOrderSave(n); }, function () { varBusy = false; if (ordPending) queueOrderSave(n); });
-}
-function rowUnder(y, skip) {
-  var rows = document.querySelectorAll('#cdItems .pline'), i, hit = null, best = null, bestD = 1e9;
-  for (i = 0; i < rows.length; i++) {
-    if (rows[i] === skip) continue;
-    var b = rows[i].getBoundingClientRect();
-    if (y >= b.top && y <= b.bottom) hit = rows[i];
-    var d = Math.abs(y - (b.top + b.bottom) / 2);
-    if (d < bestD) { bestD = d; best = rows[i]; }
-  }
-  return hit || best;
-}
-function dragPlace(row, y) {
-  var over = rowUnder(y, row); if (!over) return;
-  var mid = (over.getBoundingClientRect().top + over.getBoundingClientRect().bottom) / 2, parent = row.parentNode;
-  if (y < mid) { if (row.nextElementSibling === over) return; parent.insertBefore(row, over); }
-  else { if (over.nextElementSibling === row) return; parent.insertBefore(row, over.nextElementSibling); }
-  syncOrderFromDom(); renumberLines();
-}
-function endLineDrag(e) {
-  if (!lineDrag || (e && e.pointerId != null && e.pointerId !== lineDrag.pointer)) return;
-  var moved = lineDrag.moved, n = lineDrag.note, row = lineDrag.row;
-  if (row) row.classList.remove('dragging');
-  document.body.classList.remove('linedrag');
-  lineDrag = null;
-  if (moved && n) { ordPending = noteOrderKey(n) !== ordBase[n.id]; ordSwallow = true; setTimeout(function () { ordSwallow = false; }, 500); queueOrderSave(n); }
-}
-document.addEventListener('pointerdown', function (e) {
-  var h = e.target.closest && e.target.closest('[data-drag]');
-  if (!h || !h.closest('#cdItems') || varBusy || lineDrag) return;
-  if (e.button != null && e.button !== 0) return;
-  var row = h.closest('.pline'), n = curNote(); if (!row || !n) return;
-  e.preventDefault();
-  try { h.setPointerCapture(e.pointerId); } catch (err) {}
-  lineDrag = { pointer: e.pointerId, y: e.clientY, row: row, note: n, moved: false };
-  row.classList.add('dragging'); document.body.classList.add('linedrag');
-}, { passive: false });
-document.addEventListener('pointermove', function (e) {
-  if (!lineDrag || e.pointerId !== lineDrag.pointer) return;
-  if (Math.abs(e.clientY - lineDrag.y) > 4) lineDrag.moved = true;
-  if (!lineDrag.moved) return;
-  e.preventDefault();
-  dragPlace(lineDrag.row, e.clientY);
-  var edge = 72;
-  if (e.clientY < edge) window.scrollBy(0, -14);
-  else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, 14);
-}, { passive: false });
-document.addEventListener('pointerup', endLineDrag);
-document.addEventListener('pointercancel', endLineDrag);
 function lineOf(el) { var d = el.closest('[data-lid]'), n = curNote(); return d && n && (n.items || []).filter(function (l) { return l.id === d.dataset.lid; })[0]; }
-function setLine(l, n) { var c = custOpen; n = n || curNote(); if (!c || !n || !l) return Promise.resolve();
-  var id = l.id, nid = n.id;
-  return autoSave('line:' + id, function () { var note = noteById(nid) || n, cur = (note.items || []).filter(function (x) { return x.id === id; })[0] || l;
-    var qty = cur.qty, noteTxt = cur.note || '';
-    return api('customerItem', { id: c.id, noteId: nid, op: 'set', lineId: id, qty: qty, note: noteTxt }).then(function (r) {
-      note.updated = r.note.updated; note.updated_by = r.note.updated_by;
-      var live = (note.items || []).filter(function (x) { return x.id === id; })[0] || cur;
-      if (lineKey(live) === (qty + '\n' + noteTxt)) { lineBase[id] = qty + '\n' + noteTxt; delete lineHold[id]; }
-      else lineHold[id] = nid;
-      var snapN = noteById(nid) || (note && note.id ? note : curNote()); if (snapN && snapN.id) rememberNoteVersion(snapN);
-      pcSave(c); if (isAutosaveDirty() && !batchT) scheduleAutosave();
-    }); }); }
-function markLine(l, n) { n = n || curNote(); if (!l || !n) return; rememberLine(l);
-  if (lineKey(l) === lineBase[l.id]) delete lineHold[l.id]; else lineHold[l.id] = n.id; scheduleAutosave(); }
-document.addEventListener('click', function (e) {
-  if (ordSwallow) { ordSwallow = false; e.preventDefault(); e.stopPropagation(); return; }
-}, true);
-document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return;
-  var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
-  var t = e.target, l = lineOf(t); if (!l) return;
-  var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), mv = t.closest('[data-lord]');
-  if (mv) { moveItem(l, mv.dataset.lord === 'up' ? -1 : 1); return; }
-  if (t.closest('[data-vf]')) { switchLineFinish(l, t.closest('[data-vf]').dataset.vf); return; }
+function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
+  return autoSave('line:' + id, function () { var cur = (n.items || []).filter(function (x) { return x.id === id; })[0] || l;
+    return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }); }); }
+var lnoteT = {};
+var qtyT = {};
+document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return; var t = e.target, l = lineOf(t); if (!l) return;
+  var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]');
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
-  if (t.closest('[data-rmiss]')) { var rr = itemRow(l.name); openReportMissing(l.name, rr ? rr[1] : (l.desc || '')); return; }
   if (t.closest('[data-lfc]')) { var r1 = itemRow(l.name); if (isFloorRow(r1)) floorCalcFor(itemFromRow(r1), { c: custOpen, n: curNote(), line: l }); return; }
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
-  if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l); markLine(l); }
-  else if (rm) { if (varBusy) return; if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
+  if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
+    clearTimeout(qtyT[l.id]); qtyT[l.id] = setTimeout(function () { setLine(l, { qty: l.qty }); }, 500); }
+  else if (rm) { if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
     n.items = n.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
-    delete lineHold[l.id]; delete lineBase[l.id]; delete nameBase[l.id]; delete saveQ['line:' + l.id];
-    if (varHold && varHold.ids) { delete varHold.ids[l.id]; if (!Object.keys(varHold.ids).length) varHold = null; }
-    if (ordPending) { queueOrderSave(n); return; }
-    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }).then(function () { rememberNoteVersion(n); }); });
-    scheduleAutosave(); }
+    delete saveQ['line:' + l.id];
+    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }); }); }
 });
 // ---- move / copy an item line to another note of the project; clone a note (same project or another one)
 function noteBtns(c, skipId, attr) { return (c.notes || []).filter(function (x) { return x.id !== skipId; }).map(function (x) {
@@ -1987,342 +1244,65 @@ function lineMenu(l) { var c = custOpen, n = curNote(); if (!c || !n) return;
     moveLine(l, b.dataset.mv ? 'move' : 'copy', b.dataset.mv || b.dataset.cp).then(closeSheet, function (er) { msg($('mvMsg'), er.message);
       $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = false; }); }); }; }
 function moveLine(l, op, to) { var c = custOpen, n = curNote(), t;
-  return flushAutosave().then(function (ok) {   // qty / note / finish typed just now go first; a clean note does not save
-    if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
+  if (qtyT[l.id] || lnoteT[l.id]) { clearTimeout(qtyT[l.id]); clearTimeout(lnoteT[l.id]); delete qtyT[l.id]; delete lnoteT[l.id]; setLine(l, { qty: l.qty, note: l.note || '' }); }
+  return Promise.resolve(saveRun['line:' + l.id] || saveQ['line:' + l.id] && runSave('line:' + l.id)).then(function () {   // qty / note typed just now go first
+    if (saveQ['line:' + l.id]) throw new Error('Not saved yet. Check the connection and try again.');
     return to === 'new' ? api('noteSave', { id: c.id }).then(function (r) { c.notes.push(r.note); return r.note; }) : c.notes.filter(function (x) { return x.id === to; })[0];
   }).then(function (tn) { t = tn; if (!t) throw new Error('That note is gone.');
     return api('customerItem', { id: c.id, noteId: n.id, op: op, lineId: l.id, toNoteId: t.id }); })
   .then(function (r) { n.items = r.items; t.items = r.toItems; [[n, r.note], [t, r.toNote]].forEach(function (p) { p[0].updated = p[1].updated; p[0].updated_by = p[1].updated_by; });
     if (curCust && curCust.id === c.id) { var cn = c.notes.filter(function (x) { return x.id === curCust.noteId; })[0]; if (cn) { curCust.count = cn.items.length; saveCur(); } }
-    rememberNoteVersion(n); rememberNoteVersion(t);
     if (custOpen === c) { keepTyped(); renderNoteCards(); }
     toast((op === 'move' ? 'Moved ' : 'Copied ') + l.name + ' → ' + t.title); });
 }
-/** Default for a copy: the typed project name, otherwise "Project #1004", plus " copy". Never the display label "Chen · #1004". */
-function copyName(c) { var n = String(c && c.name || '').trim(); return (n || projLabel(c) || 'Project') + ' copy'; }
-function askCopyName(c, title, hint, go) {
-  var def = copyName(c);
-  openSheet('<h3>' + esc(title) + '</h3><div class="hint" style="margin:0 0 8px">' + hint + '</div>' +
-    '<label class="f">Project name</label><input id="cpName" maxlength="80" value="' + esc(def) + '">' +
-    '<button class="btn" id="cpGo" style="margin-top:10px">Create project</button><div id="cpMsg" class="msg hidden"></div>');
-  var inp = $('cpName'); inp.focus(); try { inp.select(); } catch (e) {}
-  function run() {
-    if ($('cpGo').disabled) return;
-    var name = inp.value.trim() || def;
-    $('cpGo').disabled = true; $('cpGo').textContent = 'Cloning…';
-    go(name).then(closeSheet, function (er) { if (!$('cpMsg')) return; msg($('cpMsg'), er.message || 'Something went wrong.'); $('cpGo').disabled = false; $('cpGo').textContent = 'Create project'; });
-  }
-  $('cpGo').onclick = run;
-  inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); run(); } });
-}
-function makeProjectCopy(src, name) {
-  return flushAutosave().then(function (ok) {
-    if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
-    return api('customerSave', { customer: { name: name, phone: src.phone || '', city: src.city || '', tax: src.tax || 'SF' } });
-  });
-}
-function cloneOneNote(src, n, destId) {
-  return api('noteClone', { id: src.id, noteId: n.id, toId: destId }).then(function (r) {
-    if (!r || !r.note) throw new Error('Nothing was copied.');
-    return copyMissingPhotos(src, n, destId, r.note).then(function () { return r.note; });
-  });
-}
-/** If noteClone came back with no photos and this note has some, upload the copies we already have. Skip when the server copied any. */
-function copyMissingPhotos(src, n, destId, note) {
-  var want = (n && n.photos) || [], have = (note && note.photos) || [];
-  if (!note || !want.length || have.length) return Promise.resolve();
-  return want.reduce(function (p, fid) {
-    return p.then(function () {
-      var got = fileCache[fid] ? Promise.resolve({ data: fileCache[fid] }) : api('customerFile', { id: src.id, fileId: fid });
-      return got.then(function (r) {
-        if (!r || !r.data) return;
-        var mime = (String(r.data).match(/^data:([^;]+)/) || [])[1] || 'image/jpeg';
-        return api('customerFileAdd', { id: destId, noteId: note.id, kind: 'photo', file: { data: r.data, mimeType: mime } }).then(function (add) {
-          if (add && add.photos) note.photos = add.photos;
-          if (add && add.fileId) { fileCache[add.fileId] = r.data; keepPhotoBlob(add.fileId, r.data); }
-        });
-      }, function () {});
-    });
-  }, Promise.resolve());
-}
-function dropEmptyStarter(projectId, starterId) {
-  function once(left) {
-    return api('customerGet', { id: projectId }).then(function (p) {
-      var starter = (p.notes || []).filter(function (n) { return n.id === starterId; })[0];
-      var others = (p.notes || []).filter(function (n) { return n.id !== starterId; });
-      if (!others.length && left > 0) return new Promise(function (r) { setTimeout(r, 400); }).then(function () { return once(left - 1); });
-      if (starter && others.length && !(starter.items || []).length && !(starter.photos || []).length && !String(starter.text || '').trim()) {
-        return api('noteDelete', { id: projectId, noteId: starterId }).catch(function (er) { if (/not found|gone/i.test(er.message || '')) return; throw er; });
-      }
-    });
-  }
-  return once(2);
-}
-function cloneNotesInto(src, notes, dest) {
-  var starterId = dest.notes && dest.notes[0] && dest.notes[0].id, copied = 0;
-  return notes.reduce(function (p, n) {
-    return p.then(function () {
-      return cloneOneNote(src, n, dest.id).then(function () { copied++; if (copied === 1 && starterId) return dropEmptyStarter(dest.id, starterId); });
-    });
-  }, Promise.resolve()).then(function () { return api('customerGet', { id: dest.id }); }).then(function (p) {
-    if (!copied) return api('customerDelete', { id: p.id }).then(function () { throw new Error('Nothing was copied.'); });
-    return p;
-  }).catch(function (er) {
-    if (!copied && dest && dest.id) return api('customerDelete', { id: dest.id }).then(function () { throw er; }, function () { throw er; });
-    throw er;
-  });
-}
-function showCopied(p) {
-  var n = (p.notes || [])[0];
-  if (n) setCur(p, n);
-  openCust(p.id, p, n && n.id);
-  toast('Cloned into ' + projLabel(p));
-}
 function noteMenu(id) { var c = custOpen, n = (c.notes || []).filter(function (x) { return x.id === id; })[0]; if (!n) return;
-  openSheet('<h3 class="notr">' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
-    '<button class="btn" id="ncClone">Clone note</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button>' +
-    '<button class="btn sec" id="ncNew" style="margin-top:8px">Clone to new project…</button><button class="btn sec" id="ncHist" style="margin-top:8px">Version history</button>' +
-    '<div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
+  openSheet('<h3>' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
+    '<button class="btn" id="ncClone">Clone note</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
   $('ncClone').onclick = function () { this.disabled = true; this.textContent = 'Cloning…';
     cloneNote(c, n, c.id).then(closeSheet, function (er) { msg($('ncMsg'), er.message); $('ncClone').disabled = false; $('ncClone').textContent = 'Clone note'; }); };
   $('ncOther').onclick = function () { this.disabled = true; $('ncList').innerHTML = '<div class="spinner"></div>';
     api('customerList', { filter: {} }).then(function (l) { l = l.filter(function (x) { return x.id !== c.id; });
       $('ncList').innerHTML = '<div class="mvh">Clone “' + esc(n.title) + '” into…</div>' + (l.length ? l.map(function (x) { return '<button class="crow2" data-clto="' + esc(x.id) + '"><b>' + esc(projLabel(x)) + '</b><span class="s">' + (x.noteList || []).length + ' notes</span></button>'; }).join('') : '<div class="empty">No other projects.</div>'); })
       .catch(function (er) { msg($('ncMsg'), er.message); }); };
-  $('ncNew').onclick = function () {
-    askCopyName(c, 'Clone to new project…', 'Copies this note into a new project. This project stays as it is.', function (name) {
-      return makeProjectCopy(c, name).then(function (dest) { return cloneNotesInto(c, [n], dest); }).then(showCopied);
-    });
-  };
-  $('ncHist').onclick = function () { openNoteHistory(c, n); };
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-clto]'); if (!b) return; b.disabled = true; b.querySelector('b').textContent += ' · cloning…';
     cloneNote(c, n, b.dataset.clto).then(closeSheet, function (er) { msg($('ncMsg'), er.message); b.disabled = false; }); }; }
 function cloneNote(c, n, toId) {
-  return flushAutosave().then(function (ok) { if (!ok) throw new Error('Not saved yet. Check the connection and try again.'); return cloneOneNote(c, n, toId); }).then(function (note) {
-    if (toId === c.id) { c.notes.push(note); setCur(c, note); noteOpenId = note.id; if (custOpen === c) { renderNoteCards(); scrollToNote(note.id); } toast('Cloned: ' + note.title + ' (adding here)'); }
-    else { openCust(toId, null, note.id); api('customerGet', { id: toId }).then(function (t) { setCur(t, note); }).catch(function () {}); toast('Cloned into another project: ' + note.title); } });
-}
-// Version history is per note on this phone (the project cache only keeps the current copy). Last 20 saves.
-// Photo bytes, when this phone has them, sit in IndexedDB so a restore can put a removed photo back.
-var HIST_MAX = 20, histPause = false, histOpen = null;
-function histKey(id) { return 'esNoteHist:' + (session ? ((session.account || '') + ':' + String(session.name || '').toLowerCase()) : '') + ':' + id; }
-function loadHist(id) { try { var a = JSON.parse(localStorage.getItem(histKey(id)) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-function saveHist(id, list) {
-  try { localStorage.setItem(histKey(id), JSON.stringify(list)); }
-  catch (e) { if (list.length > 1) { list.pop(); saveHist(id, list); } }
-}
-function snapSame(a, b) {
-  return !!(a && b && a.title === b.title && a.text === b.text && JSON.stringify(a.items) === JSON.stringify(b.items) && JSON.stringify(a.photos) === JSON.stringify(b.photos));
-}
-function noteSnap(n) {
-  return { at: Date.now(), title: n.title || '', text: n.text || '',
-    items: (n.items || []).map(function (l) { return { name: l.name, desc: l.desc || '', qty: l.qty, note: l.note || '', photo: l.photo || '' }; }),
-    photos: (n.photos || []).slice() };
-}
-function keepPhotoBlob(fid, data) { if (!fid || !data || String(data).indexOf('data:') !== 0 || !window.indexedDB) return; idb('readwrite', function (st) { st.put(data, 'ph:' + fid); }).catch(function () {}); }
-function photoBlob(fid) {
-  if (fileCache[fid]) return Promise.resolve(fileCache[fid]);
-  if (!window.indexedDB) return Promise.resolve('');
-  return idb('readonly', function (st) { return st.get('ph:' + fid); }).then(function (d) { return d || ''; }).catch(function () { return ''; });
-}
-function ensurePhotoBlob(c, fid) {
-  return photoBlob(fid).then(function (data) {
-    if (data) return data;
-    if (!c) return '';
-    return api('customerFile', { id: c.id, fileId: fid }).then(function (r) {
-      if (r && r.data) { fileCache[fid] = r.data; keepPhotoBlob(fid, r.data); return r.data; }
-      return '';
-    }, function () { return ''; });
-  });
-}
-function rememberNoteVersion(n, force) {
-  if ((histPause && !force) || !n || !n.id || String(n.id).indexOf('tmp-') === 0) return;
-  (n.photos || []).forEach(function (fid) { if (fileCache[fid]) keepPhotoBlob(fid, fileCache[fid]); });
-  var snap = noteSnap(n), list = loadHist(n.id);
-  if (snapSame(list[0], snap)) return;
-  list.unshift(snap); if (list.length > HIST_MAX) list.length = HIST_MAX;
-  saveHist(n.id, list);
-}
-function histWhen(ms) {
-  try { return new Date(ms).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }); }
-  catch (e) { return whenTxt(ms); }
-}
-function clearNoteDirtyState(n) {
-  if (!n) return;
-  Object.keys(lineHold).forEach(function (id) { if (lineHold[id] === n.id) delete lineHold[id]; });
-  (n.items || []).forEach(function (l) { lineBase[l.id] = lineKey(l); nameBase[l.id] = l.name; });
-  if (varHold && varHold.noteId === n.id) varHold = null;
-  ordBase[n.id] = noteOrderKey(n);
-  if (!curNote() || curNote() === n) ordPending = false;
-  n._baseTitle = n.title || ''; n._baseText = n.text || '';
-  if (curNote() === n) noteDirty = false;
-  scheduleAutosave();
-}
-function syncNotePhotos(c, n, want) {
-  want = want || [];
-  var have = (n.photos || []).slice(), wantSet = {}, haveSet = {}, missing = 0;
-  want.forEach(function (f) { wantSet[f] = 1; }); have.forEach(function (f) { haveSet[f] = 1; });
-  var chain = Promise.resolve();
-  have.forEach(function (fid) {
-    if (wantSet[fid]) return;
-    chain = chain.then(function () {
-      return ensurePhotoBlob(c, fid).then(function () {
-        return api('customerFileRemove', { id: c.id, fileId: fid, noteId: n.id }).then(function (r) {
-          n.photos = (r && r.photos) || (n.photos || []).filter(function (x) { return x !== fid; });
-        });
-      });
-    });
-  });
-  want.forEach(function (fid) {
-    if (haveSet[fid]) return;
-    chain = chain.then(function () {
-      return photoBlob(fid).then(function (data) {
-        if (!data) { missing++; return; }
-        var mime = (String(data).match(/^data:([^;]+)/) || [])[1] || 'image/jpeg';
-        return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: { data: data, mimeType: mime } }).then(function (r) {
-          if (r && r.fileId) { fileCache[r.fileId] = data; keepPhotoBlob(r.fileId, data); }
-          if (r && r.photos) n.photos = r.photos;
-        }, function () { missing++; });
-      });
-    });
-  });
-  return chain.then(function () { return missing; });
-}
-function applyNoteSnapshot(c, n, snap) {
-  rememberNoteVersion(n, true);
-  histPause = true;
-  return api('noteSave', { id: c.id, noteId: n.id, title: snap.title || n.title, text: snap.text || '' }).then(function () {
-    return api('customerGet', { id: c.id });
-  }).then(function (fresh) {
-    var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
-    var ids = ((fn && fn.items) || []).map(function (l) { return l.id; }), chain = Promise.resolve();
-    for (var i = ids.length - 1; i >= 0; i--) {
-      (function (id) { chain = chain.then(function () {
-        return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: id }).catch(function (er) {
-          if (/not found|gone/i.test(er.message || '') && !/^project not found/i.test(er.message || '')) return; throw er;
-        });
-      }); })(ids[i]);
-    }
-    (snap.items || []).forEach(function (l) {
-      chain = chain.then(function () {
-        return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' } })
-          .then(function (r) { if (r && r.items) n.items = r.items; if (r && r.note) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; } });
-      });
-    });
-    return chain.then(function () { if (!(snap.items || []).length) n.items = []; });
-  }).then(function () { return syncNotePhotos(c, n, snap.photos || []); }).then(function (missing) {
-    histPause = false;
-    n.title = snap.title || n.title; n.text = snap.text || '';
-    clearNoteDirtyState(n); rememberNoteVersion(n); pcSave(c);
-    if (isCurNote(c.id, n.id)) syncCount();
-    return missing;
-  }).catch(function (er) {
-    histPause = false;
-    return api('customerGet', { id: c.id }).then(function (fresh) {
-      var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
-      if (fn) { n.items = fn.items || []; n.photos = fn.photos || []; n.title = fn.title; n.text = fn.text || ''; n.updated = fn.updated; n.updated_by = fn.updated_by; clearNoteDirtyState(n); if (custOpen === c) renderOverview(); }
-      throw er;
-    }, function () { throw er; });
-  });
-}
-function restoreNoteVersion(c, n, snap) {
-  function waitIdle(left) { if ((!phBusy && !varBusy) || left <= 0) return Promise.resolve(); return new Promise(function (r) { setTimeout(r, 200); }).then(function () { return waitIdle(left - 1); }); }
-  return waitIdle(25).then(function () { return flushAutosave(); }).then(function (ok) {
-    if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
-    return applyNoteSnapshot(c, n, snap);
-  });
-}
-function versionPreview(h, i) {
-  var s = h.list[i]; if (!s) return;
-  var rows = (s.items || []).map(function (l, k) {
-    return '<div class="shrow" style="cursor:default"><span><b class="notr">' + (k + 1) + '. ' + esc(l.name) + '</b><span class="s notr">× ' + esc(l.qty || 1) + (l.note ? ' · ' + esc(l.note) : '') + '</span></span></div>';
-  }).join('');
-  openSheet('<h3>Version history</h3><div class="hint" style="margin:0 0 8px"><span class="notr">' + esc(histWhen(s.at)) + '</span> · ' + (s.items || []).length + ' items' +
-    ((s.photos || []).length ? ' · ' + s.photos.length + ' photos' : '') + '</div>' +
-    '<div class="notr" style="font-weight:800;font-size:16px;margin-bottom:4px">' + esc(s.title || '') + '</div>' +
-    (String(s.text || '').trim() ? '<div class="hint notr" style="margin:0 0 8px">' + esc(s.text) + '</div>' : '') +
-    (rows || '<div class="empty">No items in this version.</div>') +
-    '<button class="btn" id="hvRestore" style="margin-top:10px">Restore this version</button><button class="btn sec" id="hvBack" style="margin-top:8px">Back</button><div id="hvMsg" class="msg hidden"></div>');
-  $('hvBack').onclick = function () { openNoteHistory(h.c, h.n); };
-  $('hvRestore').onclick = function () { var b = this; b.disabled = true; b.textContent = 'Restoring…';
-    restoreNoteVersion(h.c, h.n, s).then(function (missing) { closeSheet(); if (custOpen === h.c) renderOverview(); toast(missing ? 'Some photos from that version are no longer on the server.' : 'Restored this version.'); },
-      function (er) { if ($('hvMsg')) msg($('hvMsg'), er.message || 'Not saved yet. Check the connection and try again.'); if ($('hvRestore')) { $('hvRestore').disabled = false; $('hvRestore').textContent = 'Restore this version'; } }); };
-}
-function openNoteHistory(c, n) {
-  var list = loadHist(n.id); histOpen = { c: c, n: n, list: list };
-  var head = '<h3>Version history</h3><div class="hint notr" style="margin:0 0 8px">' + esc(n.title) + '</div>';
-  if (!list.length) { openSheet(head + '<div class="empty">No saved versions yet. A version is kept on this phone each time the note saves.</div>'); return; }
-  openSheet(head + '<div class="hint" style="margin:0 0 8px">Kept on this phone, last 20 saves.</div>' + list.map(function (s, i) {
-    var cnt = (s.items || []).length, ph = (s.photos || []).length;
-    return '<button class="crow2" data-hv="' + i + '"><b class="notr">' + esc(histWhen(s.at)) + '</b><span class="s">' + cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + '</span></button>';
-  }).join(''));
-  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-hv]'); if (!b || !histOpen) return; versionPreview(histOpen, +b.dataset.hv); };
+  return (noteOpenId === n.id ? flushNote() : Promise.resolve()).then(function () { return api('noteClone', { id: c.id, noteId: n.id, toId: toId }); }).then(function (r) {
+    if (toId === c.id) { c.notes.push(r.note); setCur(c, r.note); noteOpenId = r.note.id; if (custOpen === c) { renderNoteCards(); scrollToNote(r.note.id); } toast('Cloned: ' + r.note.title + ' (adding here)'); }
+    else { openCust(toId, null, r.note.id); api('customerGet', { id: toId }).then(function (t) { setCur(t, r.note); }).catch(function () {}); toast('Cloned into another project: ' + r.note.title); } });
 }
 function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
-  if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); markLine(l); }
-  else if (t.dataset.lnote) { l.note = t.value; markLine(l); }
+  if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); setLine(l, { qty: l.qty }); }
+  else if (t.dataset.lnote) { clearTimeout(lnoteT[l.id]); l.note = t.value; setLine(l, { note: l.note }); }
 });
 document.addEventListener('input', function (e) { var t = e.target; if (!t.dataset.lnote || !t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
-  l.note = t.value; markLine(l); });
+  l.note = t.value; clearTimeout(lnoteT[l.id]); lnoteT[l.id] = setTimeout(function () { setLine(l, { note: l.note }); }, 1000); });
 /** Phone photos are shrunk before upload (longest side 1600 px, JPEG): fast on the floor's Wi-Fi, small in Drive. */
 function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = new FileReader(); rd.onerror = function () { rej(new Error('Could not read the photo.')); };
   rd.onload = function () { var img = new Image(); img.onerror = function () { rej(new Error('This photo type is not supported here. Try a JPG.')); };
     img.onload = function () { var k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
       cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); res({ data: cv.toDataURL('image/jpeg', 0.82), mimeType: 'image/jpeg' }); };
     img.src = rd.result; }; rd.readAsDataURL(file); }); }
-/** Quote this note: the existing cart_quote webhook flow (same payload + optional note_title), filled from this customer + note.
- *  Quote project uses that same cartQuote call for every note, in note order, and saves the project first. */
-/** The "Quote Note N" button (beside Quote project) quotes the OPEN note: "Quote Note 2" / "Quote Kitchen". */
-var quoteFor = null, quoteBusy = false;
-function quoteBtn(keep) { var b = $('cdQuote'), a = $('cdQuoteAll'); if (!b) return; var n = curNote(), t = n ? (($('nTitle') && $('nTitle').value.trim()) || n.title) : '';
-  b.textContent = n ? 'Quote ' + t : 'Quote this note (open a note first)';
-  if (!quoteBusy) { b.disabled = !n; if (a) a.disabled = false; }
-  if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; if (!quoteBusy && !keep) msg($('cdMsg'), ''); } }
-function quoteLock(on) { quoteBusy = on; var b = $('cdQuote'), a = $('cdQuoteAll');
-  if (on) { if (b) b.disabled = true; if (a) a.disabled = true; } else quoteBtn(true); }
-function lineNoteBits(it) { return (it || []).filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + String(l.note).trim(); }); }
-function quoteSent(r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Building Supply.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); }
+/** Quote this note: the existing cart_quote webhook flow (same payload + optional note_title), filled from this customer + note. */
+/** The one "Quote this note" button (under Save project) quotes the OPEN note: "Quote Note 2" / "Quote Kitchen". */
+var quoteFor = null;
+function quoteBtn() { var b = $('cdQuote'); if (!b) return; var n = curNote(), t = n ? (($('nTitle') && $('nTitle').value.trim()) || n.title) : '';
+  b.textContent = n ? 'Quote ' + t : 'Quote this note (open a note first)'; b.disabled = !n;
+  if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; msg($('cdMsg'), ''); } }
 function quoteCust() {
-  var c = custOpen, n = curNote(); if (!n || quoteBusy) { quoteBtn(); return; } var it = n.items || [];
+  var c = custOpen, n = curNote(), b = $('cdQuote'); if (!n) { quoteBtn(); return; } var it = n.items || [];
   if (!it.length) { msg($('cdMsg'), 'No items in this note yet. Add items from Search first.'); return; }
-  quoteLock(true); msg($('cdMsg'), isAutosaveDirty() ? 'Saving…' : 'Sending…', true);
-  flushAutosave().then(function (ok) {
-    if (!ok) { msg($('cdMsg'), 'Not saved yet. Check the connection and try again.'); return; }
-    n = curNote(); if (!n || custOpen !== c) return; var it2 = n.items || [];
-    var notes = [String(n.text || '').trim()].concat(lineNoteBits(it2)).filter(Boolean).join('\n');
-    msg($('cdMsg'), 'Sending…', true);
+  b.disabled = true; msg($('cdMsg'), 'Sending…', true);
+  flushNote().then(function () {
+    var notes = [String(n.text || '').trim()].concat(it.filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + l.note.trim(); })).filter(Boolean).join('\n');
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
-      items: it2.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it2.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
-  }).then(function (r) { if (r) quoteSent(r); }).catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { quoteLock(false); });
+      items: it.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
+  }).then(function (r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Building Supply.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); })
+    .catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { b.disabled = false; quoteBtn(); });
 }
-/** Whole project: same cartQuote shape. Every note's items stay in that note's order; titles go in the notes text the webhook already gets,
- *  and also in project_notes / whole_project for a server that stores the cart as sent. */
-function quoteProject() {
-  var c = custOpen; if (!c || quoteBusy) return;
-  var count = (c.notes || []).reduce(function (a, n) { return a + ((n.items || []).length); }, 0);
-  if (!count) { msg($('cdMsg'), 'No items in this project yet. Add items from Search first.'); return; }
-  quoteLock(true); msg($('cdMsg'), 'Saving…', true);
-  var saveBtn = $('cdSaveAll'); if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
-  persistProject().then(function (ok) {
-    if (custOpen !== c) return;
-    markProjectSaved(ok, false);
-    if (!ok) { msg($('cdMsg'), 'Not saved yet. Check the connection and try again.'); return; }
-    var notes = c.notes || [], items = [], lines = [], sections = [], projectNotes = [];
-    notes.forEach(function (n) {
-      var it = n.items || [], text = String(n.text || '').trim(), title = n.title || 'Note';
-      it.forEach(function (l) { items.push({ item: l.name, qty: l.qty }); lines.push({ name: l.name, qty: l.qty }); });
-      var body = [text].concat(lineNoteBits(it)).filter(Boolean).join('\n');
-      sections.push(body ? title + '\n' + body : title);
-      projectNotes.push({ title: title, text: text, items: it.map(function (l) { return { name: l.name, qty: l.qty, note: String(l.note || '').trim() }; }) });
-    });
-    msg($('cdMsg'), 'Sending…', true);
-    return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: sections.join('\n\n'), note_title: projLabel(c),
-      items: items, lines: lines, whole_project: true, project_notes: projectNotes } }).then(quoteSent);
-  }).catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { quoteLock(false); });
-}
-function planFromCust() { snapshotInputs(); var c = custOpen, n = curNote();
+function planFromCust() { var c = custOpen, n = curNote(); flushNote();
   go('plan'); planInit().then(function () { setPlanRev(null); setPlanKeep(null); clearReader(); msg($('plMsg'), '');
     $('plName').value = custLabel(c); $('plPhone').value = c.phone || ''; $('plCity').value = c.city || ''; $('plTax').value = c.tax === 'Fremont' ? 'Fremont' : 'SF';
     if (!$('plNotes').value.trim()) $('plNotes').value = n ? (n.title + (n.text ? ': ' + n.text : '')) : ''; toast('Plan form filled for ' + custLabel(c)); }); }
@@ -2415,12 +1395,8 @@ function openRequest(rid) {
       kv('Discount', p.discount_pct == null ? 'default' : p.discount_pct + '%') + kv('Tax', p.tax_store) + kv('Revised from', p.revised_from) +
       kv('Status', r.status + (r.sends > 1 ? ' (sent ' + r.sends + '×)' : ''));
     if (cartK) { var sub = g.lines.reduce(function (a, l) { return a + l.price * l.qty; }, 0);
-      function cartLineRow(l) { return '<div class="kv"><span>' + l.qty + ' × ' + esc(l.name) + (l.missing ? ' <span class="missing">(gone)</span>' : '') + '</span><b>' + (l.missing ? '' : money(l.price * l.qty)) + '</b></div>'; }
-      var groups = Array.isArray(p.project_notes) ? p.project_notes : null, used = 0;
-      if (groups && groups.length) groups.forEach(function (gn) { var nItems = (gn.items || []).length, chunk = g.lines.slice(used, used + nItems); used += nItems;
-        body += '<div class="sec-h" style="margin-top:12px"><h2 class="notr" style="text-transform:none;letter-spacing:0;font-size:15px;color:var(--text)">' + esc(gn.title || 'Note') + '</h2></div>' + (chunk.length ? chunk.map(cartLineRow).join('') : '<div class="hint">None</div>'); });
-      if (!groups || !groups.length || used < g.lines.length) body += '<div class="sec-h" style="margin-top:12px"><h2>Items</h2></div>' + g.lines.slice(groups && groups.length ? used : 0).map(cartLineRow).join('');
-      body += (g.lines.some(function (l) { return l.price == null && !l.missing; }) ? '' : '<div class="kv"><span>Retail today (before tax)</span><b>' + money(sub) + '</b></div>'); }
+      body += '<div class="sec-h" style="margin-top:12px"><h2>Items</h2></div>' + g.lines.map(function (l) { return '<div class="kv"><span>' + l.qty + ' × ' + esc(l.name) + (l.missing ? ' <span class="missing">(gone)</span>' : '') + '</span><b>' + (l.missing ? '' : money(l.price * l.qty)) + '</b></div>'; }).join('') +
+        (g.lines.some(function (l) { return l.price == null && !l.missing; }) ? '' : '<div class="kv"><span>Retail today (before tax)</span><b>' + money(sub) + '</b></div>'); }
     else { var t = Object.keys(p.trim || {}).filter(function (k) { return p.trim[k] !== '' && p.trim[k] != null; });
       body += '<div class="sec-h" style="margin-top:12px"><h2>Trim</h2></div>' + (t.length ? t.map(function (k) { return kv(k, p.trim[k]); }).join('') : '<div class="hint">None</div>');
       if (p.cabinet_list && p.cabinet_list.length) body += '<div class="sec-h" style="margin-top:12px"><h2>Cabinet list (staff-confirmed)</h2></div>' +
@@ -2466,6 +1442,51 @@ function loadRequestIntoForm(rid, clone, btn) {
     }
   }).catch(function (er) { toast(er.message); }).then(function () { if (btn) btn.disabled = false; });
 }
+// ---------------- reported missing (Reports.gs on the server). Hidden unless listReports answers supported:true.
+var meName = '', rmList = [], rmResolved = false, RM_STORE_KEY = 'esRmStore';
+function rmCount() { var n = rmList.filter(function (r) { return r.status !== 'resolved'; }).length, b = $('rmBadge'); b.textContent = n; b.classList.toggle('hidden', !n); }
+function rmProbe() { return serverApi('listReports', {}).then(function (r) { var ok = !!(r && r.supported === true); document.body.classList.toggle('rmon', ok); rmList = ok ? (r.reports || []) : []; rmCount(); return ok; }, function () { document.body.classList.remove('rmon'); return false; }); }
+function rmDate(ms) { var d = new Date(Number(ms)); return isNaN(d) ? '' : d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' PT'; }
+function reportMissing(name) { var it = shown[name] || { name: name, desc: '' }, st = 'SF';
+  try { st = localStorage.getItem(RM_STORE_KEY) === 'FRE' ? 'FRE' : 'SF'; } catch (e) {}
+  openSheet('<h3>Report missing</h3><div class="notr" style="font-weight:700">' + esc(it.name) + '</div><div class="hint notr" style="margin:2px 0 10px">' + esc(String(it.desc || '').slice(0, 120)) + '</div>' +
+    '<label class="f">Qty missing</label><input id="rmQty" type="number" inputmode="numeric" min="1" max="9999" step="1" value="1">' +
+    '<label class="f">Store</label><div class="rmseg" id="rmStore"><button type="button" data-s="SF"' + (st === 'SF' ? ' class="active"' : '') + '>SF</button><button type="button" data-s="FRE"' + (st === 'FRE' ? ' class="active"' : '') + '>FRE</button></div>' +
+    '<label class="f">Note (optional)</label><textarea id="rmNote" maxlength="300" rows="2" placeholder="Where you looked, who asked…"></textarea>' +
+    '<div class="actions" style="margin-top:12px"><button onclick="closeSheet()">Cancel</button><button class="primary" id="rmSend">Send report</button></div><div id="rmMsg" class="msg err hidden"></div>');
+  $('rmStore').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; st = b.dataset.s; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); };
+  $('rmSend').onclick = function () { var q = Number($('rmQty').value), b = this;
+    if (!(q >= 1 && q <= 9999 && Math.floor(q) === q)) { msg($('rmMsg'), 'Qty must be a whole number from 1 to 9999.'); return; }
+    b.disabled = true; try { localStorage.setItem(RM_STORE_KEY, st); } catch (e) {}
+    serverApi('reportMissing', { item: it.name, desc: String(it.desc || '').slice(0, 200), qty: q, store: st, note: $('rmNote').value.trim().slice(0, 300) })
+      .then(function (r) { closeSheet(); toast('Reported missing. Thanks!'); if (r && r.report) { rmList.unshift(r.report); rmCount(); } })
+      .catch(function (er) { msg($('rmMsg'), er.message); b.disabled = false; }); };
+}
+function rmRowHtml(r) { var own = meName && r.who === meName, open = r.status !== 'resolved';
+  return '<div class="rmrow"><div class="top" style="display:flex;justify-content:space-between;gap:8px"><b class="notr">' + esc(r.item) + '</b><span class="chip">' + esc(r.store) + ' · ' + 'qty' + ' ' + qty(r.qty) + '</span></div>' +
+    (r.desc ? '<div class="rmmeta notr">' + esc(r.desc) + '</div>' : '') +
+    '<div class="rmmeta"><span class="notr">' + esc(r.who) + '</span> · ' + esc(rmDate(r.when)) + '</div>' +
+    (r.note ? '<div class="rmnote notr">' + esc(r.note) + '</div>' : '') +
+    (!open ? '<div class="rmmeta">Found by <span class="notr">' + esc(r.resolvedBy || '') + '</span>' + (r.resolvedAt ? ' · ' + esc(rmDate(r.resolvedAt)) : '') + '</div>' : '') +
+    '<div class="actions">' + (open ? '<button class="primary" data-rm="found" data-id="' + esc(r.id) + '">Mark found</button>' : '') + (own ? '<button data-rm="del" data-id="' + esc(r.id) + '">Delete</button>' : '') + '</div></div>'; }
+function rmRender() { var rows = rmList.filter(function (r) { return rmResolved ? r.status === 'resolved' : r.status !== 'resolved'; })
+    .sort(function (a, b) { return Number(rmResolved ? (b.resolvedAt || b.when) : b.when) - Number(rmResolved ? (a.resolvedAt || a.when) : a.when); });
+  var el = $('rmListEl'); if (el) el.innerHTML = rows.length ? rows.map(rmRowHtml).join('') : '<div class="empty">' + (rmResolved ? 'No found reports yet.' : 'No open reports.') + '</div>'; }
+function rmOpen() { openSheet('<div class="sec-h"><h3>Reported missing</h3><button class="link" id="rmRef">Refresh</button></div>' +
+    '<div class="rmseg" id="rmView"><button type="button" data-v="open"' + (rmResolved ? '' : ' class="active"') + '>Still missing</button><button type="button" data-v="res"' + (rmResolved ? ' class="active"' : '') + '>Found</button></div>' +
+    '<div id="rmListEl"><div class="empty">Loading…</div></div><div id="rmLMsg" class="msg err hidden"></div>');
+  rmRender(); rmProbe().then(rmRender);
+  $('rmRef').onclick = function () { rmProbe().then(rmRender); };
+  $('rmView').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rmResolved = b.dataset.v === 'res'; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); rmRender(); };
+  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-rm]'); if (!b) return; var id = b.dataset.id, del = b.dataset.rm === 'del';
+    if (del && !confirm('Delete this report?')) return; b.disabled = true;
+    serverApi(del ? 'deleteReport' : 'resolveReport', { id: id }).then(function (r) {
+      if (del) rmList = rmList.filter(function (x) { return String(x.id) !== String(id); });
+      else rmList = rmList.map(function (x) { return String(x.id) === String(id) ? (r && r.report) || Object.assign({}, x, { status: 'resolved', resolvedBy: meName, resolvedAt: Date.now() }) : x; });
+      rmCount(); rmRender(); toast(del ? 'Report deleted.' : 'Marked found.'); })
+      .catch(function (er) { msg($('rmLMsg'), er.message); b.disabled = false; }); };
+}
+$('rmBtn').onclick = rmOpen;
 function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600); }
 
 // ---------------- tile calculator (tile math only: area, waste %, pieces / boxes, coverage, tile cost). Opens from a tile
@@ -2676,7 +1697,7 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
         if (u.me) { session.name = r.name; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); setHeader(session); } loadUsers(); })
       .catch(function (er) { msg($('rnMsg'), er.message); g.disabled = false; }); }; }
   else if (k === 'role') { var RL = { admin: 'Full admin', account_admin: 'Account admin', staff: 'Staff', warehouse: 'Warehouse' };
-    openSheet('<h3>Change role for ' + esc(u.name) + '</h3><p class="hint">Full admin: everything, every account. Account admin: their own account and its staff. Staff: search, prices, projects. Warehouse: search, stock, and reported missing inventory, never prices. It takes effect on their next tap; they stay signed in.</p>' +
+    openSheet('<h3>Change role for ' + esc(u.name) + '</h3><p class="hint">Full admin: everything, every account. Account admin: their own account and its staff. Staff: search, prices, projects. Warehouse: search and stock only, never prices. It takes effect on their next tap; they stay signed in.</p>' +
       '<label class="f">Role</label><select id="rlSel">' + Object.keys(RL).map(function (r) { return '<option value="' + r + '"' + (r === u.role ? ' selected' : '') + '>' + RL[r] + '</option>'; }).join('') + '</select><button class="btn" id="rlGo">Change role</button><div id="rlMsg" class="msg hidden"></div>');
     $('rlGo').onclick = function () { var r = $('rlSel').value, g = this; if (r === u.role) { closeSheet(); return; }
       if (!confirm('Change ' + u.name + ' from ' + RL[u.role] + ' to ' + RL[r] + '?' + (r === 'admin' ? '\n\nA full admin can see every project, change webhooks and manage every login.' : '') + (u.me ? '\n\nThis is your own login. You lose full admin right away.' : ''))) return;
