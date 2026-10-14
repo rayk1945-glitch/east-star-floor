@@ -316,6 +316,12 @@
   body.wh #custBar, body.wh .toplinks .plan, body.wh #adminBtn, body.wh #bnav [data-go="cust"], body.wh #bnav [data-go="history"],
   body:not(.rmon) .rmfeat { display:none !important; }
   .rmbadge { display:inline-block; min-width:18px; margin-left:5px; padding:0 5px; border-radius:999px; background:#b91c1c; color:#fff; font-size:11px; line-height:18px; text-align:center; }
+  /* One short chip per store with open missing reports, right after that store's qty chip. Hidden until listReports says supported. */
+  .locstock { align-items: center; }
+  .locstock button.rmmiss { appearance:none; -webkit-appearance:none; display:inline-flex; align-items:center; gap:3px; margin:0; border:1px solid #e08a1e; background:var(--warn-bg); color:var(--warn-fg);
+    cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; text-align:center; border-radius:999px; padding:4px 8px; min-height:32px;
+    white-space:nowrap; align-self:center; }
+  .locstock button.rmmiss .rmico { font-size:11px; line-height:1; }
   .rmrow { border-top:1px solid var(--line); padding:10px 0; } .rmrow:first-child { border-top:0; } .rmrow .rmmeta { font-size:12.5px; color:var(--muted); margin-top:2px; } .rmrow .rmnote { font-size:13px; margin-top:4px; } .rmrow .actions { margin-top:6px; }
   .rmseg { display:flex; gap:6px; margin:6px 0 10px; } .rmseg button { flex:1; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; } .rmseg button.active { background:var(--navy,#1f2937); color:#fff; border-color:var(--navy,#1f2937); }
   body.wh [onclick^="addItem"], body.wh #tcAdd, body.wh #priceBar { display:none !important; }
@@ -434,7 +440,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261013a"></script>
+<script src="i18n.js?v=20261014a"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -484,7 +490,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261013a';
+var PAGE_VER = '20261014a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -676,7 +682,7 @@ function card(it) {
   var chip = function (l, v) { return v ? '<span class="chip">' + l + ' ' + esc(v) + '</span>' : '<span class="chip none">' + l + ' —</span>'; };
   var ps = perSqft(it), disc = /discontinu/i.test(it.desc) ? ' <span class="chip" style="background:#fdecec;color:#7f1d1d">discontinued</span>' : '';
   var nm = encodeURIComponent(it.name).replace(/'/g, '%27');  // names like 2' x 9' must not break the inline onclick string
-  return '<div class="card item"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
+  return '<div class="card item" data-name="' + nm + '"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
     '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
     '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
@@ -684,7 +690,7 @@ function card(it) {
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
-    '<div class="shelf">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + (locList(it.loc).length ? '<div class="shelf locstock"><span class="loclbl">' + 'Stock by store' + '</span>' + locList(it.loc).map(function (l) { return '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>'; }).join('') + '</div>' : '') + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
+    '<div class="shelf shelves">' + chip('SF shelf', it.sf) + chip('FRE shelf', it.fre) + '</div>' + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
     '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
@@ -693,6 +699,11 @@ function card(it) {
 
 // ---------------- search
 var timer = null, seq = 0;
+$('results').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-rmitem]'); if (!b) return;
+  var name = b.getAttribute('data-rmitem') || ''; try { name = decodeURIComponent(name); } catch (err) {}
+  rmChipOpen(name);
+});
 $('q').addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(runSearch, 300); qxShow(); });
 $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(timer); runSearch(null, true); this.blur(); } });
 $('q').addEventListener('focus', function () { if (!this.value.trim()) renderRecent(); });
@@ -1444,7 +1455,87 @@ function loadRequestIntoForm(rid, clone, btn) {
 }
 // ---------------- reported missing (Reports.gs on the server). Hidden unless listReports answers supported:true.
 var meName = '', rmList = [], rmResolved = false, RM_STORE_KEY = 'esRmStore';
-function rmCount() { var n = rmList.filter(function (r) { return r.status !== 'resolved'; }).length, b = $('rmBadge'); b.textContent = n; b.classList.toggle('hidden', !n); }
+/** SF / FRE (or the full city name) so a missing chip can follow that store's qty chip. */
+function locStoreKey(label) {
+  var s = String(label || '').trim().toUpperCase().replace(/\./g, '');
+  if (s === 'SF' || s === 'SAN FRANCISCO') return 'SF';
+  if (s === 'FRE' || s === 'FREMONT') return 'FRE';
+  return '';
+}
+function rmOpenFor(name) {
+  var key = String(name || '').trim();
+  if (!key) return [];
+  return rmList.filter(function (r) { return r && r.status !== 'resolved' && String(r.item || '').trim() === key; });
+}
+function rmStoreRank(s) { return s === 'SF' ? 0 : s === 'FRE' ? 1 : 2; }
+/** Open qty summed per store. Blank store becomes "—". */
+function rmSums(name) {
+  var sum = {}, i, r, st, rows = rmOpenFor(name);
+  for (i = 0; i < rows.length; i++) {
+    r = rows[i]; st = String(r.store || '').trim().toUpperCase() || '—';
+    sum[st] = (sum[st] || 0) + (Number(r.qty) || 0);
+  }
+  return sum;
+}
+function rmMissBtn(name, store, n) {
+  return '<button type="button" class="chip rmmiss rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '"><span class="rmico" aria-hidden="true">⚠</span>' + esc(store + ' -' + qty(n)) + '</button>';
+}
+/** Stock key for a loc label: SF/FRE aliases, otherwise the label itself when it matches a report store. */
+function rmLocKey(label, sums) {
+  var key = locStoreKey(label);
+  if (key) return key;
+  var raw = String(label || '').trim().toUpperCase();
+  return raw && sums[raw] != null ? raw : '';
+}
+/** Stock-by-store row. Each store's missing chip sits right after that store's qty chip. A store with reports but no qty chip still gets a chip. */
+function locStockHtml(it) {
+  var name = it && it.name || '', locs = locList(it && it.loc), sums = rmSums(name), placed = {}, chips = [], i, l, key;
+  for (i = 0; i < locs.length; i++) {
+    l = locs[i]; key = rmLocKey(l[0], sums);
+    chips.push({ key: key, html: '<span class="chip ' + (Number(l[1]) > 0 ? 'good' : 'bad') + '">' + esc(l[0]) + ' ' + qty(l[1]) + '</span>' });
+    if (key && sums[key] != null && !placed[key]) {
+      chips.push({ key: key, html: rmMissBtn(name, key, sums[key]) });
+      placed[key] = 1;
+    }
+  }
+  Object.keys(sums).filter(function (s) { return !placed[s]; }).sort(function (a, b) {
+    return rmStoreRank(a) - rmStoreRank(b) || (a < b ? -1 : a > b ? 1 : 0);
+  }).forEach(function (s) {
+    var at = chips.length, j;
+    for (j = 0; j < chips.length; j++) if (chips[j].key && rmStoreRank(chips[j].key) > rmStoreRank(s)) { at = j; break; }
+    chips.splice(at, 0, { key: s, html: rmMissBtn(name, s, sums[s]) });
+  });
+  if (!chips.length) return '';
+  return '<div class="shelf locstock"><span class="loclbl">Stock by store</span>' + chips.map(function (c) { return c.html; }).join('') + '</div>';
+}
+/** Rewrite the stock row on cards already on screen (load, new report, mark found, delete). */
+function rmSyncCards() {
+  var root = $('results'); if (!root || !root.querySelector) return;
+  var cards = root.querySelectorAll('.card.item'), i, el, name, it, html, row, shelf;
+  for (i = 0; i < cards.length; i++) {
+    el = cards[i]; name = el.getAttribute('data-name') || '';
+    try { name = decodeURIComponent(name); } catch (e) {}
+    it = shown[name]; if (!it) continue;
+    html = locStockHtml(it); row = el.querySelector('.locstock');
+    if (!html) { if (row) row.remove(); continue; }
+    if (row) row.outerHTML = html;
+    else { shelf = el.querySelector('.shelves'); if (shelf) shelf.insertAdjacentHTML('afterend', html); else el.insertAdjacentHTML('beforeend', html); }
+  }
+}
+function rmChipOpen(name) {
+  var rows = rmOpenFor(name).slice().sort(function (a, b) { return (Number(b.when) || 0) - (Number(a.when) || 0); });
+  if (!rows.length) { rmSyncCards(); return; }
+  openSheet('<h3>Reported missing</h3><div class="notr" style="font-weight:700;margin-bottom:6px">' + esc(name) + '</div>' +
+    rows.map(function (r) {
+      var st = String(r.store || '').trim();
+      return '<div class="rmrow"><div class="top" style="display:flex;justify-content:space-between;gap:8px"><b class="notr">' + esc(st ? st.toUpperCase() : '—') + '</b><span class="chip"><span>qty</span> ' + qty(r.qty) + '</span></div>' +
+        '<div class="rmmeta">' + (r.who ? '<span class="notr">' + esc(r.who) + '</span>' : '') + (r.who && r.when ? ' · ' : '') + (r.when ? esc(rmDate(r.when)) : '') + '</div>' +
+        (String(r.note || '').trim() ? '<div class="rmnote notr">' + esc(String(r.note).trim()) + '</div>' : '') + '</div>';
+    }).join('') +
+    '<button type="button" class="link" id="rmAll" style="margin-top:12px">See all reports</button>');
+  var all = $('rmAll'); if (all) all.onclick = function () { rmOpen(); };
+}
+function rmCount() { var n = rmList.filter(function (r) { return r.status !== 'resolved'; }).length, b = $('rmBadge'); b.textContent = n; b.classList.toggle('hidden', !n); rmSyncCards(); }
 function rmProbe() { return serverApi('listReports', {}).then(function (r) { var ok = !!(r && r.supported === true); document.body.classList.toggle('rmon', ok); rmList = ok ? (r.reports || []) : []; rmCount(); return ok; }, function () { document.body.classList.remove('rmon'); return false; }); }
 function rmDate(ms) { var d = new Date(Number(ms)); return isNaN(d) ? '' : d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' PT'; }
 function reportMissing(name) { var it = shown[name] || { name: name, desc: '' }, st = 'SF';

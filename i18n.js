@@ -31,6 +31,7 @@
     'Report missing': '报告缺货', 'Reported missing': '缺货报告', 'Missing': '缺货', 'Qty missing': '缺货数量', 'Store': '门店', 'Note (optional)': '备注（可选）', 'Where you looked, who asked…': '找过哪里、谁要的…',
     'Send report': '提交报告', 'Cancel': '取消', 'Qty must be a whole number from 1 to 9999.': '数量必须是 1 到 9999 的整数。', 'Reported missing. Thanks!': '已报告缺货，谢谢！',
     'Mark found': '已找到', 'Found': '已找到', 'Found by': '找到人', 'No open reports.': '没有未解决的缺货报告。', 'No found reports yet.': '还没有已找到的报告。',
+    'See all reports': '查看全部报告', 'Open missing reports': '查看缺货报告',
     'Delete this report?': '删除这条报告？', 'Report deleted.': '报告已删除。', 'Marked found.': '已标记为找到。', 'qty': '数量', 'Still missing': '仍缺货',
     // projects / notes
     'Back to projects': '返回项目列表', '+ Add contact info': '+ 添加联系信息', 'Hide contact info ▴': '收起联系信息 ▴', 'Address': '地址', 'Phone': '电话',
