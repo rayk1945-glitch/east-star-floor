@@ -1508,7 +1508,7 @@ function rmChipLabel(rows) {
 function rmMissChip(name) {
   var rows = rmOpenFor(name);
   if (!rows.length) return '';
-  return '<button type="button" class="chip rmmess rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '">' + esc(rmChipLabel(rows)) + '</button>';
+  return '<button type="button" class="chip rmmiss rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '">' + esc(rmChipLabel(rows)) + '</button>';
 }
 /** Stock-by-store row, including the missing chip when this item has open reports. Empty when there is nothing to show. */
 function locStockHtml(it) {
@@ -1538,7 +1538,8 @@ function rmChipOpen(name) {
   if (!rows.length) { rmSyncCards(); return; }
   openSheet('<h3>Reported missing</h3><div class="notr" style="font-weight:700;margin-bottom:6px">' + esc(name) + '</div>' +
     rows.map(function (r) {
-      return '<div class="rmrow"><div class="top" style="display:flex;justify-content:space-between;gap:8px"><b class="notr">' + esc(r.store || '—') + '</b><span class="chip"><span>qty</span> ' + qty(r.qty) + '</span></div>' +
+      var st = String(r.store || '').trim();
+      return '<div class="rmrow"><div class="top" style="display:flex;justify-content:space-between;gap:8px"><b class="notr">' + esc(st ? st.toUpperCase() : '—') + '</b><span class="chip"><span>qty</span> ' + qty(r.qty) + '</span></div>' +
         '<div class="rmmeta">' + (r.who ? '<span class="notr">' + esc(r.who) + '</span>' : '') + (r.who && r.when ? ' · ' : '') + (r.when ? esc(rmDate(r.when)) : '') + '</div>' +
         (String(r.note || '').trim() ? '<div class="rmnote notr">' + esc(String(r.note).trim()) + '</div>' : '') + '</div>';
     }).join('') +
