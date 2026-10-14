@@ -186,7 +186,11 @@
   .addnote { display:block; width:100%; margin:0 0 12px; min-height:50px; border:2px dashed #94a3b8; border-radius:14px; background:#fff; font:inherit; font-size:16px; font-weight:700; color:#1f2937; cursor:pointer; }
   .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
-  .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
+  .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; align-items:flex-start; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:block; }
+  .nphi { width:72px; } .scanbtn { appearance:none; -webkit-appearance:none; display:block; width:100%; margin-top:3px; border:1px solid var(--line-strong); background:#fff; color:var(--text); border-radius:8px; padding:3px 2px; font:inherit; font-size:10px; font-weight:700; line-height:1.15; min-height:32px; cursor:pointer; }
+  .scanrow { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .scanrow input { width:22px; height:22px; margin-top:2px; flex:none; } .scanrow b { display:block; font-size:15px; word-break:break-word; } .scanrow span span { display:block; font-size:12.5px; color:var(--muted); }
+  .scanqs { display:flex; flex-wrap:wrap; gap:6px; } .scanq { min-height:36px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
   .nphb { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
   .nphz { border:2px dashed transparent; border-radius:12px; padding:2px; transition:background .15s,border-color .15s; } .nphd { display:none; text-align:center; font-size:13px; color:var(--muted); padding:6px; }
   .pldz { border:2px dashed transparent; border-radius:12px; padding:4px; } .pldz.drag { border-color:#2563eb; background:#eff6ff; }
@@ -440,7 +444,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014b"></script>
+<script src="i18n.js?v=20261014c"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -490,7 +494,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014b';
+var PAGE_VER = '20261014c';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1175,7 +1179,10 @@ function renderTotals() { var n = curNote(), el = $('cdTotals'); if (!el || !n) 
     '<p class="note">Retail list prices, no discount. Discounts are applied on the official quote.</p>'; }
 function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !n) return; var ps = n.photos || [];
   $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
-  el.innerHTML = ps.length ? ps.map(function (f) { return fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>'; }).join('') : '<span class="hint" style="margin:0">No photos yet.</span>';
+  el.innerHTML = ps.length ? ps.map(function (f) {
+    var pic = fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>';
+    return '<span class="nphi">' + pic + '<button type="button" class="scanbtn" data-scan="' + esc(f) + '">Scan for model #</button></span>';
+  }).join('') : '<span class="hint" style="margin:0">No photos yet.</span>';
   var c = custOpen; el.querySelectorAll('.ld[data-fid]').forEach(function (s) { var f = s.dataset.fid;
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
   $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
@@ -1194,18 +1201,19 @@ function uploadNotePhotos(files) { var c = custOpen, n = curNote(); if (!c || !n
   var room = PH_NOTE_MAX - (n.photos || []).length;
   if (room <= 0) { toast('Max 20 photos per note.'); return; }
   if (files.length > room) { files = files.slice(0, room); toastMsg('This note has room for ' + room + ' more photos (max 20 per note).'); }
-  var total = files.length, done = 0, ok = 0, fail = 0, idx = 0; phBusy = true;
+  var total = files.length, done = 0, ok = 0, fail = 0, idx = 0, added = []; phBusy = true;
   var h = $('nPhotos') && $('nPhotos').querySelector('.hint'); if (h) h.remove();
   files.forEach(function () { $('nPhotos') && $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); });
   function prog() { var b = $('nPhProg'); if (b) { b.textContent = done < total ? 'Uploading ' + done + '/' + total : ''; b.style.display = done < total ? '' : 'none'; } }
   function dropPh() { var u = $('nPhotos') && $('nPhotos').querySelector('[data-up]'); if (u) u.remove(); }
   function one() { if (idx >= total) return Promise.resolve(); var f = files[idx++];
     return shrinkPhoto(f).then(function (d) { return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) { fileCache[r.fileId] = d.data; return r; }); })
-      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; }, function (er) { fail++; n._phErr = er.message; })
+      .then(function (r) { ok++; n.photos = r.photos; n.updated = r.note.updated; if (r && r.fileId) added.push(r.fileId); }, function (er) { fail++; n._phErr = er.message; })
       .then(function () { done++; dropPh(); if (noteOpenId === n.id) { renderNotePhotos(); for (var k = done; k < total; k++) $('nPhotos').insertAdjacentHTML('beforeend', '<span class="ld" data-up="1"></span>'); } prog(); return one(); }); }
   prog();
   Promise.all([one(), one()]).then(function () { phBusy = false; prog();
-    toast(fail ? ok + ' saved, ' + fail + ' failed: ' + (n._phErr || '') : (total === 1 ? 'Photo saved to ' + n.title : ok + ' photos saved to ' + n.title)); delete n._phErr; }); }
+    toast(fail ? ok + ' saved, ' + fail + ' failed: ' + (n._phErr || '') : (total === 1 ? 'Photo saved to ' + n.title : ok + ' photos saved to ' + n.title)); delete n._phErr;
+    if (added.length) scanNotePhotos(added, c.id, n.id); }); }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.dataset.nph || !t.files || !t.files.length) return; var fs = [].slice.call(t.files); t.value = ''; uploadNotePhotos(fs); });
 // drag and drop photos onto the open note
 function phDropZone(e) { return e.target.closest && e.target.closest('.nphz'); }
@@ -1220,6 +1228,229 @@ document.addEventListener('paste', function (e) { if (!custOpen || !noteOpenId |
   if (typing && cd.getData && cd.getData('text/plain')) return;
   e.preventDefault(); fs = fs.map(function (f, i) { return f.name && f.name !== 'image.png' ? f : new File([f], 'pasted-' + Date.now() + '-' + i + '.' + ((f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: f.type }); });
   uploadNotePhotos(fs); });
+/** On-device model-number scan (Tesseract.js, loaded from a CDN only when a photo is scanned). No API key.
+ *  New photos (camera, upload, paste, drop) scan after they save; each thumbnail also has Scan for model #. */
+var scanSeq = 0, scanWant = 0, scanJob = null, ocrWorker = null, ocrLoad = null, ocrChain = Promise.resolve(), ocrOnProg = null;
+var SCAN_NORM_ = null, SCAN_NORM_VER_ = null;
+$('sheetX').addEventListener('click', function () { scanWant = 0; });
+$('sheetBg').addEventListener('click', function () { scanWant = 0; });
+function scanNormIndex(bundle) {
+  var items = (bundle && bundle.items) || [], ver = (bundle && (bundle.version || bundle.built) || '') + '#' + items.length;
+  if (SCAN_NORM_ && SCAN_NORM_VER_ === ver) return SCAN_NORM_;
+  var m = {}, i, k;
+  for (i = 0; i < items.length; i++) { k = normCode_(items[i][0]); if (k.length < 5) continue; (m[k] = m[k] || []).push(i); }
+  SCAN_NORM_ = m; SCAN_NORM_VER_ = ver; return m;
+}
+/** Tokens that look like model numbers (a digit, 5+ letters/digits, # and dashes kept). */
+function scanCandidates(text) {
+  var raw = String(text || '').toUpperCase(), out = [], seen = {}, re = /[A-Z0-9]+(?:[#\-][A-Z0-9]+)*/g, m;
+  function push(s) {
+    s = String(s || '').replace(/\s+/g, ''); if (!s) return;
+    var k = normCode_(s);
+    if (k.length < 5 || k.length > 24 || !/\d/.test(k)) return;
+    if (!/[A-Z]/.test(k) && k.length < 6) return;
+    if (seen[k]) return; seen[k] = 1; out.push(s);
+  }
+  while ((m = re.exec(raw))) push(m[0]);
+  return out;
+}
+/** Exact item name first, then the same match with spaces, dashes and # ignored. */
+function scanMatchItems(text, bundle) {
+  var items = (bundle && bundle.items) || [], exact = bundle ? nameIndex_(bundle) : {}, normMap = bundle ? scanNormIndex(bundle) : {};
+  var cands = scanCandidates(text), matched = [], used = {}, exactNorms = {};
+  function addAt(i) {
+    var r = items[i]; if (!r || used[r[0]]) return;
+    used[r[0]] = 1; matched.push({ name: r[0], desc: String(r[1] || '').slice(0, 110), photo: r[13] || '' });
+  }
+  cands.forEach(function (c) {
+    if (exact[c] != null) { addAt(exact[c]); exactNorms[normCode_(c)] = 1; return; }
+    var k = normCode_(c), ids = normMap[k] || [], i, up = c.toUpperCase(), exactI = -1;
+    for (i = 0; i < ids.length; i++) if (String(items[ids[i]][0]).toUpperCase() === up) { exactI = ids[i]; break; }
+    if (exactI >= 0) addAt(exactI); else if (ids.length) ids.forEach(addAt);
+  });
+  var blob = normCode_(text);
+  if (bundle && blob.length >= 8) {
+    var longs = [], i, k;
+    for (i = 0; i < items.length; i++) { k = normCode_(items[i][0]); if (k.length >= 8 && blob.indexOf(k) >= 0) longs.push([k.length, i, k]); }
+    longs.sort(function (a, b) { return b[0] - a[0]; });
+    var kept = [];
+    longs.forEach(function (L) {
+      if (exactNorms[L[2]]) return;
+      if (kept.some(function (x) { return x.length > L[2].length && x.indexOf(L[2]) >= 0; })) return;
+      kept.push(L[2]); addAt(L[1]);
+    });
+  }
+  var matchedNorms = matched.map(function (x) { return normCode_(x.name); }), unmatched = [], seenU = {};
+  cands.forEach(function (c) {
+    var k = normCode_(c);
+    if (!k || seenU[k]) return;
+    if (matchedNorms.some(function (mk) { return mk === k || mk.indexOf(k) >= 0 || (mk.length >= 8 && k.indexOf(mk) >= 0); })) return;
+    seenU[k] = 1; unmatched.push(c);
+  });
+  return { matched: matched, unmatched: unmatched, empty: !String(text || '').trim() };
+}
+function scanPlan(picks, items) {
+  var seen = {}, have = {}, adds = [], bumps = [];
+  (items || []).forEach(function (l) { if (l && l.name) have[l.name] = l; });
+  (picks || []).forEach(function (p) {
+    if (!p || !p.name || seen[p.name]) return; seen[p.name] = 1;
+    if (have[p.name]) bumps.push(have[p.name]);
+    else adds.push({ name: p.name, desc: String(p.desc || '').slice(0, 110), qty: 1, photo: p.photo || '' });
+  });
+  return { adds: adds, bumps: bumps };
+}
+function scanResultHtml(res) {
+  var matched = res.matched || [], unmatched = res.unmatched || [];
+  if (!matched.length && !unmatched.length) return '<h3>Scan for model #</h3><p class="hint">' + (res.empty ? 'No text found in this photo.' : 'No model numbers found in this photo.') + '</p><div class="actions"><button type="button" id="scanCancel">Cancel</button></div>';
+  var h = '<h3>' + (matched.length ? 'Add these items?' : 'Scan for model #') + '</h3>';
+  if (!matched.length) h += '<p class="hint">No matching items. Search the numbers below.</p>';
+  else h += '<p class="hint">Uncheck any you don\'t want.</p>' + matched.map(function (m, i) {
+    var d = m.desc.length > 80 ? m.desc.slice(0, 80) + '…' : m.desc;
+    return '<label class="scanrow"><input type="checkbox" checked data-scan-i="' + i + '"><span><b class="notr">' + esc(m.name) + '</b><span class="notr">' + esc(d) + '</span></span></label>';
+  }).join('');
+  if (res.noData) h += '<p class="hint">No item data yet. Ask admin to sync the item list.</p>';
+  if (unmatched.length) h += '<div class="mvh">Not in the item list</div><div class="scanqs">' + unmatched.map(function (u, i) {
+    return '<button type="button" class="scanq" data-scan-q="' + i + '">' + esc(u) + '</button>';
+  }).join('') + '</div><p class="hint">Tap a number to search it.</p>';
+  h += '<div class="actions">' + (matched.length ? '<button type="button" class="primary" id="scanAdd">Add to note</button>' : '') + '<button type="button" id="scanCancel">Cancel</button></div>';
+  return h;
+}
+function scanShowResult(res, job) {
+  if (job && job.gen !== scanWant) return;
+  if (!job) scanWant = ++scanSeq;
+  scanJob = job || { custId: custOpen && custOpen.id, noteId: noteOpenId, matched: res.matched || [], unmatched: res.unmatched || [], gen: scanWant };
+  openSheet(scanResultHtml(res));
+  if ($('scanCancel')) $('scanCancel').onclick = function () { scanWant = 0; closeSheet(); };
+  if ($('scanAdd')) $('scanAdd').onclick = scanCommit;
+  $('sheetBody').onclick = function (e) {
+    var q = e.target.closest && e.target.closest('[data-scan-q]');
+    if (!q || !scanJob) return;
+    var text = scanJob.unmatched[+q.dataset.scanQ] || '';
+    if (text) scanSearch(text);
+  };
+}
+function scanSearch(q) {
+  var c = custOpen, n = curNote(); if (c && n) setCur(c, n);
+  scanWant = 0; closeSheet(); go('search'); $('q').value = q; qxShow(); runSearch(q, true);
+}
+function scanCommit() {
+  var job = scanJob, b = $('scanAdd'); if (!job) return;
+  var picks = [];
+  [].forEach.call($('sheetBody').querySelectorAll('[data-scan-i]'), function (box) { if (box.checked) picks.push(job.matched[+box.dataset.scanI]); });
+  if (!picks.length) { scanWant = 0; closeSheet(); return; }
+  var c = custOpen, n = c && (c.notes || []).filter(function (x) { return x.id === job.noteId; })[0];
+  if (!c || c.id !== job.custId || !n) { scanWant = 0; closeSheet(); toast('That note is gone.'); return; }
+  if (b) b.disabled = true;
+  scanWant = 0; closeSheet(); scanAddToNote(c, n, picks);
+}
+function scanAddToNote(c, n, picks) {
+  var plan = scanPlan(picks, n.items), chain = Promise.resolve();
+  plan.bumps.forEach(function (l) {
+    chain = chain.then(function () {
+      var next = Math.max(1, (Number(l.qty) || 1) + 1), prev = l.qty;
+      l.qty = next; if (qtyT[l.id]) { clearTimeout(qtyT[l.id]); delete qtyT[l.id]; }
+      return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: l.id, qty: next, note: l.note || '' }).then(function (r) {
+        n.updated = r.note.updated; n.updated_by = r.note.updated_by;
+      }, function (er) { l.qty = prev; throw er; });
+    });
+  });
+  plan.adds.forEach(function (l) {
+    chain = chain.then(function () {
+      return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: l }).then(function (r) {
+        n.items = r.items; n.updated = r.note.updated; n.updated_by = r.note.updated_by;
+        if (curCust && curCust.id === c.id && curCust.noteId === n.id) { curCust.count = r.items.length; saveCur(); }
+      });
+    });
+  });
+  var count = plan.adds.length + plan.bumps.length, one = (plan.adds[0] || plan.bumps[0] || {}).name;
+  chain.then(function () {
+    if (noteOpenId === n.id && $('cdItems')) renderPicked(); else if ($('cdNotes')) { keepTyped(); renderNoteCards(); }
+    toast((count > 1 ? 'Added ' + count + ' items' : 'Added ' + one) + ' → ' + projLabel(c) + ' · ' + n.title);
+  }).catch(function (er) { toast('Not added: ' + er.message); if (noteOpenId === n.id && $('cdItems')) renderPicked(); });
+}
+function loadTesseract() {
+  if (window.Tesseract && Tesseract.createWorker) return Promise.resolve(window.Tesseract);
+  if (ocrLoad) return ocrLoad;
+  ocrLoad = new Promise(function (res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    s.async = true;
+    s.onload = function () { (window.Tesseract && Tesseract.createWorker) ? res(window.Tesseract) : rej(new Error('Could not read the photo.')); };
+    s.onerror = function () { ocrLoad = null; rej(new Error('No connection. Check your internet and reload the page.')); };
+    document.head.appendChild(s);
+  });
+  return ocrLoad;
+}
+function ocrReady() {
+  if (ocrWorker) return Promise.resolve(ocrWorker);
+  return loadTesseract().then(function (T) {
+    if (ocrWorker) return ocrWorker;
+    return T.createWorker('eng', 1, { logger: function (m) { if (ocrOnProg) ocrOnProg(m); } }).then(function (w) { ocrWorker = w; return w; });
+  });
+}
+function ocrImage(src) {
+  var run = ocrChain.then(function () { return ocrReady(); }).then(function (w) { return w.recognize(src).then(function (r) { return (r && r.data && r.data.text) || ''; }); });
+  ocrChain = run.then(function () {}, function () {});
+  return run;
+}
+function scanSrc(fid) {
+  if (fileCache[fid]) return fileCache[fid];
+  var imgs = document.querySelectorAll('#nPhotos img[data-fid]'), i;
+  for (i = 0; i < imgs.length; i++) if (imgs[i].dataset.fid === fid && imgs[i].src) return imgs[i].src;
+  return '';
+}
+function scanFail(msg) {
+  if (!scanWant) return;
+  openSheet('<h3>Scan for model #</h3><p class="hint">' + esc(msg) + '</p><div class="actions"><button type="button" id="scanCancel">Cancel</button></div>');
+  if ($('scanCancel')) $('scanCancel').onclick = function () { scanWant = 0; closeSheet(); };
+}
+function scanNotePhotos(fids, custId, noteId) {
+  fids = (fids || []).filter(Boolean); if (!fids.length || !scanNoteOf(custId, noteId)) return;
+  var gen = scanWant = ++scanSeq;
+  openSheet('<h3>Scan for model #</h3><div class="spinner"></div><p id="scanStat">' + (fids.length > 1 ? 'Reading 1 of ' + fids.length : 'Loading reader…') + '</p><p id="scanProg" class="hint"></p>');
+  var texts = [], i = 0, failed = 0;
+  function alive() { return scanWant === gen && !!scanNoteOf(custId, noteId); }
+  function stat(t, pct) { if (scanWant !== gen || !$('scanStat')) return; $('scanStat').textContent = t; if ($('scanProg')) $('scanProg').textContent = pct || ''; }
+  function next() {
+    if (!alive()) return;
+    if (i >= fids.length) { finish(); return; }
+    var src = scanSrc(fids[i]), n = i;
+    stat(fids.length > 1 ? 'Reading ' + (n + 1) + ' of ' + fids.length : 'Loading reader…', '');
+    if (!src) { failed++; i++; next(); return; }
+    ocrOnProg = function (m) {
+      if (scanWant !== gen) return;
+      if (m.status === 'recognizing text') stat(fids.length > 1 ? 'Reading ' + (n + 1) + ' of ' + fids.length : 'Reading text from the photo…', Math.round((m.progress || 0) * 100) + '%');
+      else stat(fids.length > 1 ? 'Reading ' + (n + 1) + ' of ' + fids.length : 'Loading reader…', '');
+    };
+    ocrImage(src).then(function (t) { ocrOnProg = null; texts.push(t || ''); i++; next(); }, function () { ocrOnProg = null; failed++; texts.push(''); i++; next(); });
+  }
+  function finish() {
+    ocrOnProg = null; if (!alive()) return;
+    if (!texts.join('').trim() && failed === fids.length) { scanFail('Could not read the photo.'); return; }
+    var dataPnow = localData ? Promise.resolve(localData) : (dataP || Promise.resolve(null));
+    dataPnow.then(function (b) {
+      if (!alive()) return;
+      var res = scanMatchItems(texts.join('\n'), b);
+      res.noData = !b;
+      scanShowResult(res, { gen: gen, custId: custId, noteId: noteId, matched: res.matched, unmatched: res.unmatched });
+    });
+  }
+  next();
+}
+function scanNoteOf(custId, noteId) {
+  if (!custOpen || custOpen.id !== custId) return null;
+  var ns = custOpen.notes || [], i;
+  for (i = 0; i < ns.length; i++) if (ns[i].id === noteId) return ns[i];
+  return null;
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-scan]');
+  if (!b || !b.closest('#nPhotos')) return;
+  e.preventDefault();
+  var n = curNote(), c = custOpen; if (!n || !c) return;
+  if (!scanSrc(b.dataset.scan)) { toast('Loading…'); return; }
+  scanNotePhotos([b.dataset.scan], c.id, n.id);
+});
 /** Move a photo to another note of the same project (server: customerFileMove). */
 function movePhoto(f, toId) { var c = custOpen, n = curNote();
   return api('customerFileMove', { id: c.id, fileId: f, noteId: n.id, toNoteId: toId }).then(function (r) { n.photos = r.photos; n.updated = r.note.updated;
