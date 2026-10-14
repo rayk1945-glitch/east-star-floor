@@ -521,8 +521,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261014s"></script>
-<script src="i18n.js?v=20261014s"></script>
+<script src="search.js?v=20261014t"></script>
+<script src="i18n.js?v=20261014t"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -572,7 +572,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014s';
+var PAGE_VER = '20261014t';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -683,7 +683,7 @@ document.addEventListener('click', function (e) { var b = e.target.closest('[dat
 
 function enterApp() {
   if (session.mustChangePin) { show('pinchange'); return; }
-  show('app'); setHeader(session);
+  show('app'); setHeader(session); initAppBack();
   if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
@@ -3246,7 +3246,7 @@ $('stAdd').onclick = function () { ($('stRole').value === 'admin' ? askOk('Make 
 if (session) enterApp(); else { show('signin'); warmUp(); pkSigninShow(); }
 
 /* Product / door / countertop thumbs (search .thumb and note-line .cthumb). Note photos in #nPhotos keep their move/remove sheet. */
-var photoScale = 1, photoTx = 0, photoTy = 0, photoZoomHist = 0, pzBackPending = false, pzPinch = null, pzPan = null, pzIgnoreClick = false;
+var photoScale = 1, photoTx = 0, photoTy = 0, pzPinch = null, pzPan = null, pzIgnoreClick = false;
 function pzApply() {
   var img = $('photoZoomImg'); if (!img) return;
   img.style.transform = (photoScale === 1 && !photoTx && !photoTy) ? '' : ('translate3d(' + photoTx + 'px,' + photoTy + 'px,0) scale(' + photoScale + ')');
@@ -3256,16 +3256,13 @@ function pzDist(a, b) { var dx = a.clientX - b.clientX, dy = a.clientY - b.clien
 function openPhotoZoom(src) {
   var el = $('photoZoom'), img = $('photoZoomImg'); if (!el || !src) return;
   pzReset(); img.src = src; el.classList.add('on'); document.body.classList.add('pzopen');
-  if (!photoZoomHist && !pzBackPending) { try { history.pushState({ photoZoom: 1 }, ''); photoZoomHist = 1; } catch (e) { photoZoomHist = 0; } }
   var x = $('photoZoomX'); if (x) x.focus();
 }
-function closePhotoZoom(fromPop) {
-  var el = $('photoZoom'); if (!el || !el.classList.contains('on')) { if (fromPop) photoZoomHist = 0; return; }
+function closePhotoZoom() {
+  var el = $('photoZoom'); if (!el || !el.classList.contains('on')) return;
   el.classList.remove('on'); document.body.classList.remove('pzopen');
   var img = $('photoZoomImg'); if (img) { img.removeAttribute('src'); img.style.transform = ''; }
   pzReset();
-  if (fromPop) { photoZoomHist = 0; return; }
-  if (photoZoomHist) { photoZoomHist = 0; pzBackPending = true; try { history.back(); } catch (e) { pzBackPending = false; } }
 }
 document.addEventListener('click', function (e) {
   var im = e.target.closest && e.target.closest('img.thumb, img.cthumb');
@@ -3275,26 +3272,49 @@ document.addEventListener('click', function (e) {
   e.preventDefault(); e.stopPropagation();
   openPhotoZoom(src);
 }, true);
-$('photoZoomX').addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); closePhotoZoom(false); });
+$('photoZoomX').addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); closePhotoZoom(); });
 $('photoZoom').addEventListener('click', function (e) {
   if (pzIgnoreClick) { pzIgnoreClick = false; return; }
   if (e.target.closest('#photoZoomImg, #photoZoomX')) return;
-  closePhotoZoom(false);
+  closePhotoZoom();
 });
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape' || !$('photoZoom').classList.contains('on')) return;
-  e.preventDefault(); closePhotoZoom(false);
+  e.preventDefault(); closePhotoZoom();
 });
-window.addEventListener('popstate', function () {
-  if (pzBackPending) {
-    pzBackPending = false;
-    if ($('photoZoom').classList.contains('on') && !photoZoomHist) {
-      try { history.pushState({ photoZoom: 1 }, ''); photoZoomHist = 1; } catch (e) {}
-    }
-    return;
+/* Phone Back stays in the app: close overlays / nested screens one level, then re-arm a history trap so the browser never leaves. */
+function armAppBack() {
+  try { if (!(history.state && history.state.esApp)) history.pushState({ esApp: 1 }, ''); } catch (e) {}
+}
+function initAppBack() {
+  try { if (!history.state || !history.state.esApp) history.replaceState({ esApp: 1, root: 1 }, ''); } catch (e) {}
+  armAppBack();
+}
+/** One Back step inside the app (photo → confirm → sheet → nested page → root trap). */
+function handleAppBack() {
+  if ($('photoZoom') && $('photoZoom').classList.contains('on')) { closePhotoZoom(); return; }
+  if (cfmDone) { cfmDone(false); return; }
+  if ($('sheet') && $('sheet').classList.contains('on')) { closeSheet(); if (typeof scanWant !== 'undefined') scanWant = 0; return; }
+  // Project detail → History project list (same as the ‹ button)
+  if ($('p-cust') && $('p-cust').classList.contains('on') && custOpen && $('cuDetail') && $('cuDetail').innerHTML) {
+    flushBatch().then(loadCustList); return;
   }
-  if ($('photoZoom').classList.contains('on')) closePhotoZoom(true);
+  // Search results → search home
+  if ($('p-search') && $('p-search').classList.contains('on') && $('q') && $('q').value.trim()) {
+    $('q').value = ''; sessionStorage.removeItem('esRedLastQ'); runSearch(); return;
+  }
+  // History Requests → Projects
+  if ($('p-history') && $('p-history').classList.contains('on') && hView === 'req') { setHView('notes'); loadHistory(); return; }
+  // Plan / Admin → Search (match crumb)
+  if (($('p-plan') && $('p-plan').classList.contains('on')) || ($('p-admin') && $('p-admin').classList.contains('on'))) { go('search'); return; }
+  // Reported → Project
+  if ($('p-reported') && $('p-reported').classList.contains('on')) { go('cust'); return; }
+}
+window.addEventListener('popstate', function () {
+  handleAppBack();
+  setTimeout(armAppBack, 0);
 });
+initAppBack();
 $('photoZoomStage').addEventListener('touchstart', function (e) {
   if (e.touches.length >= 2) {
     pzPan = null;
