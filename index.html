@@ -503,7 +503,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014o"></script>
+<script src="i18n.js?v=20261014p"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -553,7 +553,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014o';
+var PAGE_VER = '20261014p';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1340,6 +1340,7 @@ function renderOverview() {
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
       '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div>' +
+      '<button type="button" class="btn sec" id="cdShareProj">Share</button>' +
       '<button type="button" class="btn sec" id="cdCloneProj" data-cloneproj="1">Clone project</button>' +
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
@@ -1352,6 +1353,7 @@ function renderOverview() {
   if ($('cdRm2')) $('cdRm2').onclick = function () { pullContacts(c); c.contacts = [c.contacts[0]]; c._contact2 = false; rememberInfo(c); c._infoDirty = infoChanged(c); renderOverview(); scheduleAutosave(); };
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
   $('cdClient').onclick = function () { flushBatch().then(function () { if (custOpen === c) openClientLink(c); }); };
+  if ($('cdShareProj')) $('cdShareProj').onclick = function () { flushBatch().then(function () { if (custOpen === c) openClientLink(c); }); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); };
   $('cdNewNote').onclick = function () { addNoteNow(c); };
   $('cdSaveAll').onclick = saveProject;
