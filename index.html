@@ -318,9 +318,10 @@
   .rmbadge { display:inline-block; min-width:18px; margin-left:5px; padding:0 5px; border-radius:999px; background:#b91c1c; color:#fff; font-size:11px; line-height:18px; text-align:center; }
   /* One short chip per store with open missing reports, right after that store's qty chip. Hidden until listReports says supported. */
   .locstock { align-items: center; }
-  .locstock button.rmmiss { appearance:none; -webkit-appearance:none; margin:0; border:1px solid #e0b15a; background:var(--warn-bg); color:var(--warn-fg);
-    cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; text-align:center; border-radius:999px; padding:6px 10px; min-height:36px;
+  .locstock button.rmmiss { appearance:none; -webkit-appearance:none; display:inline-flex; align-items:center; gap:3px; margin:0; border:1px solid #e08a1e; background:var(--warn-bg); color:var(--warn-fg);
+    cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; text-align:center; border-radius:999px; padding:4px 8px; min-height:32px;
     white-space:nowrap; align-self:center; }
+  .locstock button.rmmiss .rmico { font-size:11px; line-height:1; }
   .rmrow { border-top:1px solid var(--line); padding:10px 0; } .rmrow:first-child { border-top:0; } .rmrow .rmmeta { font-size:12.5px; color:var(--muted); margin-top:2px; } .rmrow .rmnote { font-size:13px; margin-top:4px; } .rmrow .actions { margin-top:6px; }
   .rmseg { display:flex; gap:6px; margin:6px 0 10px; } .rmseg button { flex:1; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; } .rmseg button.active { background:var(--navy,#1f2937); color:#fff; border-color:var(--navy,#1f2937); }
   body.wh [onclick^="addItem"], body.wh #tcAdd, body.wh #priceBar { display:none !important; }
@@ -1477,7 +1478,7 @@ function rmSums(name) {
   return sum;
 }
 function rmMissBtn(name, store, n) {
-  return '<button type="button" class="chip rmmiss rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '">' + esc(store + ' missing ' + qty(n)) + '</button>';
+  return '<button type="button" class="chip rmmiss rmfeat" data-rmitem="' + encodeURIComponent(name).replace(/'/g, '%27') + '"><span class="rmico" aria-hidden="true">⚠</span>' + esc(store + ' -' + qty(n)) + '</button>';
 }
 /** Stock key for a loc label: SF/FRE aliases, otherwise the label itself when it matches a report store. */
 function rmLocKey(label, sums) {
