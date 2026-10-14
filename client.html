@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<title>East Star Building Supply 劍鋒高級建材</title>
+<title>East Star Max 劍鋒高級建材 Max</title>
 <style>
   :root { --text:#1f2937; --muted:#6b7280; --line:#e5e7eb; --blue:#1A8BC9; --bg:#f6f7f9; }
   * { box-sizing:border-box; }
@@ -73,7 +73,7 @@
 <div class="wrap">
   <header>
     <button class="lang" data-lang-toggle="1" type="button">中文</button>
-    <img src="logo.png" alt="East Star Building Supply 劍鋒高級建材" class="logo" width="640" height="272">
+    <img src="logo.png" alt="East Star Max 劍鋒高級建材 Max" class="logo" width="640" height="272">
     <h1 id="title">&nbsp;</h1>
     <div class="sub" id="sub"></div>
   </header>
@@ -92,7 +92,7 @@
 // The sharer's language rides along (&l=zh) the first time; after that the client's own toggle is remembered.
 try { if (/[?&]l=zh\b/.test(location.search) && !localStorage.getItem('esLang')) localStorage.setItem('esLang', 'zh'); } catch (e) {}
 </script>
-<script src="i18n.js?v=20261012d"></script>
+<script src="i18n.js?v=20261014b"></script>
 <script>
 // Read-only client view of one project (client.html?c=TOKEN). No sign-in, no item data download, no prices:
 // the server answers token requests with a whitelist copy (titles, text, items, qty, item notes, photos) only.
@@ -108,10 +108,10 @@ function call(action, data) {
     .then(function (r) { return r.json(); }, function () { throw new Error('No connection. Check your internet and reload the page.'); })
     .then(function (j) { if (!j || !j.ok) throw new Error((j && j.error) || 'Something went wrong.'); return j.data; });
 }
-function fail(m) { $('title').textContent = 'East Star Building Supply'; $('sub').textContent = ''; $('main').innerHTML = '<div class="msgbox">' + esc(m) + '</div>'; }
+function fail(m) { m = String(m == null ? '' : m).replace(/Ask East Star(?! Max)/g, 'Ask East Star Max'); $('title').textContent = 'East Star Max'; $('sub').textContent = ''; $('main').innerHTML = '<div class="msgbox">' + esc(m) + '</div>'; }
 function render(p) {
   var title = p.name ? p.name : (p.num ? 'Project #' + p.num : 'Your project');
-  if (window.I18N) I18N.setTitle(title + ' · East Star Building Supply'); else document.title = title + ' · East Star Building Supply';
+  if (window.I18N) I18N.setTitle(title + ' · East Star Max'); else document.title = title + ' · East Star Max';
   $('title').textContent = title; $('title').classList.toggle('notr', !!p.name);
   $('sub').textContent = (p.name && p.num ? 'Project #' + p.num + ' · ' : '') + (p.updated ? 'Updated ' + new Date(p.updated).toLocaleDateString(window.I18N && I18N.lang() === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
   var notes = (p.notes || []).filter(function (n) { return n.text || (n.items || []).length || (n.photos || []).length; });
@@ -130,7 +130,7 @@ function render(p) {
     call('clientFile', { fileId: el.dataset.f }).then(function (r) { var im = document.createElement('img'); im.src = r.data; im.alt = 'photo'; el.replaceWith(im); }, function () { el.remove(); }).then(next); })();
 }
 document.addEventListener('click', function (e) { var im = e.target.closest('.photos img'); if (im) { $('zoom').querySelector('img').src = im.src; $('zoom').classList.add('on'); } else if (e.target.closest('#zoom')) $('zoom').classList.remove('on'); });
-if (!/^[a-f0-9]{48,64}$/i.test(TOKEN)) fail('This link is not complete. Ask East Star for the link again.');
+if (!/^[a-f0-9]{48,64}$/i.test(TOKEN)) fail('This link is not complete. Ask East Star Max for the link again.');
 else call('clientView').then(render).catch(function (er) { fail(er.message); });
 </script>
 </body>

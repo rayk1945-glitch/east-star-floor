@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "East Star",
-  "short_name": "East Star",
-  "description": "East Star showroom floor: stock, prices, projects.",
+  "name": "East Star Max",
+  "short_name": "East Star Max",
+  "description": "East Star Max showroom floor: stock, prices, projects.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
