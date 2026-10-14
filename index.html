@@ -449,7 +449,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014j"></script>
+<script src="i18n.js?v=20261014k"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -499,7 +499,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014j';
+var PAGE_VER = '20261014k';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1705,20 +1705,16 @@ function moveLine(l, op, to) { var c = custOpen, n = curNote(), t;
 }
 function noteMenu(id) { var c = custOpen, n = (c.notes || []).filter(function (x) { return x.id === id; })[0]; if (!n) return;
   openSheet('<h3>' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
-    '<button class="btn" id="ncClone">Clone note</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
+    '<button class="btn" id="ncClone">Clone note</button><button class="btn" id="ncNew" type="button">Clone to new project</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
   $('ncClone').onclick = function () { this.disabled = true; this.textContent = 'Cloning…';
     cloneNote(c, n, c.id).then(closeSheet, function (er) { msg($('ncMsg'), er.message); $('ncClone').disabled = false; $('ncClone').textContent = 'Clone note'; }); };
-  $('ncOther').onclick = function () { this.disabled = true;
-    $('ncList').innerHTML = '<div class="mvh">Clone “' + esc(n.title) + '” into…</div><button type="button" class="newc" data-clnew="1">+ New project</button><div id="ncProj"><div class="spinner"></div></div>';
-    api('customerList', { filter: {} }).then(function (l) { l = (Array.isArray(l) ? l : []).filter(function (x) { return x.id !== c.id; });
-      var host = $('ncProj'); if (!host) return;
-      host.innerHTML = l.length ? l.map(function (x) { return '<button class="crow2" data-clto="' + esc(x.id) + '"><b>' + esc(projLabel(x)) + '</b><span class="s">' + (x.noteList || []).length + ' notes</span></button>'; }).join('') : '<div class="empty">No other projects.</div>'; })
-      .catch(function (er) { msg($('ncMsg'), er.message); var host = $('ncProj'); if (host) host.innerHTML = ''; }); };
-  $('sheetBody').onclick = function (e) {
-    var nw = e.target.closest('[data-clnew]');
-    if (nw) { if (nw.disabled) return; nw.disabled = true; nw.textContent = 'Creating…';
-      cloneNoteToNewProject(c, n).catch(function (er) { msg($('ncMsg'), er.message); nw.disabled = false; nw.textContent = '+ New project'; }); return; }
-    var b = e.target.closest('[data-clto]'); if (!b) return; b.disabled = true; b.querySelector('b').textContent += ' · cloning…';
+  $('ncNew').onclick = function () { var b = this; if (b.disabled) return; b.disabled = true; b.textContent = 'Cloning…';
+    cloneNoteToNewProject(c, n).catch(function (er) { msg($('ncMsg'), er.message); b.disabled = false; b.textContent = 'Clone to new project'; }); };
+  $('ncOther').onclick = function () { this.disabled = true; $('ncList').innerHTML = '<div class="spinner"></div>';
+    api('customerList', { filter: {} }).then(function (l) { l = (Array.isArray(l) ? l : []).filter(function (x) { return x.id !== c.id; }); if (!$('ncList')) return;
+      $('ncList').innerHTML = '<div class="mvh">Clone “' + esc(n.title) + '” into…</div>' + (l.length ? l.map(function (x) { return '<button class="crow2" data-clto="' + esc(x.id) + '"><b>' + esc(projLabel(x)) + '</b><span class="s">' + (x.noteList || []).length + ' notes</span></button>'; }).join('') : '<div class="empty">No other projects.</div>'); })
+      .catch(function (er) { msg($('ncMsg'), er.message); if ($('ncList')) $('ncList').innerHTML = ''; }); };
+  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-clto]'); if (!b) return; b.disabled = true; b.querySelector('b').textContent += ' · cloning…';
     cloneNote(c, n, b.dataset.clto).then(closeSheet, function (er) { msg($('ncMsg'), er.message); b.disabled = false; }); }; }
 /** Copy one note onto a project with noteClone, then drop the empty note the server made with the project. */
 function cloneNotesInto(srcId, notes, toId, blankId) {
@@ -1734,7 +1730,7 @@ function cloneNotesInto(srcId, notes, toId, blankId) {
   }
   return step();
 }
-/** "+ New project" in the clone list: a normal blank project (tax default only, no contacts), then this note. */
+/** "Clone to new project": a normal blank project (tax default only, no contacts), then this note. */
 function cloneNoteToNewProject(c, n) {
   var createdId = '';
   return (noteOpenId === n.id ? flushNote() : Promise.resolve()).then(function () { return createBlankProject(); }).then(function (created) {

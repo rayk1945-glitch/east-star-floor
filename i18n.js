@@ -51,7 +51,7 @@
     'Note title': '笔记标题', 'Collapse note': '收起笔记', 'Note actions': '笔记操作', 'Add items from Search here': '在这里添加搜索到的商品', 'Items': '商品', 'Photos': '照片', 'Notes': '备注',
     '+ Add from Search': '+ 从搜索添加', '📷 Add photo': '📷 添加照片', 'No photos yet.': '还没有照片。', 'Remove photo': '删除照片', 'adding here': '正在添加到这里',
     'What they want, colors, measurements, timing': '客户想要什么、颜色、尺寸、时间', 'Note: color, size…': '备注：颜色、尺寸…', 'Move or copy': '移动或复制',
-    'no longer in the item list': '已不在商品清单中', 'Move to…': '移动到…', 'Copy to…': '复制到…', 'Clone note': '复制笔记', 'Clone to another project…': '复制到另一个项目…', 'Clone project': '复制项目',
+    'no longer in the item list': '已不在商品清单中', 'Move to…': '移动到…', 'Copy to…': '复制到…', 'Clone note': '复制笔记', 'Clone to new project': '复制到新项目', 'Clone to another project…': '复制到另一个项目…', 'Clone project': '复制项目',
     'No other projects.': '没有其他项目。', 'No projects yet. Tap + New project.': '还没有项目。点 + 新项目。', 'No projects yet. Tap Project below to start one.': '还没有项目。点下面的「项目」开始。',
     'No project matches.': '没有匹配的项目。', 'No notes yet. Tap + Add note.': '还没有笔记。点 + 添加笔记。', 'No items in this note yet. Add items from Search first.': '这个笔记还没有商品。请先从搜索添加。',
     'Items from Search go into this note.': '搜索到的商品会加入这个笔记。', 'Pick a project, then which of its notes items from Search go into.': '先选项目，再选搜索商品要加入哪个笔记。',
