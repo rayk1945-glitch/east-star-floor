@@ -160,7 +160,8 @@
   .nhead #cdTitle { font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%; }
   .nhead .sh { font-size:11.5px; background:#eef2f7; color:#334155; border-radius:999px; padding:2px 8px; }
   .nhead .infolink { flex-basis:100%; text-align:left; background:none; border:0; padding:0 0 0 42px; color:#1e3a6e; font-size:14px; font-weight:600; text-decoration:underline; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .nhead .ndnew { margin-left:auto; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 12px; font-weight:700; font-size:13.5px; color:#1f2937; white-space:nowrap; }
+  .nhead .ndacts { display:flex; flex-wrap:wrap; gap:6px; margin-left:auto; justify-content:flex-end; max-width:100%; min-width:0; }
+  .nhead .ndnew { margin-left:0; flex:0 0 auto; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 12px; font:inherit; font-weight:700; font-size:13.5px; color:#1f2937; white-space:nowrap; cursor:pointer; }
   .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
@@ -448,7 +449,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014i"></script>
+<script src="i18n.js?v=20261014j"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -498,7 +499,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014i';
+var PAGE_VER = '20261014j';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1179,7 +1180,7 @@ function renderOverview() {
   $('cuDetail').innerHTML = '<div class="proj" id="cdProj"><div class="phead">' +
       '<div class="nhead"><button class="back" id="cdBack" aria-label="Back to projects">‹</button><b id="cdTitle">' + esc(projLabel(c)) + '</b>' +
       (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
-      '<button class="ndnew" id="ndNew">+ New project</button>' +
+      '<div class="ndacts"><button type="button" class="ndnew" id="ndNew">+ New project</button><button type="button" class="ndnew" id="cdCloneTop" data-cloneproj="1">Clone project</button></div>' +
       '<button class="infolink" id="cdInfoT" aria-expanded="' + infoOpen + '">' + infoLinkText(c) + '</button></div>' +
       '<div class="pinfo' + (infoOpen ? '' : ' hidden') + '" id="cdInfo">' +
       contactFieldsHtml(c, projectContacts(c)[0], '', projectContacts(c).length > 1) +
@@ -1192,7 +1193,7 @@ function renderOverview() {
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
       '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div>' +
-      '<button type="button" class="btn sec" id="cdCloneProj">Clone project</button>' +
+      '<button type="button" class="btn sec" id="cdCloneProj" data-cloneproj="1">Clone project</button>' +
       '<button class="btn sec" id="cdQuote">Quote this note</button><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
   $('cdBack').onclick = function () { flushInfo(); flushNote(); loadCustList(); };
@@ -1206,7 +1207,9 @@ function renderOverview() {
   $('cdClient').onclick = function () { flushInfo(); flushNote(); openClientLink(c); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); flushInfo(); };
   $('cdNewNote').onclick = function () { addNoteNow(c); };
-  $('cdSaveAll').onclick = saveProject; $('cdCloneProj').onclick = function () { cloneProject(c, this); }; $('cdQuote').onclick = quoteCust;
+  $('cdSaveAll').onclick = saveProject;
+  [].forEach.call(document.querySelectorAll('[data-cloneproj]'), function (b) { b.onclick = function () { cloneProject(c, b); }; });
+  $('cdQuote').onclick = quoteCust;
   $('cdRec').onclick = toggleRec;
   $('cdVoiceT').onclick = function () { voiceOpen = !voiceOpen; renderVoice(); };
   if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?')) return;
@@ -1755,7 +1758,9 @@ function copyProjectName(c) {
 /** Whole project: new id, name + " (copy)", same contacts, address, tax, and every note. */
 function cloneProject(c, btn) {
   if (!c) return;
-  if (btn) { btn.disabled = true; btn.textContent = 'Cloning…'; }
+  var btns = document.querySelectorAll('[data-cloneproj]');
+  [].forEach.call(btns, function (b) { b.disabled = true; });
+  if (btn) btn.textContent = 'Cloning…';
   return Promise.all([flushInfo(), flushNote()]).then(function () { return Promise.all(Object.keys(saveQ).map(runSave)); }).then(function () {
     return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k]; }));
   }).then(function () {
@@ -1783,7 +1788,7 @@ function cloneProject(c, btn) {
       setCur(t, note || (t.notes && t.notes[0]));
     }).catch(function () {});
     toast('Cloned project: ' + (o.created.label || o.name));
-  }).catch(function (er) { toast(er.message); if ($('cdCloneProj')) { $('cdCloneProj').disabled = false; $('cdCloneProj').textContent = 'Clone project'; } });
+  }).catch(function (er) { toast(er.message); [].forEach.call(document.querySelectorAll('[data-cloneproj]'), function (b) { b.disabled = false; b.textContent = 'Clone project'; }); });
 }
 function cloneNote(c, n, toId) {
   return (noteOpenId === n.id ? flushNote() : Promise.resolve()).then(function () { return api('noteClone', { id: c.id, noteId: n.id, toId: toId }); }).then(function (r) {
