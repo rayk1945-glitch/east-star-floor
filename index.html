@@ -444,7 +444,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014d"></script>
+<script src="i18n.js?v=20261014e"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -473,7 +473,7 @@ function serverApi(action, data) {
   var body = Object.assign({}, data || {}, { action: action }); if (session) body.token = session.token;
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('Unexpected server reply (HTTP ' + r.status + ').'); }
-      if (!j.ok) { var er = new Error(noteWords(j.error || 'Something went wrong.')); if (j.auth) signedOut(); throw er; } return j.data; }); },
+      if (!j.ok) { var er = new Error(noteWords(j.reason === 'not configured' ? 'The bot is not set up yet. Ask admin.' : (j.error || 'Something went wrong.'))); if (j.reason) er.reason = j.reason; if (j.auth) signedOut(); throw er; } return j.data; }); },
       function () { throw new Error('No connection to the server. Check your internet and try again.'); });
 }
 /** Server messages still say "customer" (API unchanged); staff see "note". */
@@ -494,7 +494,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014d';
+var PAGE_VER = '20261014e';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -965,7 +965,8 @@ function shareText(c) {
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
 /** "Share with client": a read-only, no-login link to this project (client.html?c=TOKEN). The server sends no prices,
- *  stock, shelves, contact info or voice notes for it. After the link exists: email, text, copy, and share. */
+ *  stock, shelves, contact info or voice notes for it. After the link exists: email, text, copy, send to bot, and share.
+ *  Send to bot calls sendClientLinkToBot. The webhook URL and key stay in Script Properties, never on this page. */
 function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t + (window.I18N && I18N.lang() === 'zh' ? '&l=zh' : ''); }   // &l=zh: the client page starts in Chinese when shared from 中文
 function clT(s) { return window.I18N ? I18N.t(s) : s; }
 var CL_NOTE = 'Hi, here is the project we put together for you. Open the link to see your items and photos. No sign-in needed.';
@@ -1001,6 +1002,7 @@ function openClientLink(c) {
       '<div class="clbtns"><a class="btn" id="clEmail" href="' + esc(mailHref(bits.email, bits.subject, bits.emailBody)) + '">Email</a>' +
       '<a class="btn" id="clText" href="' + esc(smsHref(bits.phone, bits.smsBody)) + '">Text</a>' +
       '<button class="btn" id="clCopy" type="button">Copy link</button>' +
+      '<button class="btn" id="clBot" type="button">Send to bot</button>' +
       (navigator.share ? '<button class="btn sec" id="clShare" type="button">Share…</button>' : '') + '</div>' +
       '<div class="clrow"><a class="link" id="clOpen" href="' + esc(u) + '" target="_blank" rel="noopener">Preview</a><span style="flex:1"></span><button class="link" id="clNew">New link</button><button class="link" id="clStop" style="color:#7f1d1d">Stop client link</button></div>'
       : '<button class="btn" id="clMake">Make client link</button>') + '<div id="clMsg" class="msg hidden"></div>');
@@ -1011,9 +1013,30 @@ function openClientLink(c) {
   if ($('clCopy')) $('clCopy').onclick = function () { var b = this;
     (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).catch(function () { var i = $('clUrl'); i.select(); document.execCommand('copy'); })
       .then(function () { b.textContent = 'Copied ✓'; toast('Client link copied'); }); };
+  if ($('clBot')) $('clBot').onclick = function () { openClientBotForm(c, u); };
   if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: bits.subject, text: bits.emailBody, url: u }).catch(function () {}); };
   if ($('clNew')) $('clNew').onclick = function () { if (confirm('Make a new link? The old link stops working right away.')) run('new', this).then(function (r) { if (r) toast('New client link (old one stopped)'); }); };
   if ($('clStop')) $('clStop').onclick = function () { if (confirm('Stop the client link? Anyone who has it can no longer open this project.')) run('stop', this).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); };
+}
+/** Confirm the client email, then ask Apps Script to forward the link to the bot. No webhook URL or key is on this page. */
+function openClientBotForm(c, u) {
+  openSheet('<h3>Send to bot</h3><div class="hint" style="margin:0 0 10px">Confirm the client email. The bot will draft the message for approval.</div>' +
+    '<label class="f">Email</label><input id="clBotEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(clientEmailOf(c)) + '">' +
+    '<label class="f">Note (optional)</label><textarea id="clBotNote" rows="3" maxlength="500"></textarea>' +
+    '<div class="clbtns"><button class="btn" id="clBotSend" type="button">Send to bot</button><button class="btn sec" id="clBotCancel" type="button">Cancel</button></div>' +
+    '<div id="clMsg" class="msg hidden"></div>');
+  $('clBotCancel').onclick = function () { openClientLink(c); };
+  $('clBotSend').onclick = function () {
+    var b = this, email = $('clBotEmail').value.trim(), note = $('clBotNote').value.trim();
+    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) { msg($('clMsg'), 'Enter the client email.'); return; }
+    b.disabled = true; b.textContent = 'Sending…';
+    serverApi('sendClientLinkToBot', {
+      projectId: c.id, projectName: projLabel(c), clientName: String(c.name || '').trim(),
+      clientEmail: email, clientPhone: clientPhoneOf(c), link: u,
+      sender: session && session.name || '', note: note
+    }).then(function () { closeSheet(); toast('Sent to bot — it will draft the email for approval'); })
+      .catch(function (er) { b.disabled = false; b.textContent = 'Send to bot'; msg($('clMsg'), er.message); });
+  };
 }
 function openShare(c) {
   openSheet('<h3>Share ' + esc(projLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this project with all its notes, and can add items, edit and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
