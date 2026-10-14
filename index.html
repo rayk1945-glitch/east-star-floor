@@ -119,7 +119,7 @@
   .toplinks { display:flex; gap:4px; }
   .toplinks button { border:1px solid var(--line-strong); background:#fff; border-radius:999px; font:inherit; font-size:12.5px; font-weight:600; padding:5px 10px; color:#1f2937; cursor:pointer; }
   .toplinks button.langbtn, .langbtn { padding:0 9px; font-weight:700; } .langbtn.big { border:1px solid var(--line-strong); background:#fff; border-radius:999px; min-height:40px; padding:0 14px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
-  .toplinks button.plan { background:#7f1d1d; color:#fff; border-color:#7f1d1d; }
+  .toplinks button.plan { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
   .acct { font-size:12px; color:var(--muted); margin-top:-6px; margin-bottom:6px; }
   nav.bottom { position:fixed; left:0; right:0; bottom:0; z-index:20; background:rgba(255,255,255,.97); border-top:1px solid var(--line);
     display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); }
@@ -185,7 +185,10 @@
   .proj .vtog { margin-left:auto; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; }
   .proj #cdVoice { margin-top:8px; } .proj #cdQuote { margin-top:10px; } .proj #cdSaveAll { margin:10px 0 0; } .proj #cdSaveMsg { margin-top:4px; }
   .addnote { display:block; width:100%; margin:0 0 12px; min-height:50px; border:2px dashed #94a3b8; border-radius:14px; background:#fff; font:inherit; font-size:16px; font-weight:700; color:#1f2937; cursor:pointer; }
-  .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 10px; min-height:0; }
+  .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 4px; min-height:0; }
+  .nchips { display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 8px; } .ngroup:not(.open) .nchips { margin-right:36px; }
+  .nchip { appearance:none; -webkit-appearance:none; min-height:32px; border:1px solid var(--line-strong); background:#fff; color:var(--text); border-radius:999px; padding:0 10px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+  .nchip.on { background:var(--accent); color:#fff; border-color:var(--accent); }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
   .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; align-items:flex-start; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:block; }
   .nphi { width:72px; } .scanbtn { appearance:none; -webkit-appearance:none; display:block; width:100%; margin-top:3px; border:1px solid var(--line-strong); background:#fff; color:var(--text); border-radius:8px; padding:3px 2px; font:inherit; font-size:10px; font-weight:700; line-height:1.15; min-height:32px; cursor:pointer; }
@@ -308,7 +311,7 @@
   .link { color:var(--accent); }
   .chip { background:#e6f2fa; color:#005d9a; }
   .toplinks button { border-color:var(--line-strong); color:var(--navy); }
-  .toplinks button.plan { background:var(--red); border-color:var(--red); color:#fff; }
+  .toplinks button.plan.primary { background:var(--accent); border-color:var(--accent); color:#fff; border-radius:999px; font-weight:600; font-size:14px; }
   #bnav button.active { color:var(--accent); }
   input:focus, select:focus, textarea:focus { border-color:var(--accent); }
   #signin .card { border-top:4px solid var(--accent); }
@@ -361,7 +364,7 @@
 <section id="app" class="hidden">
   <header><div class="head-in">
     <div class="toprow"><h1><img src="logo.png" alt="East Star Max" class="hd-logo" width="640" height="272"><span class="hd-txt">East Star Max</span> <small id="hdName" class="notr"></small></h1>
-      <div class="toplinks"><button class="plan" data-go="plan">Send plan</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button class="rmfeat" id="rmBtn" title="Reported missing" aria-label="Reported missing">Missing<span class="rmbadge hidden" id="rmBadge"></span></button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
+      <div class="toplinks"><button class="plan primary" data-go="plan">Kitchen quote</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button class="rmfeat" id="rmBtn" title="Reported missing" aria-label="Reported missing">Missing<span class="rmbadge hidden" id="rmBadge"></span></button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
   </div></header>
   <main>
     <!-- SEARCH -->
@@ -445,7 +448,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014f"></script>
+<script src="i18n.js?v=20261014h"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -495,7 +498,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014f';
+var PAGE_VER = '20261014h';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -574,7 +577,7 @@ function go(p, quiet) {
   if (p === 'admin') adminLoad();
 }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (!b) return;
-  if (b.dataset.go === 'plan' && b.closest('.toplinks') && custOpen && $('p-cust').classList.contains('on')) { planFromCust(); return; }   // header "Send plan to <bot>" from a project: prefilled
+  if (b.dataset.go === 'plan' && b.closest('.toplinks') && custOpen && $('p-cust').classList.contains('on')) { planFromCust(); return; }   // header Kitchen quote from a project: prefilled
   go(b.dataset.go); });
 
 function enterApp() {
@@ -596,7 +599,7 @@ function setHeader(m) {
   var hn = $('hdName'); if (hn) hn.textContent = m.name || '';
   $('planBot').textContent = m.bot || 'the bot'; $('plSend').textContent = m.bot ? 'Send to ' + m.bot : 'Send';
   if (m.bot && session && session.bot !== m.bot) { session.bot = m.bot; try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {} }   // "Send to" may point this login at another bot
-  var pb = document.querySelector('.toplinks .plan'); if (pb) pb.textContent = m.bot ? 'Send plan to ' + m.bot : 'Send plan';
+  var pb = document.querySelector('.toplinks .plan'); if (pb) pb.textContent = 'Kitchen quote';
 }
 $('signinForm').addEventListener('submit', function (e) { e.preventDefault(); var b = $('signinBtn'); b.disabled = true; msg($('signinMsg'), '');
   api('signin', { name: $('inName').value, pin: $('inPin').value }).then(function (s) { session = s; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); $('inPin').value = ''; pkOffer = true; enterApp(); })
@@ -1230,14 +1233,30 @@ function addNoteNow(c) {
 function scrollToNote(id) { var g = document.querySelector('[data-ng="' + id + '"]'); if (g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - document.querySelector('#app header').offsetHeight - 8); }
 function noteSummary(n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
   return cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : ''); }
+var NOTE_TITLE_CHIPS = ['Kitchen', 'Bath 1', 'Bath 2', 'Bath 3'];
+function noteTitleCustom(t) { return !!(t && NOTE_TITLE_CHIPS.indexOf(t) < 0 && !/^Note \d+$/.test(t)); }
+function noteChipRow(n) {
+  var t = n.title || '';
+  return '<div class="nchips">' + NOTE_TITLE_CHIPS.map(function (label) {
+    return '<button type="button" class="nchip' + (t === label ? ' on' : '') + '" data-nchip="' + esc(n.id) + '" data-nlabel="' + esc(label) + '">' + label + '</button>';
+  }).join('') + '<button type="button" class="nchip' + (noteTitleCustom(t) ? ' on' : '') + '" data-nchip="' + esc(n.id) + '" data-ncustom="1">Custom</button></div>';
+}
+function noteCardEl(id) { var cards = document.querySelectorAll('#cdNotes [data-ng]'), i; for (i = 0; i < cards.length; i++) if (cards[i].dataset.ng === id) return cards[i]; return null; }
+function shownNoteTitle(n) { if (n && noteOpenId === n.id && $('nTitle')) return $('nTitle').value.trim() || n.title || ''; return n && n.title || ''; }
+function paintNoteChips(n) {
+  var card = n && noteCardEl(n.id); if (!card) return;
+  var t = shownNoteTitle(n);
+  [].forEach.call(card.querySelectorAll('.nchip'), function (b) { b.classList.toggle('on', b.dataset.ncustom ? noteTitleCustom(t) : t === b.dataset.nlabel); });
+}
+function syncCurTitle(n) { if (!n || !custOpen || !isCurNote(custOpen.id, n.id) || !curCust || curCust.noteTitle === n.title) return; curCust.noteTitle = n.title; saveCur(); }
 /** All note groups. Only the open one has the editing ids (nTitle, cdItems, nPhotos, cdQuote...). */
 function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNotes')) return;
   $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
-    if (n.id !== noteOpenId) return '<div class="card ngroup" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div>' +
-      '<span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
+    if (n.id !== noteOpenId) return '<div class="card ngroup" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div></button>' +
+      noteChipRow(n) + '<button class="nghead" data-nopen="' + esc(n.id) + '"><span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
     return '<div class="card ngroup open" data-ng="' + esc(n.id) + '">' +
       '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
-        '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' +
+        '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
@@ -1249,7 +1268,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
   quoteBtn();
   var n = curNote(); if (!n) return;
   if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + projLabel(c) + ' · ' + n.title); };
-  $('nTitle').addEventListener('input', function () { queueNote(); quoteBtn(); }); $('nText').addEventListener('input', queueNote);
+  $('nTitle').addEventListener('input', function () { queueNote(); quoteBtn(); paintNoteChips(n); }); $('nText').addEventListener('input', queueNote);
   $('nTitle').addEventListener('blur', flushNote); $('nText').addEventListener('blur', flushNote);
   $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
   $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
@@ -1259,6 +1278,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
 /** Tap a collapsed header: open that group (the open one collapses); tap ▴ to collapse. */
 document.addEventListener('click', function (e) { if (!custOpen || !e.target.closest('#cdNotes')) return;
   var nm = e.target.closest('[data-nmenu]'); if (nm) { noteMenu(nm.dataset.nmenu); return; }
+  var chip = e.target.closest('[data-nchip]'); if (chip) { e.preventDefault(); applyNoteChip(chip); return; }
   var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]'); if (!b && !x) return;
   var id = b ? b.dataset.nopen : null; flushNote().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
@@ -1311,15 +1331,33 @@ function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdNa
       if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = projLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); } }); }); }
 /** Note title/text autosave (debounced + on leaving the box); "Save project" saves everything at once. */
 var noteT = null, noteDirty = false;
-function queueNote() { var n0 = curNote(); if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; } noteDirty = true; clearTimeout(noteT);
+function queueNote() { var n0 = curNote(); if (n0 && $('nTitle')) { n0.title = $('nTitle').value.trim() || n0.title; n0.text = $('nText').value; syncCurTitle(n0); } noteDirty = true; clearTimeout(noteT);
   $('nSaved').textContent = 'Editing…'; noteT = setTimeout(flushNote, 900); }
-function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
-  noteDirty = false; var c = custOpen; n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; $('nSaved').textContent = 'Saving…';
-  return autoSave('note:' + n.id, function () { var title = n.title, text = n.text;
+function commitNote(n) { var c = custOpen, title = n.title, text = n.text || '';
+  if ($('nSaved') && noteOpenId === n.id) $('nSaved').textContent = 'Saving…';
+  return autoSave('note:' + n.id, function () {
     return api('noteSave', { id: c.id, noteId: n.id, title: title, text: text }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by;
       if ($('nSaved') && noteOpenId === n.id) $('nSaved').textContent = 'Saved ' + whenTxt(r.note.updated);
-      if (isCurNote(c.id, n.id) && curCust.noteTitle !== r.note.title) { curCust.noteTitle = r.note.title; saveCur(); } }); })
-    .then(function () { if (saveQ['note:' + n.id] && $('nSaved') && noteOpenId === n.id) $('nSaved').innerHTML = '<span class="missing">Not saved yet (will retry)</span>'; }); }
+      syncCurTitle(n); }); }).then(function () { if (saveQ['note:' + n.id] && $('nSaved') && noteOpenId === n.id) $('nSaved').innerHTML = '<span class="missing">Not saved yet (will retry)</span>'; }); }
+function flushNote() { clearTimeout(noteT); var n = curNote(); if (!noteDirty || !n || !$('nTitle')) return Promise.resolve();
+  noteDirty = false; n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; return commitNote(n); }
+function setNoteTitle(n, title) {
+  title = String(title || '').trim().slice(0, 60); if (!title || !n) return;
+  n.title = title;
+  if (noteOpenId === n.id && $('nTitle')) { $('nTitle').value = title; noteDirty = true; quoteBtn(); paintNoteChips(n); syncCurTitle(n); flushNote(); return; }
+  var card = noteCardEl(n.id), head = card && card.querySelector('.nghead b'); if (head) head.textContent = title;
+  paintNoteChips(n); syncCurTitle(n); commitNote(n);
+}
+function focusCustomTitle(n) {
+  if (!n) return;
+  if (noteOpenId !== n.id) { flushNote().then(function () { keepTyped(); noteOpenId = n.id; renderNoteCards(); scrollToNote(n.id); var el = $('nTitle'); if (el) { el.focus(); el.select(); } }); return; }
+  var el = $('nTitle'); if (el) { el.focus(); el.select(); }
+}
+function applyNoteChip(chip) {
+  var n = (custOpen.notes || []).filter(function (x) { return x.id === chip.dataset.nchip; })[0]; if (!n) return;
+  if (chip.dataset.ncustom) { focusCustomTitle(n); return; }
+  setNoteTitle(n, chip.dataset.nlabel);
+}
 function renderPicked() {
   var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) { keepTyped(); renderNoteCards(); } return; }
   var it = n.items || [];
