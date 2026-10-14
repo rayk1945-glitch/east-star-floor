@@ -503,7 +503,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014p"></script>
+<script src="i18n.js?v=20261014q"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -553,7 +553,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014p';
+var PAGE_VER = '20261014q';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1175,7 +1175,6 @@ function smsHrefMany(phones, body) {
   return 'sms:' + joined + '?body=' + b;
 }
 function mailHref(email, subject, body) { return 'mailto:' + (email || '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body); }
-function validEmail(s) { return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(s || '').trim()); }
 function shareWho(c) {
   var list = projectContacts(c), who = c && c._shareWho || '1';
   if (!(list[1] && contactHas(list[1]))) return '1';
@@ -1229,31 +1228,33 @@ function openClientLink(c) {
   if ($('clNew')) $('clNew').onclick = function () { if (confirm('Make a new link? The old link stops working right away.')) run('new', this).then(function (r) { if (r) toast('New client link (old one stopped)'); }); };
   if ($('clStop')) $('clStop').onclick = function () { if (confirm('Stop the client link? Anyone who has it can no longer open this project.')) run('stop', this).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); };
 }
-/** Confirm the chosen contact emails, then ask Apps Script to forward the link. No webhook URL or key is on this page. */
+/** Ask Apps Script to forward the project. No email prompt: contacts and notes go as stored. No webhook URL or key is on this page. */
+function botNotesSummary(c) {
+  return (c.notes || []).map(function (n) {
+    return {
+      title: String(n.title || ''),
+      text: String(n.text || '').trim(),
+      items: (n.items || []).map(function (l) { return { name: String(l.name || ''), qty: l.qty }; }),
+      photos: (n.photos || []).length
+    };
+  });
+}
 function openClientBotForm(c, u) {
-  var chosen = chosenContacts(c), who = shareWho(c);
-  var fields = chosen.map(function (ct, i) {
-    var label = chosen.length < 2 ? 'Email' : (ct.name ? '<span class="notr">' + esc(ct.name) + '</span>' + (ct.role ? ' <span>' + esc(ct.role) + '</span>' : '') : (who === '2' ? 'Contact 2' : 'Contact ' + (i + 1)));
-    return '<label class="f">' + label + '</label><input class="clBotEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(ct.email) + '">';
-  }).join('');
-  openSheet('<h3>Send to bot</h3><div class="hint" style="margin:0 0 10px">Confirm the client email. The bot will draft the message for approval.</div>' + fields +
-    '<label class="f">Note (optional)</label><textarea id="clBotNote" rows="3" maxlength="500"></textarea>' +
+  openSheet('<h3>Send to bot</h3><div class="hint" style="margin:0 0 10px">The bot reads the contacts and notes on this project, then drafts the message for approval.</div>' +
+    '<label class="f">Note to bot</label><textarea id="clBotNote" rows="4" maxlength="500" placeholder="' + esc(clT('e.g. email the homeowner the link and mention the quote is ready')) + '"></textarea>' +
     '<div class="clbtns"><button class="btn" id="clBotSend" type="button">Send to bot</button><button class="btn sec" id="clBotCancel" type="button">Cancel</button></div>' +
     '<div id="clMsg" class="msg hidden"></div>');
   $('clBotCancel').onclick = function () { openClientLink(c); };
   $('clBotSend').onclick = function () {
-    var b = this, note = $('clBotNote').value.trim(), inputs = [].map.call(document.querySelectorAll('.clBotEmail'), function (el) { return el.value.trim(); });
-    var i, bad = false, any = false;
-    for (i = 0; i < inputs.length; i++) { if (!inputs[i]) continue; if (!validEmail(inputs[i])) bad = true; else any = true; }
-    if (bad || !any) { msg($('clMsg'), 'Enter the client email.'); return; }
-    var contacts = chosen.map(function (ct, n) { return { name: ct.name, role: ct.role, phone: ct.phone, email: validEmail(inputs[n]) ? inputs[n] : '' }; });
+    var b = this, instructions = $('clBotNote').value.trim();
+    var contacts = projectContacts(c).slice(0, 2).map(function (ct) { return { name: ct.name || '', role: ct.role || '', phone: ct.phone || '', email: ct.email || '' }; });
     var emails = [], phones = [], names = [];
     contacts.forEach(function (ct) { if (ct.email) emails.push(ct.email); var ph = clientPhoneOf({ phone: ct.phone }); if (ph) phones.push(ph); if (ct.name) names.push(ct.name); });
     b.disabled = true; b.textContent = 'Sending…';
     serverApi('sendClientLinkToBot', {
       projectId: c.id, projectName: projLabel(c), clientName: names.join(' · ') || String(c.name || '').trim(),
       clientEmail: emails.join(','), clientPhone: phones.join(', '), link: u,
-      sender: session && session.name || '', note: note, contacts: contacts
+      sender: session && session.name || '', instructions: instructions, note: instructions, contacts: contacts, notes: botNotesSummary(c)
     }).then(function () { closeSheet(); toast('Sent to bot — it will draft the email for approval'); })
       .catch(function (er) { b.disabled = false; b.textContent = 'Send to bot'; msg($('clMsg'), er.message); });
   };
