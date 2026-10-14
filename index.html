@@ -389,6 +389,13 @@
   .hd-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   @media (max-width:560px){.hd-logo{height:26px} .toprow{flex-wrap:wrap;row-gap:4px} .toprow h1{flex:1 0 100%;display:flex;align-items:center} .toplinks{flex:1 1 100%;overflow-x:auto;justify-content:flex-end}}
   .toprow h1 .hd-logo{flex-shrink:0}
+  /* iOS zooms in on any field under 16px: keep every text field at 16px or more */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea { font-size:max(16px, 1em) !important; }
+  .sheet-bg.cfm { z-index:60; } .sheet.cfm { z-index:61; }
+  .cfm .cfmmsg { white-space:pre-line; font-size:16px; line-height:1.45; margin:4px 0 16px; color:var(--text); }
+  .cfm .cfmbtns { display:flex; gap:10px; } .cfm .cfmbtns .btn { flex:1; margin:0; }
+  .cfm .cfmbtns .btn.sec2 { background:#fff; color:#111; border:1px solid var(--line-strong); }
+  .cfm .cfmbtns .btn.danger { background:#b42318; border-color:#b42318; color:#fff; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -510,10 +517,12 @@
   </nav>
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet-bg cfm" id="cfmBg"></div>
+<div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014r"></script>
+<script src="search.js?v=20261014s"></script>
+<script src="i18n.js?v=20261014s"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -563,7 +572,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014r';
+var PAGE_VER = '20261014s';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -612,7 +621,24 @@ function pricedCopyExpired() { var e = localStorage.getItem(PEXP_KEY); return !e
 // ---- project cache (per login, localStorage): lists and projects show at once, then refresh from the server in the background
 function pcKey(k) { return 'esProj:' + (session && session.name || '') + ':' + k; }
 function pcGet(k) { try { return JSON.parse(localStorage.getItem(pcKey(k)) || 'null'); } catch (e) { return null; } }
-function pcPut(k, v) { try { localStorage.setItem(pcKey(k), JSON.stringify(v)); } catch (e) { pcWipe(); } }
+/** Strip inline photo / audio bytes (data: URLs, base64) from what goes in the cache; ids and http URLs stay. */
+function pcSlim(v, d) { if (d > 12 || v == null) return v;
+  if (typeof v === 'string') return /^data:/i.test(v) || (v.length > 4000 && v.indexOf(' ') < 0 && /^[A-Za-z0-9+\/=\r\n]+$/.test(v)) ? '' : v;
+  if (Array.isArray(v)) return v.map(function (x) { return pcSlim(x, (d || 0) + 1); });
+  if (typeof v === 'object') { var o = {}; Object.keys(v).forEach(function (k) { o[k] = pcSlim(v[k], (d || 0) + 1); }); return o; }
+  return v; }
+var PC_TS = 'esProjTs';
+function pcTs() { try { return JSON.parse(localStorage.getItem(PC_TS) || '{}') || {}; } catch (e) { return {}; } }
+function pcTouch(key, del) { try { var m = pcTs(); if (del) delete m[key]; else m[key] = Date.now(); localStorage.setItem(PC_TS, JSON.stringify(m)); } catch (e) {} }
+/** Drop the least recently saved esProj entry (never the one being written). Returns false when nothing is left to drop. */
+function pcEvictOne(keep) { var m = pcTs(), best = null, bt = Infinity;
+  Object.keys(localStorage).forEach(function (k) { if (k.indexOf('esProj:') !== 0 || k === keep) return; var t = m[k] || 0; if (t < bt) { bt = t; best = k; } });
+  if (!best) return false; try { localStorage.removeItem(best); } catch (e) {} pcTouch(best, true); return true; }
+function pcPut(k, v) { var key = pcKey(k);
+  if (v == null) { try { localStorage.removeItem(key); } catch (e) {} pcTouch(key, true); return; }
+  var s; try { s = JSON.stringify(pcSlim(v, 0)); } catch (e) { return; }
+  for (var i = 0; i < 50; i++) { try { localStorage.setItem(key, s); pcTouch(key); return; } catch (e) { if (!pcEvictOne(key)) break; } }
+  try { localStorage.removeItem(key); } catch (e) {} pcTouch(key, true); }
 function pcWipe() { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('esProj:') === 0) localStorage.removeItem(k); }); } catch (e) {} }
 /** Cache the open project as it is now (notes still being created on the phone are left out). */
 function pcSave(c) { c = c || custOpen; if (!c || !c.notes) return; var o = {}; Object.keys(c).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = c[k]; });
@@ -732,6 +758,23 @@ $('pcBtn').onclick = function () { api('changePin', { oldPin: $('pcOld').value, 
 
 // ---------------- sheet
 function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
+/** In-app confirm (replaces window.confirm). askOk(text, { danger: true, ok: 'Delete' }) -> Promise<boolean>. Text is translated like confirm() was. */
+var cfmDone = null;
+function askOk(m, o) { o = o || {};
+  if (cfmDone) cfmDone(false);
+  return new Promise(function (res) {
+    var T = window.I18N && I18N.t ? I18N.t : function (x) { return x; };
+    $('cfmMsg').textContent = T(String(m));
+    var y = $('cfmYes'); y.textContent = o.ok || (o.danger ? 'Delete' : 'OK'); y.classList.toggle('danger', !!o.danger);
+    $('cfmSheet').classList.add('on'); $('cfmBg').classList.add('on');
+    cfmDone = function (v) { cfmDone = null; $('cfmSheet').classList.remove('on'); $('cfmBg').classList.remove('on'); res(!!v); };
+    setTimeout(function () { try { y.focus(); } catch (e) {} }, 30);
+  });
+}
+$('cfmYes').onclick = function () { if (cfmDone) cfmDone(true); };
+$('cfmNo').onclick = function () { if (cfmDone) cfmDone(false); };
+$('cfmBg').onclick = function () { if (cfmDone) cfmDone(false); };
+document.addEventListener('keydown', function (e) { if (!cfmDone) return; if (e.key === 'Escape') cfmDone(false); else if (e.key === 'Enter') { e.preventDefault(); cfmDone(true); } }, true);
 function closeSheet() { if (window.lineFlush) { var f = lineFlush; lineFlush = null; f(); } $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
@@ -1107,7 +1150,7 @@ $('hSelDel').onclick = function () {
   var ask = ok.length === 1
     ? 'Delete ' + projLabel(ok[0]) + ' with all its notes, photos and voice notes?'
     : 'Delete ' + ok.length + ' projects with all their notes, photos and voice notes?';
-  if (!confirm(ask)) return;
+  askOk(ask, { danger: true }).then(function (yes) { if (!yes) return;
   var btn = $('hSelDel'); btn.disabled = true;
   var failed = [], n = ok.length;
   ok.reduce(function (p, c) {
@@ -1123,6 +1166,7 @@ $('hSelDel').onclick = function () {
     if (failed.length) toast(failed.join(' · '));
     else toast(n === 1 ? 'Deleted ' + projLabel(ok[0]) : 'Deleted ' + n + ' projects');
     loadNotesList();
+  });
   });
 };
 // ---- one customer: slim info line (collapsed; a brand-new customer opens expanded), note cards, voice notes
@@ -1235,8 +1279,8 @@ function openClientLink(c) {
     $('clText').setAttribute('href', smsHrefMany(bits.phones, bits.smsBody)); };
   if ($('clBot')) $('clBot').onclick = function () { openClientBotForm(c, u); };
   if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: bits.subject, text: bits.emailBody, url: u }).catch(function () {}); };
-  if ($('clNew')) $('clNew').onclick = function () { if (confirm('Make a new link? The old link stops working right away.')) run('new', this).then(function (r) { if (r) toast('New client link (old one stopped)'); }); };
-  if ($('clStop')) $('clStop').onclick = function () { if (confirm('Stop the client link? Anyone who has it can no longer open this project.')) run('stop', this).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); };
+  if ($('clNew')) $('clNew').onclick = function () { var b = this; askOk('Make a new link? The link your client already has stops working right away. Send them the new one.', { ok: 'Make new link' }).then(function (yes) { if (yes) run('new', b).then(function (r) { if (r) toast('New client link (old one stopped)'); }); }); };
+  if ($('clStop')) $('clStop').onclick = function () { var b = this; askOk('Stop the client link? Anyone who has it can no longer open this project.', { danger: true, ok: 'Stop link' }).then(function (yes) { if (yes) run('stop', b).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); }); };
 }
 /** Ask Apps Script to forward the project. No email prompt: contacts and notes go as stored. No webhook URL or key is on this page. */
 function botNotesSummary(c) {
@@ -1372,8 +1416,8 @@ function renderOverview() {
   $('cdQuote').onclick = quoteCust; $('cdQuoteAll').onclick = quoteProject;
   $('cdRec').onclick = toggleRec;
   $('cdVoiceT').onclick = function () { voiceOpen = !voiceOpen; renderVoice(); };
-  if ($('cdDel')) $('cdDel').onclick = function () { if (!confirm('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?')) return;
-    api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); };
+  if ($('cdDel')) $('cdDel').onclick = function () { askOk('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?', { danger: true }).then(function (yes) { if (!yes) return;
+    api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); }); };
   renderNoteCards(); renderVoice();
 }
 /** "+ Add note": the note shows right away with a temp id; the server creates it in the background (Saving… / Saved, retried
@@ -1436,8 +1480,8 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
   if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + projLabel(c) + ' · ' + n.title); };
   $('nTitle').addEventListener('input', function () { queueNote(); quoteBtn(); paintNoteChips(n); }); $('nText').addEventListener('input', queueNote);
   $('cdAddMore').onclick = function () { setCur(c, n); go('search'); $('q').focus(); };
-  $('nDel').onclick = function () { if (!confirm('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?')) return;
-    api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); };
+  $('nDel').onclick = function () { askOk('Delete the note “' + n.title + '” with its ' + n.items.length + ' items and ' + (n.photos || []).length + ' photos?', { danger: true }).then(function (yes) { if (!yes) return;
+    api('noteDelete', { id: c.id, noteId: n.id }).then(function () { c.notes = c.notes.filter(function (x) { return x !== n; }); if (isCurNote(c.id, n.id)) setCur(null); noteOpenId = null; renderNoteCards(); toast('Note deleted'); }).catch(function (er) { toast(er.message); }); }); };
   renderPicked(); renderNotePhotos();
 }
 /** Tap a collapsed header: open that group (the open one collapses); tap ▴ to collapse. */
@@ -2047,10 +2091,10 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
     var nq = curNote(); if (nq) lineHold[l.id] = nq.id; scheduleAutosave(); }
-  else if (rm) { if (!confirm('Remove ' + l.name + '?')) return; var c = custOpen, n = curNote();
+  else if (rm) { var c = custOpen, n = curNote(); askOk('Remove ' + l.name + '?', { danger: true, ok: 'Remove' }).then(function (yes) { if (!yes || custOpen !== c || curNote() !== n) return;
     n.items = n.items.filter(function (x) { return x !== l; }); renderPicked(); syncCount();
     delete saveQ['line:' + l.id]; delete lineHold[l.id];
-    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }).then(function () { rememberNoteVersion(n); }); }); }
+    autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }).then(function () { rememberNoteVersion(n); }); }); }); }
 });
 // ---- reorder items inside a note: drag the handle or the arrows. The server keeps array order, so a new order is
 // saved by removing the lines and adding them back (same customerItem calls as before).
@@ -2633,8 +2677,8 @@ document.addEventListener('click', function (e) { var t = e.target; if (!t.close
   if (t.closest('[data-vplay]')) { var b = t.closest('[data-vplay]'); if (row.querySelector('audio')) { row.querySelector('audio').play(); return; } b.textContent = 'Loading…';
     (fileCache[f] ? Promise.resolve({ data: fileCache[f] }) : api('customerFile', { id: c.id, fileId: f })).then(function (r) { fileCache[f] = r.data; b.textContent = '▶ Play';
       var a = document.createElement('audio'); a.controls = true; a.src = r.data; row.appendChild(a); a.play().catch(function () {}); }).catch(function (er) { b.textContent = '▶ Play'; toast(er.message); }); }
-  else if (t.closest('[data-vdel]')) { if (!confirm('Remove this voice note?')) return;
-    api('customerFileRemove', { id: c.id, fileId: f }).then(function () { c.voice = c.voice.filter(function (v) { return v.fileId !== f; }); renderVoice(); }).catch(function (er) { toast(er.message); }); } });
+  else if (t.closest('[data-vdel]')) { askOk('Remove this voice note?', { danger: true, ok: 'Remove' }).then(function (yes) { if (!yes) return;
+    api('customerFileRemove', { id: c.id, fileId: f }).then(function () { c.voice = c.voice.filter(function (v) { return v.fileId !== f; }); renderVoice(); }).catch(function (er) { toast(er.message); }); }); } });
 document.addEventListener('change', function (e) { var t = e.target; if (!t.dataset.vtext || !t.closest('#cdVoice')) return; var f = t.closest('[data-vid]').dataset.vid, c = custOpen;
   api('customerVoiceText', { id: c.id, fileId: f, transcript: t.value }).then(function () { (c.voice || []).forEach(function (v) { if (v.fileId === f) v.transcript = t.value; }); toast('Saved'); }).catch(function (er) { toast(er.message); }); });
 function toggleRec() { if (rec) { rec.stop(); return; }
@@ -2695,9 +2739,9 @@ document.addEventListener('click', function (e) { var b = e.target.closest('butt
   if (act === 'open') openRequest(rid);
   else if (act === 'tocust') cartToCustomer(rid, b);
   else if (act === 'edit' || act === 'clone') loadRequestIntoForm(rid, act === 'clone', b);
-  else if (act === 'resend') { if (!confirm('Send ' + rid + ' to ' + (b.dataset.bot || session.bot || 'the bot') + ' again (same request ID)?')) return;
+  else if (act === 'resend') { askOk('Send ' + rid + ' to ' + (b.dataset.bot || session.bot || 'the bot') + ' again (same request ID)?', { ok: 'Send again' }).then(function (yes) { if (!yes) return;
     b.disabled = true; api('requestResend', { request_id: rid }).then(function (r) { toast(r.sent ? 'Re-sent ' + r.request_id : 'Re-send failed: ' + r.status); refreshLists(); })
-      .catch(function (er) { toast(er.message); b.disabled = false; }); } });
+      .catch(function (er) { toast(er.message); b.disabled = false; }); }); } });
 function refreshLists() { if ($('p-history').classList.contains('on')) loadHistory(); if ($('p-plan').classList.contains('on')) loadRecent('plan', 'plList', 5); }
 function kv(k, v) { return v === '' || v == null ? '' : '<div class="kv"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>'; }
 function openRequest(rid) {
@@ -2912,9 +2956,8 @@ function reportAct(id, del) {
   rmList.forEach(function (r) { if (String(r.id) === String(id)) row = r; });
   if (!row) return;
   if (del && meName && row.who && row.who !== meName) { toast('Only the reporter can delete this report.'); return; }
-  if (del && !confirm('Delete this report?')) return;
   if (!del && row.status === 'resolved') return;
-  if (!del && !confirm('Mark this as found?')) return;
+  askOk(del ? 'Delete this report?' : 'Mark this as found?', del ? { danger: true } : { ok: 'Mark found' }).then(function (yes) { if (!yes) return;
   serverApi(del ? 'deleteReport' : 'resolveReport', { id: id }).then(function (r) {
     if (del) rmList = rmList.filter(function (x) { return String(x.id) !== String(id); });
     else rmList = rmList.map(function (x) { return String(x.id) === String(id) ? (r && r.report) || Object.assign({}, x, { status: 'resolved', resolvedBy: meName, resolvedAt: Date.now() }) : x; });
@@ -2922,6 +2965,7 @@ function reportAct(id, del) {
     if (custOpen && $('cdItems')) renderPicked();
     toast(del ? 'Report deleted.' : 'Marked found.');
   }).catch(function (er) { toast(er.message); });
+  });
 }
 function rmCount() { var n = rmList.filter(function (r) { return r.status !== 'resolved'; }).length, b = $('rmBadge'); if (b) { b.textContent = n; b.classList.toggle('hidden', !n); } rmSyncCards(); if ($('p-reported') && $('p-reported').classList.contains('on')) renderReportedPage(); }
 function rmProbe() { return serverApi('listReports', { includeResolved: true }).then(function (r) {
@@ -2963,12 +3007,12 @@ function rmOpen() { openSheet('<div class="sec-h"><h3>Reported missing</h3><butt
   $('rmRef').onclick = function () { rmProbe().then(rmRender); };
   $('rmView').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rmResolved = b.dataset.v === 'res'; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); rmRender(); };
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-rm]'); if (!b) return; var id = b.dataset.id, del = b.dataset.rm === 'del';
-    if (del && !confirm('Delete this report?')) return; b.disabled = true;
+    (del ? askOk('Delete this report?', { danger: true }) : Promise.resolve(true)).then(function (yes) { if (!yes) return; b.disabled = true;
     serverApi(del ? 'deleteReport' : 'resolveReport', { id: id }).then(function (r) {
       if (del) rmList = rmList.filter(function (x) { return String(x.id) !== String(id); });
       else rmList = rmList.map(function (x) { return String(x.id) === String(id) ? (r && r.report) || Object.assign({}, x, { status: 'resolved', resolvedBy: meName, resolvedAt: Date.now() }) : x; });
       rmCount(); rmRender(); toast(del ? 'Report deleted.' : 'Marked found.'); })
-      .catch(function (er) { msg($('rmLMsg'), er.message); b.disabled = false; }); };
+      .catch(function (er) { msg($('rmLMsg'), er.message); b.disabled = false; }); }); };
 }
 $('rmBtn').onclick = rmOpen;
 if ($('rpStore')) $('rpStore').addEventListener('click', function (e) { var b = e.target.closest('[data-st]'); if (!b) return; reportStore = b.dataset.st; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); renderReportedPage(); });
@@ -3167,12 +3211,12 @@ $('stList').addEventListener('change', function (e) { var sel = e.target.closest
     msg($('stListMsg'), u.name + '’s plans and carts now go to ' + r.bot + (r.sendTo ? '' : ' (own account)') + '.', true); })
     .catch(function (er) { msg($('stListMsg'), er.message); loadUsers(); }).then(function () { sel.disabled = false; }); });
 $('stList').addEventListener('click', function (e) { var b = e.target.closest('button[data-sa]'); if (!b) return; var u = staffRows[+b.closest('[data-si]').dataset.si], k = b.dataset.sa;
-  if (k === 'pause') { if (u.active && !confirm('Pause ' + u.name + '? They are signed out now and cannot sign in until you tap Resume.')) return; b.disabled = true;
+  if (k === 'pause') { (u.active ? askOk('Pause ' + u.name + '? They are signed out now and cannot sign in until you tap Resume.', { danger: true, ok: 'Pause' }) : Promise.resolve(true)).then(function (yes) { if (!yes) return; b.disabled = true;
     api('adminSetActive', { id: u.id, name: u.name, active: !u.active }).then(function (r) { msg($('stListMsg'), r.active ? u.name + ' can sign in again.' : u.name + ' is paused' + (r.sessionsEnded ? ' and was signed out (' + r.sessionsEnded + ' device' + (r.sessionsEnded === 1 ? '' : 's') + ')' : '') + '.', true); loadUsers(); })
-      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
-  else if (k === 'del') { if (!confirm('Delete the login for ' + u.name + '?\n\nThey are signed out and can no longer sign in. Their projects and history stay (shown as “deleted: ' + u.name + '”).')) return; b.disabled = true;
+      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }); }
+  else if (k === 'del') { askOk('Delete the login for ' + u.name + '?\n\nThey are signed out and can no longer sign in. Their projects and history stay (shown as “deleted: ' + u.name + '”).', { danger: true }).then(function (yes) { if (!yes) return; b.disabled = true;
     api('adminDeleteUser', { id: u.id, name: u.name }).then(function (r) { msg($('stListMsg'), 'Deleted ' + r.name + '. ' + r.customersKept + ' project' + (r.customersKept === 1 ? '' : 's') + ' kept.', true); loadUsers(); })
-      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
+      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }); }
   else if (k === 'pin') { openSheet('<h3>Reset password for ' + esc(u.name) + '</h3><p class="hint">They are signed out and must pick their own password at the next sign-in. Give them the temporary password in person.</p>' +
       '<label class="f">Temporary password</label><div class="pwrap"><input id="rpPin" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" maxlength="128"><button type="button" class="pwshow" data-pwshow="rpPin" aria-label="Show password">Show</button></div><button class="btn" id="rpGo">Reset password</button><div id="rpMsg" class="msg hidden"></div>');
     $('rpPin').focus();
@@ -3189,15 +3233,15 @@ $('stList').addEventListener('click', function (e) { var b = e.target.closest('b
     openSheet('<h3>Change role for ' + esc(u.name) + '</h3><p class="hint">Full admin: everything, every account. Account admin: their own account and its staff. Staff: search, prices, projects. Warehouse: search and stock only, never prices. It takes effect on their next tap; they stay signed in.</p>' +
       '<label class="f">Role</label><select id="rlSel">' + Object.keys(RL).map(function (r) { return '<option value="' + r + '"' + (r === u.role ? ' selected' : '') + '>' + RL[r] + '</option>'; }).join('') + '</select><button class="btn" id="rlGo">Change role</button><div id="rlMsg" class="msg hidden"></div>');
     $('rlGo').onclick = function () { var r = $('rlSel').value, g = this; if (r === u.role) { closeSheet(); return; }
-      if (!confirm('Change ' + u.name + ' from ' + RL[u.role] + ' to ' + RL[r] + '?' + (r === 'admin' ? '\n\nA full admin can see every project, change webhooks and manage every login.' : '') + (u.me ? '\n\nThis is your own login. You lose full admin right away.' : ''))) return;
+      askOk('Change ' + u.name + ' from ' + RL[u.role] + ' to ' + RL[r] + '?' + (r === 'admin' ? '\n\nA full admin can see every project, change webhooks and manage every login.' : '') + (u.me ? '\n\nThis is your own login. You lose full admin right away.' : ''), { ok: 'Change role' }).then(function (yes) { if (!yes) return;
       g.disabled = true; api('adminSetRole', { id: u.id, role: r }).then(function (x) { closeSheet(); msg($('stListMsg'), x.name + ' is now ' + RL[x.role] + '.', true);
-        if (x.me) { location.reload(); return; } loadUsers(); }).catch(function (er) { msg($('rlMsg'), er.message); g.disabled = false; }); }; }
-  else if (k === 'pk') { if (!confirm('Remove fingerprint / Face ID for ' + u.name + ' on all ' + u.passkeys + ' saved device' + (u.passkeys === 1 ? '' : 's') + '?\n\nThey sign in with their password and can turn it on again.')) return; b.disabled = true;
+        if (x.me) { location.reload(); return; } loadUsers(); }).catch(function (er) { msg($('rlMsg'), er.message); g.disabled = false; }); }); }; }
+  else if (k === 'pk') { askOk('Remove fingerprint / Face ID for ' + u.name + ' on all ' + u.passkeys + ' saved device' + (u.passkeys === 1 ? '' : 's') + '?\n\nThey sign in with their password and can turn it on again.', { danger: true, ok: 'Remove' }).then(function (yes) { if (!yes) return; b.disabled = true;
     api('adminRemovePasskeys', { id: u.id }).then(function (r) { msg($('stListMsg'), 'Removed ' + r.removed + ' saved device' + (r.removed === 1 ? '' : 's') + ' for ' + r.name + '.', true); loadUsers(); })
-      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }
+      .catch(function (er) { msg($('stListMsg'), er.message); b.disabled = false; }); }); }
 });
-$('stAdd').onclick = function () { if ($('stRole').value === 'admin' && !confirm('Make ' + $('stName').value + ' a full admin? They can see every project, change webhooks and manage every login.')) return; api('adminSetUser', { name: $('stName').value, pin: $('stPin').value, account: $('stAcct').value, role: $('stRole').value }).then(function (r) {
-  msg($('stMsg'), (r.reset ? 'Password reset for ' : 'Added ') + r.name + '. Give them the temporary password in person.', true); $('stPin').value = ''; loadUsers(); }).catch(function (er) { msg($('stMsg'), er.message); }); };
+$('stAdd').onclick = function () { ($('stRole').value === 'admin' ? askOk('Make ' + $('stName').value + ' a full admin? They can see every project, change webhooks and manage every login.', { ok: 'Make full admin' }) : Promise.resolve(true)).then(function (yes) { if (!yes) return; api('adminSetUser', { name: $('stName').value, pin: $('stPin').value, account: $('stAcct').value, role: $('stRole').value }).then(function (r) {
+  msg($('stMsg'), (r.reset ? 'Password reset for ' : 'Added ') + r.name + '. Give them the temporary password in person.', true); $('stPin').value = ''; loadUsers(); }).catch(function (er) { msg($('stMsg'), er.message); }); }); };
 
 if (session) enterApp(); else { show('signin'); warmUp(); pkSigninShow(); }
 

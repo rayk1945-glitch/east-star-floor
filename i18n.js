@@ -11,6 +11,8 @@
 
   // ---------------------------------------------------------------- strings table: whole texts (trimmed)
   var EX = {
+    'Make a new link? The link your client already has stops working right away. Send them the new one.': '生成新链接？客户手上的旧链接会立即失效，请把新链接发给客户。',
+    'OK': '确定', 'Make new link': '生成新链接', 'Stop link': '停用链接', 'Send again': '再次发送', 'Mark found': '标记已找到', 'Pause': '暂停', 'Change role': '更改角色', 'Make full admin': '设为完全管理员',
     // header / nav / sign in
     'East Star Max': '劍鋒高級建材 Max', 'East Star Red': '劍鋒高級建材 Red', 'Sign in': '登录', 'Sign out': '退出', 'Admin': '管理', 'Search': '搜索', 'Project': '项目', 'Projects': '项目',
     'History': '历史', 'Requests': '请求', 'Name': '姓名', 'PIN': '密码 (PIN)', 'Refresh': '刷新', 'All': '全部', 'Carts': '购物车', 'Plans': '图纸', 'From': '从', 'To': '到',
