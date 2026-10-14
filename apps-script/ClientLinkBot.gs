@@ -18,15 +18,23 @@
  * Request (text/plain JSON, same as the other staff actions; token is the
  * staff session and is NOT forwarded to the bot):
  *   {"action":"sendClientLinkToBot","token":"…","projectId":"","projectName":"",
- *    "clientName":"","clientEmail":"","clientPhone":"","link":"","sender":"","note":"",
- *    "contacts":[{"name":"","role":"","phone":"","email":""}]}
+ *    "clientName":"","clientEmail":"","clientPhone":"","link":"","sender":"",
+ *    "instructions":"","note":"",
+ *    "contacts":[{"name":"","role":"","phone":"","email":""}],
+ *    "notes":[{"title":"","text":"","items":[{"name":"","qty":1}],"photos":0}]}
  *
  * Webhook POST body (Content-Type application/json, Authorization: BOT_WEBHOOK_AUTH):
  *   {"projectId":"","projectName":"","clientName":"","clientEmail":"","clientPhone":"",
- *    "link":"","sender":"","note":"","contacts":[{"name":"","role":"","phone":"","email":""}]}
- * sender is session.name. The client cannot set it. contacts is the chosen
- * recipients (one or two). If the request has no contacts array, one contact is
- * built from clientName, clientPhone, and clientEmail. The session token is not forwarded.
+ *    "link":"","sender":"","instructions":"","note":"",
+ *    "contacts":[{"name":"","role":"","phone":"","email":""}],
+ *    "notes":[{"title":"","text":"","items":[{"name":"","qty":1}],"photos":0}]}
+ * sender is session.name. The client cannot set it. Email is not required:
+ * contacts are the project's stored contacts (one or two), email included only
+ * when it is already saved. instructions is the staff "Note to bot"; note is
+ * the same text so an older reader still sees it. notes is a summary of each
+ * project note (title, text, item name and qty, photo count) with no prices.
+ * If the request has no contacts array, one contact is built from clientName,
+ * clientPhone, and clientEmail. The session token is not forwarded.
  */
 function sendClientLinkToBotResponse_(body, session) {
   try {
@@ -57,8 +65,10 @@ function sendClientLinkToBot_(body, session) {
     clientPhone: String(body.clientPhone || ''),
     link: String(body.link || ''),
     sender: String(session.name || ''),
-    note: String(body.note || ''),
-    contacts: botContacts_(body)
+    instructions: String(body.instructions != null ? body.instructions : (body.note || '')),
+    note: String(body.note != null ? body.note : (body.instructions || '')),
+    contacts: botContacts_(body),
+    notes: botNotes_(body)
   };
   var res;
   try {
@@ -85,5 +95,28 @@ function botContacts_(body) {
     list.push({ name: String(x.name || ''), role: String(x.role || ''), phone: String(x.phone || ''), email: String(x.email || '') });
   }
   if (!list.length) list.push({ name: String(body.clientName || ''), role: '', phone: String(body.clientPhone || ''), email: String(body.clientEmail || '') });
+  return list;
+}
+
+function botNotes_(body) {
+  var raw = body && Array.isArray(body.notes) ? body.notes : [], list = [], i, n, items, j, l, row, qty;
+  for (i = 0; i < raw.length && list.length < 12; i++) {
+    n = raw[i];
+    if (!n || typeof n !== 'object') continue;
+    items = [];
+    row = Array.isArray(n.items) ? n.items : [];
+    for (j = 0; j < row.length && items.length < 40; j++) {
+      l = row[j];
+      if (!l || typeof l !== 'object') continue;
+      qty = (typeof l.qty === 'number' && isFinite(l.qty)) ? l.qty : String(l.qty == null ? '' : l.qty);
+      items.push({ name: String(l.name || ''), qty: qty });
+    }
+    list.push({
+      title: String(n.title || ''),
+      text: String(n.text || '').slice(0, 1000),
+      items: items,
+      photos: Number(n.photos) || 0
+    });
+  }
   return list;
 }
