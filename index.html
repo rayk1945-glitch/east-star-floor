@@ -164,7 +164,7 @@
   .nhead #cdTitle { max-width:52%; }
   .tcbtn { display:block; width:100%; margin:4px 0 8px; min-height:42px; border:1px solid var(--line-strong); border-radius:12px; background:#f7f8fa; font:inherit; font-size:15px; font-weight:700; color:#1f2937; cursor:pointer; }
   .shline { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .shline > span { flex:1; min-width:0; } .shline b { color:#1f2937; }
-  .clbtns { display:flex; gap:8px; margin-top:8px; } .clbtns .btn { flex:1; margin-top:0; } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
+  .clbtns { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; } .clbtns .btn { flex:1 1 calc(50% - 8px); width:auto; margin-top:0; min-height:44px; font-size:15px; padding:0 10px; text-decoration:none; } .clbtns .btn.sec { border:1.5px solid var(--accent); } .clrow { display:flex; align-items:center; gap:12px; margin-top:6px; }
   .sendto { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); } .sendto select { flex:1; min-width:0; min-height:40px; font-size:14px; }
   .shbtn.on { border-color:#1A8BC9; color:#0b5f8f; background:#eef7fc; }
   .shbtn { border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:6px 14px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; flex-shrink:0; }
@@ -179,6 +179,7 @@
   .proj { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 10px 10px; margin-bottom:12px; }
   .proj .phead { padding:0 2px 10px; border-bottom:1px solid var(--line); margin-bottom:10px; } .proj .nhead { margin:0 0 4px; }
   .proj .pinfo { margin:10px 0 2px; } .proj .shline { margin-top:6px; }
+  .ct2 { margin-top:10px; padding-top:8px; border-top:1px dashed var(--line); }
   .proj .ngroup { box-shadow:none; border:1px solid var(--line-strong); margin-bottom:8px; padding:12px; } .proj .ngroup.open { border:2px solid #1f2937; }
   .proj .addnote { margin:0; min-height:46px; } .proj .pvoice { margin:0 0 8px; } .proj .vbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .proj .vbar .recbtn { min-height:40px; padding:0 14px; font-size:14px; }
   .proj .vtog { margin-left:auto; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; }
@@ -444,7 +445,7 @@
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <script src="search.js?v=20261013a"></script>
-<script src="i18n.js?v=20261014c"></script>
+<script src="i18n.js?v=20261014f"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -473,7 +474,7 @@ function serverApi(action, data) {
   var body = Object.assign({}, data || {}, { action: action }); if (session) body.token = session.token;
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('Unexpected server reply (HTTP ' + r.status + ').'); }
-      if (!j.ok) { var er = new Error(noteWords(j.error || 'Something went wrong.')); if (j.auth) signedOut(); throw er; } return j.data; }); },
+      if (!j.ok) { var er = new Error(noteWords(j.reason === 'not configured' ? 'The bot is not set up yet. Ask admin.' : (j.error || 'Something went wrong.'))); if (j.reason) er.reason = j.reason; if (j.auth) signedOut(); throw er; } return j.data; }); },
       function () { throw new Error('No connection to the server. Check your internet and try again.'); });
 }
 /** Server messages still say "customer" (API unchanged); staff see "note". */
@@ -494,7 +495,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014c';
+var PAGE_VER = '20261014f';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -840,6 +841,35 @@ function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) |
 function custLabel(c) { return c.label || c.name || (c.num ? '#' + c.num : ''); }
 /** What staff see for the top level: "Project #1001" until a name is typed, then "Mrs. Chen · #1001" (quotes/API keep custLabel). */
 function projLabel(c) { var l = custLabel(c); return /^#\d+$/.test(l) ? 'Project ' + l : l; }
+/** Up to two contacts. Old projects only have name, phone, city, and tax: that becomes contact 1, and an email
+ *  typed into those fields is copied into contact 1's email (the original strings stay). name/phone/email on the
+ *  project stay equal to contact 1 so the existing Apps Script columns still round-trip. */
+var CONTACT_ROLES = ['Homeowner', 'Contractor', 'Designer', 'Other'];
+function blankContact() { return { name: '', role: '', phone: '', email: '' }; }
+function emailIn(s) { var m = String(s || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i); return m ? m[0] : ''; }
+function normContact(x) { x = x || {}; return { name: String(x.name || '').trim(), role: String(x.role || '').trim(), phone: String(x.phone || '').trim(), email: String(x.email || '').trim() }; }
+function contactHas(ct) { ct = normContact(ct); return !!(ct.name || ct.role || ct.phone || ct.email); }
+function legacyContact(c) {
+  return { name: String(c && c.name || '').trim(), role: '', phone: String(c && c.phone || '').trim(), email: String(c && c.email || '').trim() || emailIn(c && c.phone) || emailIn(c && c.name) || emailIn(c && c.city) };
+}
+function projectContacts(c) {
+  var list;
+  if (c && Array.isArray(c.contacts) && c.contacts.length) list = c.contacts.slice(0, 2).map(normContact);
+  else list = [legacyContact(c)];
+  if (!list.length) list = [blankContact()];
+  if (c && c._contact2 && list.length < 2) list.push(blankContact());
+  return list;
+}
+/** Server builds that only store name/phone/city drop `contacts`. Keep a second contact from this phone's cache when contact 1 still matches. */
+function adoptContacts(server, cached) {
+  if (!server || Array.isArray(server.contacts)) return server;
+  if (!cached || !Array.isArray(cached.contacts) || !cached.contacts.length) return server;
+  var a = normContact(cached.contacts[0]);
+  if (String(server.name || '').trim() !== a.name || String(server.phone || '').trim() !== a.phone) return server;
+  server.contacts = cached.contacts.slice(0, 2).map(normContact);
+  if (!String(server.email || '').trim() && a.email) server.email = a.email;
+  return server;
+}
 function setCur(c, n) { curCust = c && n ? { id: c.id, name: projLabel(c), noteId: n.id, noteTitle: n.title, count: n.count != null ? n.count : (n.items || []).length } : null;
   if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); else localStorage.removeItem(curKey()); renderCustBar(); }
 function saveCur() { if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); renderCustBar(); }
@@ -896,7 +926,7 @@ function custRowHtml(c) { var ago = c.updated ? whenTxt(c.updated) : '', nl = c.
     secs = [nl.length + ' note' + (nl.length === 1 ? '' : 's') + (named ? ': ' + nl.map(function (n) { return n.title || 'Note'; }).join(', ') : '')];
   return '<button class="crow2" data-cust="' + esc(c.id) + '"><b>' + esc(projLabel(c)) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
     (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
-    ([c.phone, c.city].filter(Boolean).length ? '<span class="s">' + esc([c.phone, c.city].filter(Boolean).join(' · ')) + '</span>' : '') +
+    (function () { var bits = [], list = projectContacts(c); list.forEach(function (ct) { if (ct.phone) bits.push(ct.phone); else if (ct.email) bits.push(ct.email); }); if (c.city && bits.indexOf(c.city) < 0) bits.push(c.city); return bits.length ? '<span class="s">' + esc(bits.join(' · ')) + '</span>' : ''; })() +
     '<span class="s">' + (secs.length ? esc(secs.join(', ')) + ' · ' : '') + c.count + ' item' + (c.count === 1 ? '' : 's') +
     (ago ? ' · ' + esc(ago) + (c.updated_by ? ' by ' + esc(c.updated_by) : '') : '') + '</span></button>'; }
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-cust]'); if (!b) return;
@@ -946,6 +976,7 @@ function openCust(id, pre, noteId) {
   else { custOpen = { id: id };
     d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList; }
   api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return;
+    c = adoptContacts(c, cached);
     if (cached) { if (custOpen !== cached) return;                                         // something else opened since
       if (projPending(id) || document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && $('cuDetail').contains(document.activeElement)) { pcSave(c); return; }   // don't yank what they're typing; next open shows it
       if (JSON.stringify(c) === JSON.stringify(cached)) return; }
@@ -965,13 +996,69 @@ function shareText(c) {
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
 /** "Share with client": a read-only, no-login link to this project (client.html?c=TOKEN). The server sends no prices,
- *  stock, shelves, contact info or voice notes for it. Make / copy / text it, replace it, or stop it. */
+ *  stock, shelves, contact info or voice notes for it. After the link exists: email, text, copy, send to bot, and share.
+ *  Send to bot calls sendClientLinkToBot. The webhook URL and key stay in Script Properties, never on this page. */
 function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t + (window.I18N && I18N.lang() === 'zh' ? '&l=zh' : ''); }   // &l=zh: the client page starts in Chinese when shared from 中文
+function clT(s) { return window.I18N ? I18N.t(s) : s; }
+var CL_NOTE = 'Hi, here is the project we put together for you. Open the link to see your items and photos. No sign-in needed.';
+var CL_STORE = 'San Francisco: 1945 Carroll Ave, (415) 467-2888 · Fremont: 48460 Kato Road, (510) 257-4888 · Mon – Sat 8:30 AM – 5:30 PM · eaststarusa.com';
+function clientPhoneOf(c) {
+  var raw = String(c && c.phone || '').trim();
+  if (!raw || /@/.test(raw)) return '';
+  var n = raw.replace(/[^\d+]/g, ''), digits = n.replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15 ? n : '';
+}
+function smsIsIos() { var ua = navigator.userAgent || ''; return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); }
+/** iOS: sms:?&body= or sms:NUMBER&body= . Android: sms:?body= or sms:NUMBER?body= . */
+function smsHref(phone, body) {
+  var b = encodeURIComponent(body), n = phone || '';
+  if (smsIsIos()) return n ? 'sms:' + n + '&body=' + b : 'sms:?&body=' + b;
+  return n ? 'sms:' + n + '?body=' + b : 'sms:?body=' + b;
+}
+/** Two numbers: iOS sms://open?addresses= (when the phone supports it). Android: sms:n1,n2?body= . */
+function smsHrefMany(phones, body) {
+  var nums = (phones || []).filter(Boolean);
+  if (nums.length <= 1) return smsHref(nums[0] || '', body);
+  var b = encodeURIComponent(body), joined = nums.join(',');
+  if (smsIsIos()) return 'sms://open?addresses=' + joined + '&body=' + b;
+  return 'sms:' + joined + '?body=' + b;
+}
+function mailHref(email, subject, body) { return 'mailto:' + (email || '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body); }
+function validEmail(s) { return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(s || '').trim()); }
+function shareWho(c) {
+  var list = projectContacts(c), who = c && c._shareWho || '1';
+  if (!(list[1] && contactHas(list[1]))) return '1';
+  return who === '2' || who === 'both' ? who : '1';
+}
+function chosenContacts(c) {
+  var list = projectContacts(c), who = shareWho(c);
+  if (who === '2' && list[1]) return [list[1]];
+  if (who === 'both' && list[1]) return [list[0], list[1]];
+  return [list[0]];
+}
+function clientShareBits(c, u) {
+  var id = (c.num != null && c.num !== '') ? c.num : (c.id || '');
+  var note = clT(CL_NOTE), store = clT(CL_STORE), subject = clT('Your East Star project #' + id);
+  var emails = [], phones = [];
+  chosenContacts(c).forEach(function (ct) {
+    if (ct.email) emails.push(ct.email);
+    var ph = clientPhoneOf({ phone: ct.phone }); if (ph) phones.push(ph);
+  });
+  return { id: id, subject: subject, note: note, emailBody: note + '\n\n' + u + '\n\n' + store, smsBody: note + '\n\n' + u, email: emails.join(','), phone: phones[0] || '', phones: phones };
+}
 function openClientLink(c) {
-  var t = c.clientToken, u = t ? clientUrl(t) : '';
+  var t = c.clientToken, u = t ? clientUrl(t) : '', bits = t ? clientShareBits(c, u) : null, who = t ? shareWho(c) : '1';
+  var whoHtml = t && projectContacts(c)[1] && contactHas(projectContacts(c)[1]) ? '<div class="hint" style="margin:8px 0 0">Recipients</div><div class="seg2" id="clWho">' +
+    '<button type="button" data-who="1"' + (who === '1' ? ' class="active"' : '') + '>Contact 1</button>' +
+    '<button type="button" data-who="2"' + (who === '2' ? ' class="active"' : '') + '>Contact 2</button>' +
+    '<button type="button" data-who="both"' + (who === 'both' ? ' class="active"' : '') + '>Both</button></div>' : '';
   openSheet('<h3>Share with client</h3><div class="hint" style="margin:0 0 10px">A read-only page of <b>' + esc(projLabel(c)) + '</b> for your client: all notes, items, qty, item notes and photos, plus our store addresses. <b>No prices, totals, stock or shelf locations.</b> No sign-in needed: anyone with the link can see it.</div>' +
-    (t ? '<input id="clUrl" readonly value="' + esc(u) + '" style="font-size:13px">' +
-      '<div class="clbtns"><button class="btn" id="clCopy">Copy link</button>' + (navigator.share ? '<button class="btn sec" id="clShare">Share… (text it)</button>' : '') + '</div>' +
+    (t ? '<input id="clUrl" readonly value="' + esc(u) + '" style="font-size:13px">' + whoHtml +
+      '<div class="clbtns"><a class="btn" id="clEmail" href="' + esc(mailHref(bits.email, bits.subject, bits.emailBody)) + '">Email</a>' +
+      '<a class="btn" id="clText" href="' + esc(smsHrefMany(bits.phones, bits.smsBody)) + '">Text</a>' +
+      '<button class="btn" id="clCopy" type="button">Copy link</button>' +
+      '<button class="btn" id="clBot" type="button">Send to bot</button>' +
+      (navigator.share ? '<button class="btn sec" id="clShare" type="button">Share…</button>' : '') + '</div>' +
       '<div class="clrow"><a class="link" id="clOpen" href="' + esc(u) + '" target="_blank" rel="noopener">Preview</a><span style="flex:1"></span><button class="link" id="clNew">New link</button><button class="link" id="clStop" style="color:#7f1d1d">Stop client link</button></div>'
       : '<button class="btn" id="clMake">Make client link</button>') + '<div id="clMsg" class="msg hidden"></div>');
   function run(op, b) { if (b) b.disabled = true;
@@ -981,9 +1068,44 @@ function openClientLink(c) {
   if ($('clCopy')) $('clCopy').onclick = function () { var b = this;
     (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).catch(function () { var i = $('clUrl'); i.select(); document.execCommand('copy'); })
       .then(function () { b.textContent = 'Copied ✓'; toast('Client link copied'); }); };
-  if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: 'East Star Max · ' + (c.name || projLabel(c)), text: 'Your project at East Star Max:', url: u }).catch(function () {}); };
+  if ($('clWho')) $('clWho').onclick = function (e) { var b = e.target.closest('button'); if (!b || !b.dataset.who) return;
+    c._shareWho = b.dataset.who; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); });
+    bits = clientShareBits(c, u);
+    $('clEmail').setAttribute('href', mailHref(bits.email, bits.subject, bits.emailBody));
+    $('clText').setAttribute('href', smsHrefMany(bits.phones, bits.smsBody)); };
+  if ($('clBot')) $('clBot').onclick = function () { openClientBotForm(c, u); };
+  if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: bits.subject, text: bits.emailBody, url: u }).catch(function () {}); };
   if ($('clNew')) $('clNew').onclick = function () { if (confirm('Make a new link? The old link stops working right away.')) run('new', this).then(function (r) { if (r) toast('New client link (old one stopped)'); }); };
   if ($('clStop')) $('clStop').onclick = function () { if (confirm('Stop the client link? Anyone who has it can no longer open this project.')) run('stop', this).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); };
+}
+/** Confirm the chosen contact emails, then ask Apps Script to forward the link. No webhook URL or key is on this page. */
+function openClientBotForm(c, u) {
+  var chosen = chosenContacts(c), who = shareWho(c);
+  var fields = chosen.map(function (ct, i) {
+    var label = chosen.length < 2 ? 'Email' : (ct.name ? '<span class="notr">' + esc(ct.name) + '</span>' + (ct.role ? ' <span>' + esc(ct.role) + '</span>' : '') : (who === '2' ? 'Contact 2' : 'Contact ' + (i + 1)));
+    return '<label class="f">' + label + '</label><input class="clBotEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(ct.email) + '">';
+  }).join('');
+  openSheet('<h3>Send to bot</h3><div class="hint" style="margin:0 0 10px">Confirm the client email. The bot will draft the message for approval.</div>' + fields +
+    '<label class="f">Note (optional)</label><textarea id="clBotNote" rows="3" maxlength="500"></textarea>' +
+    '<div class="clbtns"><button class="btn" id="clBotSend" type="button">Send to bot</button><button class="btn sec" id="clBotCancel" type="button">Cancel</button></div>' +
+    '<div id="clMsg" class="msg hidden"></div>');
+  $('clBotCancel').onclick = function () { openClientLink(c); };
+  $('clBotSend').onclick = function () {
+    var b = this, note = $('clBotNote').value.trim(), inputs = [].map.call(document.querySelectorAll('.clBotEmail'), function (el) { return el.value.trim(); });
+    var i, bad = false, any = false;
+    for (i = 0; i < inputs.length; i++) { if (!inputs[i]) continue; if (!validEmail(inputs[i])) bad = true; else any = true; }
+    if (bad || !any) { msg($('clMsg'), 'Enter the client email.'); return; }
+    var contacts = chosen.map(function (ct, n) { return { name: ct.name, role: ct.role, phone: ct.phone, email: validEmail(inputs[n]) ? inputs[n] : '' }; });
+    var emails = [], phones = [], names = [];
+    contacts.forEach(function (ct) { if (ct.email) emails.push(ct.email); var ph = clientPhoneOf({ phone: ct.phone }); if (ph) phones.push(ph); if (ct.name) names.push(ct.name); });
+    b.disabled = true; b.textContent = 'Sending…';
+    serverApi('sendClientLinkToBot', {
+      projectId: c.id, projectName: projLabel(c), clientName: names.join(' · ') || String(c.name || '').trim(),
+      clientEmail: emails.join(','), clientPhone: phones.join(', '), link: u,
+      sender: session && session.name || '', note: note, contacts: contacts
+    }).then(function () { closeSheet(); toast('Sent to bot — it will draft the email for approval'); })
+      .catch(function (er) { b.disabled = false; b.textContent = 'Send to bot'; msg($('clMsg'), er.message); });
+  };
 }
 function openShare(c) {
   openSheet('<h3>Share ' + esc(projLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this project with all its notes, and can add items, edit and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');
@@ -1002,10 +1124,46 @@ function openShare(c) {
   }).catch(function (er) { if ($('shList')) $('shList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
 function renderCustDetail() { renderOverview(); }
-/** The small line under the note header: "+ Add customer info" until something is filled in, then "Customer: phone · city". */
-function infoLinkText(c) { var has = [c.name, c.phone, c.city].some(function (x) { return String(x || '').trim(); }) || c.tax === 'Fremont';
-  return infoOpen ? 'Hide contact info ▴' : has ? 'Contact: ' + ([c.phone, c.city].filter(Boolean).map(esc).join(' · ') || esc(c.name)) + (c.tax === 'Fremont' ? ' · Fremont tax' : '') + ' ▾' : '+ Add contact info'; }
-function infoLine(c) { return [custLabel(c), c.phone, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
+/** The small line under the note header: "+ Add contact info" until something is filled in, then "Contact: phone · email · city". */
+function infoLinkText(c) {
+  var list = projectContacts(c), has = list.some(contactHas) || String(c.city || '').trim() || c.tax === 'Fremont', bits = [];
+  if (infoOpen) return 'Hide contact info ▴';
+  if (!has) return '+ Add contact info';
+  if (list[1] && contactHas(list[1])) list.forEach(function (ct) { var bit = ct.phone || ct.email || ct.name; if (bit) bits.push(bit); });
+  else { if (list[0].phone) bits.push(list[0].phone); if (list[0].email) bits.push(list[0].email); }
+  if (c.city) bits.push(c.city);
+  if (!bits.length && list[0].name) bits.push(list[0].name);
+  return 'Contact: ' + bits.map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : '') + ' ▾';
+}
+function infoLine(c) { var list = projectContacts(c); return [custLabel(c), list[0].phone, list[0].email, c.city].filter(Boolean).map(esc).join(' · ') + (c.tax === 'Fremont' ? ' · Fremont tax' : ''); }
+function contactFieldsHtml(c, ct, suf, headed) {
+  var role = ct.role || '', known = CONTACT_ROLES.indexOf(role) >= 0 && role !== 'Other';
+  var sel = !role ? '' : (known ? role : 'Other'), custom = sel === 'Other' && role !== 'Other' ? role : '';
+  var ph = suf ? '' : ' placeholder="optional' + (c.num ? ' (shows as Project #' + c.num + ')' : '') + '"';
+  return (headed && !suf ? '<div class="sec-h"><h2>Contact 1</h2></div>' : '') +
+    (suf ? '<div class="ct2"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><h2>Contact 2</h2><button type="button" class="link" id="cdRm2">Remove</button></div>' : '') +
+    '<label class="f">Name</label><input id="cdName' + suf + '" autocapitalize="words"' + ph + ' value="' + esc(ct.name) + '">' +
+    '<label class="f">Role</label><select id="cdRole' + suf + '"><option value=""></option>' +
+      CONTACT_ROLES.map(function (r) { return '<option value="' + r + '"' + (sel === r ? ' selected' : '') + '>' + r + '</option>'; }).join('') +
+    '</select><input id="cdRoleTxt' + suf + '" placeholder="Type a role" value="' + esc(custom) + '" style="margin-top:6px"' + (sel === 'Other' ? '' : ' class="hidden"') + '>' +
+    '<div class="twocol"><div><label class="f">Phone</label><input id="cdPhone' + suf + '" type="tel" inputmode="tel" value="' + esc(ct.phone) + '"></div>' +
+    '<div><label class="f">Email</label><input id="cdEmail' + suf + '" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(ct.email) + '"></div></div>' +
+    (suf ? '</div>' : '');
+}
+function readRole(suf) { var sel = $('cdRole' + suf); if (!sel || !sel.value) return ''; if (sel.value !== 'Other') return sel.value; var typed = $('cdRoleTxt' + suf) ? $('cdRoleTxt' + suf).value.trim() : ''; return typed || 'Other'; }
+function pullContacts(c) {
+  if (!$('cdName')) return;
+  var list = [{ name: $('cdName').value, role: readRole(''), phone: $('cdPhone').value, email: $('cdEmail').value }];
+  if ($('cdName2')) list.push({ name: $('cdName2').value, role: readRole('2'), phone: $('cdPhone2').value, email: $('cdEmail2').value });
+  c.contacts = list; c.name = list[0].name; c.phone = list[0].phone; c.email = list[0].email;
+}
+function savedContacts(c) { return projectContacts(c).map(normContact).filter(function (ct, i) { return i === 0 || contactHas(ct); }).slice(0, 2); }
+function bindContact(c, suf) {
+  ['cdName', 'cdPhone', 'cdEmail', 'cdRoleTxt'].forEach(function (id) { var el = $(id + suf); if (!el) return;
+    el.addEventListener('input', function () { pullContacts(c); queueInfo(); }); el.addEventListener('blur', flushInfo); });
+  var sel = $('cdRole' + suf); if (!sel) return;
+  sel.addEventListener('change', function () { var box = $('cdRoleTxt' + suf); if (box) box.classList.toggle('hidden', sel.value !== 'Other'); pullContacts(c); queueInfo(); });
+}
 /** Keep what's typed in the open note (title/text) in the model before any re-render. */
 function keepTyped() { var n = curNote(); if (n && $('nTitle') && noteDirty) { n.title = $('nTitle').value.trim() || n.title; n.text = $('nText').value; } }
 /** Customer page: slim info line, then the customer's notes stacked as groups (the open one expanded: title, text, items,
@@ -1020,7 +1178,8 @@ function renderOverview() {
       '<button class="ndnew" id="ndNew">+ New project</button>' +
       '<button class="infolink" id="cdInfoT" aria-expanded="' + infoOpen + '">' + infoLinkText(c) + '</button></div>' +
       '<div class="pinfo' + (infoOpen ? '' : ' hidden') + '" id="cdInfo">' +
-      '<div class="twocol"><div><label class="f">Name</label><input id="cdName" autocapitalize="words" placeholder="optional' + (c.num ? ' (shows as Project #' + c.num + ')' : '') + '" value="' + esc(c.name) + '"></div><div><label class="f">Phone</label><input id="cdPhone" type="tel" inputmode="tel" value="' + esc(c.phone) + '"></div></div>' +
+      contactFieldsHtml(c, projectContacts(c)[0], '', projectContacts(c).length > 1) +
+      (projectContacts(c).length > 1 ? contactFieldsHtml(c, projectContacts(c)[1], '2', true) : '<button type="button" class="link" id="cdAdd2" style="margin:4px 0 8px">+ Add 2nd contact</button>') +
       '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
@@ -1034,8 +1193,10 @@ function renderOverview() {
   $('cdBack').onclick = function () { flushInfo(); flushNote(); loadCustList(); };
   $('ndNew').onclick = function () { this.disabled = true; flushInfo(); flushNote(); newCustomerOpen(); };
   $('cdInfoT').onclick = function () { flushInfo(); infoOpen = !infoOpen; renderOverview(); };
-  [['cdName', 'name'], ['cdPhone', 'phone'], ['cdCity', 'city']].forEach(function (f) { var el = $(f[0]);
-    el.addEventListener('input', function () { c[f[1]] = el.value; queueInfo(); }); el.addEventListener('blur', flushInfo); });
+  bindContact(c, ''); if ($('cdName2')) bindContact(c, '2');
+  var city = $('cdCity'); city.addEventListener('input', function () { c.city = city.value; queueInfo(); }); city.addEventListener('blur', flushInfo);
+  if ($('cdAdd2')) $('cdAdd2').onclick = function () { pullContacts(c); c._contact2 = true; if (!c.contacts[1]) c.contacts[1] = blankContact(); renderOverview(); };
+  if ($('cdRm2')) $('cdRm2').onclick = function () { pullContacts(c); c.contacts = [c.contacts[0]]; c._contact2 = false; c._infoDirty = true; renderOverview(); flushInfo(); };
   if ($('cdShare')) $('cdShare').onclick = function () { openShare(c); };
   $('cdClient').onclick = function () { flushInfo(); flushNote(); openClientLink(c); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); flushInfo(); };
@@ -1140,9 +1301,11 @@ function saveProject() { var c = custOpen, b = $('cdSaveAll'); if (!c || !b) ret
     if (ok) { toast('Saved ' + projLabel(c)); setTimeout(function () { if ($('cdSaveAll') && $('cdSaveAll').textContent === 'Saved ✓') $('cdSaveAll').textContent = 'Save project'; }, 2500); } }); }
 function queueInfo() { clearTimeout(infoT); if (custOpen) custOpen._infoDirty = true; if ($('cdSaved')) $('cdSaved').textContent = 'Editing…'; infoT = setTimeout(flushInfo, 1000); }
 function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdName')) return Promise.resolve();
+  pullContacts(c);
   if (!String(c.name || '').trim() && !c.num) { $('cdSaved').innerHTML = '<span class="missing">Name is required.</span>'; return Promise.resolve(); }
   if (!c._infoDirty) return saveRun['info:' + c.id] || Promise.resolve(); c._infoDirty = false;
-  return autoSave('info:' + c.id, function () { var body = { id: c.id, name: String(c.name || '').trim(), phone: c.phone || '', city: c.city || '', tax: c.tax };
+  return autoSave('info:' + c.id, function () { var list = savedContacts(c);
+    var body = { id: c.id, name: list[0].name, phone: list[0].phone, email: list[0].email, city: c.city || '', tax: c.tax, contacts: list };
     return api('customerSave', { customer: body }).then(function (r) { c.label = r.label; c.num = r.num;
       if (curCust && curCust.id === r.id && curCust.name !== r.label) { curCust.name = r.label; saveCur(); }
       if (custOpen === c && $('cdTitle')) { $('cdTitle').textContent = projLabel(c); $('cdInfoT').innerHTML = infoLinkText(c); } }); }); }
