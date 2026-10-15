@@ -46,7 +46,7 @@
     'SF tax 8.625%': 'SF 税 8.625%', 'Fremont tax 10.25%': 'Fremont 税 10.25%', 'Changes save automatically.': '修改会自动保存。',
     'Share': '分享', 'Share to team': '分享给团队', 'Sharing': '已分享', 'Share with client': '分享给客户', 'Client link on': '客户链接已开', 'Private to you': '仅自己可见',
     '● Record voice note': '● 录语音笔记', '■ Stop': '■ 停止', '▶ Play': '▶ 播放', 'Remove this voice note?': '删除这条语音笔记？',
-    'Transcript / summary (optional)': '文字记录 / 摘要（可选）', '+ Add note': '+ 添加笔记', '+ New note': '+ 新笔记', 'Save project': '保存项目', 'Saved ✓': '已保存 ✓', 'Wait': '请稍候',
+    'Transcript / summary (optional)': '文字记录 / 摘要（可选）', '+ Add note': '+ 添加笔记', '+ New note': '+ 新笔记', 'Save project': '保存项目', 'Saved ✓': '已保存 ✓', 'Saved and started a new project': '已保存并开始新项目', 'Wait': '请稍候',
     'Saving…': '保存中…', 'Not saved, tap to retry': '没保存，点这里重试', 'Not saved yet': '还没保存', 'Not saved yet (will retry)': '还没保存（会自动重试）',
     'Not saved yet. Check the connection and try again.': '还没保存。请检查网络后重试。',
     'Quote this note': '为这个笔记报价', 'Quote this note (open a note first)': '为这个笔记报价（先打开一个笔记）', 'Delete this project': '删除这个项目', 'Delete this note': '删除这个笔记',

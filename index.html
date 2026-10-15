@@ -523,8 +523,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015a"></script>
-<script src="i18n.js?v=20261015a"></script>
+<script src="search.js?v=20261015b"></script>
+<script src="i18n.js?v=20261015b"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -574,7 +574,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015a';
+var PAGE_VER = '20261015b';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -647,7 +647,7 @@ function pcSave(c) { c = c || custOpen; if (!c || !c.notes) return; var o = {}; 
   o.notes = c.notes.filter(function (n) { return String(n.id).indexOf('tmp-') !== 0; }); pcPut('c:' + c.id, o); }
 function projPending(id) { return Object.keys(saveQ).some(function (k) { return k.indexOf(':' + id) > 0 || k.indexOf('note:') === 0 || k.indexOf('newnote:' + id) === 0; }) || noteDirty || !!batchT || (lineHold && Object.keys(lineHold).length) || (custOpen && custOpen.id === id && custOpen._infoDirty); }
 function wipeLocalData() { pcWipe(); localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
-document.addEventListener('visibilitychange', function () { if (!document.hidden) checkPageVersion();
+document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkPageVersion(); checkIdleClose(); }
   if (document.hidden && (batchT || noteDirty || (lineHold && Object.keys(lineHold).length) || (custOpen && custOpen._infoDirty))) flushBatch();
   if (document.hidden || !session) return;
   if (priceState.prices && localData && !localData.noPrices && pricedCopyExpired()) priceWindowEnded();        // the phone slept through the end of price hours
@@ -658,7 +658,7 @@ window.addEventListener('pagehide', function () {
 });
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
-function signedOut() { hSel = {}; if (typeof renderHSelBar === 'function') renderHSelBar(); var nr = $('navReported'); if (nr) nr.classList.add('hidden'); document.body.classList.remove('rmon'); rmList = []; wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
+function signedOut() { clearIdleClose(); hSel = {}; if (typeof renderHSelBar === 'function') renderHSelBar(); var nr = $('navReported'); if (nr) nr.classList.add('hidden'); document.body.classList.remove('rmon'); rmList = []; wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
 
 // ---------------- navigation
 function go(p, quiet) {
@@ -685,7 +685,7 @@ document.addEventListener('click', function (e) { var b = e.target.closest('[dat
 
 function enterApp() {
   if (session.mustChangePin) { show('pinchange'); return; }
-  show('app'); setHeader(session); initAppBack();
+  show('app'); setHeader(session); initAppBack(); touchIdle();
   if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData();
@@ -1422,24 +1422,40 @@ function renderOverview() {
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); }); };
   renderNoteCards(); renderVoice();
 }
-/** "+ Add note": the note shows right away with a temp id; the server creates it in the background (Saving… / Saved, retried
- *  like every other save). When the real id comes back it replaces the temp id everywhere; edits made meanwhile wait for it. */
+/** "+ Add note": paint instantly with a temp id (note cards only — not a full project rebuild), then create on the
+ *  server in the next tick. Real id swaps into the DOM when it returns; edits made meanwhile wait on tmpNotes. */
 function addNoteNow(c) {
   if ((c.notes || []).length >= 12) { toast('Max 12 notes per project.'); return; }
-  flushBatch();
-  var titles = c.notes.map(function (t) { return t.title; }), k = c.notes.length + 1; while (titles.indexOf('Note ' + k) >= 0) k++;
-  var tmp = 'tmp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), n = { id: tmp, title: 'Note ' + k, text: '', items: [], photos: [], updated: 0, updated_by: '' }, done;
+  keepTyped();
+  var titles = (c.notes || []).map(function (t) { return t.title; }), k = (c.notes || []).length + 1;
+  while (titles.indexOf('Note ' + k) >= 0) k++;
+  var tmp = 'tmp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var n = { id: tmp, title: 'Note ' + k, text: '', items: [], photos: [], updated: 0, updated_by: '' }, done;
   tmpNotes[tmp] = new Promise(function (r) { done = r; });
-  c.notes.push(n); setCur(c, n); noteOpenId = tmp; renderOverview(); scrollToNote(tmp); toast('New note: ' + n.title + ' (adding here)');
-  autoSave('newnote:' + c.id + ':' + tmp, function () {
-    return serverApi('noteSave', { id: c.id, title: 'Note ' + k }).then(function (r) { var id = r.note.id;
-      n.id = id; n.updated = r.note.updated; n.updated_by = r.note.updated_by; n.created = r.note.created;
-      Object.keys(r.note).forEach(function (f) { if (!(f in n)) n[f] = r.note[f]; });
-      if (noteOpenId === tmp) noteOpenId = id;
-      if (curCust && curCust.noteId === tmp) { curCust.noteId = id; saveCur(); }
-      document.querySelectorAll('[data-ng="' + tmp + '"],[data-nopen="' + tmp + '"],[data-nmenu="' + tmp + '"]').forEach(function (el) { ['ng', 'nopen', 'nmenu'].forEach(function (a) { if (el.dataset[a] === tmp) el.dataset[a] = id; }); });
-      done(id); delete tmpNotes[tmp]; pcSave(c); });
-  });
+  if (!c.notes) c.notes = [];
+  c.notes.push(n); setCur(c, n); noteOpenId = tmp;
+  // Minimal paint: only the notes list. Full renderOverview rebuilds header/contacts/voice and feels slow.
+  if ($('cdNotes')) { renderNoteCards(); scrollToNote(tmp); }
+  else { renderOverview(); scrollToNote(tmp); }
+  toast('New note: ' + n.title + ' (adding here)');
+  var projId = c.id, noteTitle = 'Note ' + k;
+  setTimeout(function () {
+    if (custOpen !== c) return;
+    flushBatch();   // prior dirty work — after first paint
+    autoSave('newnote:' + projId + ':' + tmp, function () {
+      return serverApi('noteSave', { id: projId, title: noteTitle }).then(function (r) {
+        var id = r.note.id;
+        n.id = id; n.updated = r.note.updated; n.updated_by = r.note.updated_by; n.created = r.note.created;
+        Object.keys(r.note).forEach(function (f) { if (!(f in n)) n[f] = r.note[f]; });
+        if (noteOpenId === tmp) noteOpenId = id;
+        if (curCust && curCust.noteId === tmp) { curCust.noteId = id; saveCur(); }
+        document.querySelectorAll('[data-ng="' + tmp + '"],[data-nopen="' + tmp + '"],[data-nmenu="' + tmp + '"],[data-nchip="' + tmp + '"]').forEach(function (el) {
+          ['ng', 'nopen', 'nmenu', 'nchip'].forEach(function (a) { if (el.dataset[a] === tmp) el.dataset[a] = id; });
+        });
+        done(id); delete tmpNotes[tmp]; pcSave(c);
+      });
+    });
+  }, 0);
 }
 function scrollToNote(id) { var g = document.querySelector('[data-ng="' + id + '"]'); if (g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - document.querySelector('#app header').offsetHeight - 8); }
 function noteSummary(n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
@@ -2668,6 +2684,64 @@ function drainSaves() {
     return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k]; }));
   }).then(function () { saveState(); return !Object.keys(saveQ).length && !isBatchDirty(); });
 }
+/* Idle auto-close: after 30 min with no taps/typing/scroll, if the open project has any content,
+ * save (when dirty) and start a blank new project so the next customer is not added to the old one. */
+var IDLE_MS = 30 * 60 * 1000, idleAt = Date.now(), idleT = null, idleBusy = false;
+function clearIdleClose() { clearTimeout(idleT); idleT = null; idleBusy = false; }
+function touchIdle() {
+  idleAt = Date.now();
+  if (!session) return;
+  clearTimeout(idleT);
+  idleT = setTimeout(checkIdleClose, IDLE_MS);
+}
+/** True when the project has contact, note text, items, photos, or voice (typed fields counted too). */
+function projHasContent(c) {
+  if (!c) return false;
+  keepTyped();
+  if ($('cdName') && typeof pullContacts === 'function') {
+    pullContacts(c);
+    if ($('cdCity')) c.city = $('cdCity').value;
+  }
+  if ((c.voice || []).length) return true;
+  if (String(c.city || '').trim()) return true;
+  if (projectContacts(c).some(contactHas)) return true;
+  var ns = c.notes || [], i, n;
+  for (i = 0; i < ns.length; i++) {
+    n = ns[i];
+    if (String(n.text || '').trim()) return true;
+    if ((n.items || []).length) return true;
+    if ((n.photos || []).length) return true;
+  }
+  if ($('nText') && String($('nText').value || '').trim()) return true;
+  return false;
+}
+function checkIdleClose() {
+  clearTimeout(idleT); idleT = null;
+  if (idleBusy || !session) return;
+  var waited = Date.now() - idleAt;
+  if (waited < IDLE_MS) { idleT = setTimeout(checkIdleClose, IDLE_MS - waited); return; }
+  var c = custOpen;
+  if (!c || !projHasContent(c)) { touchIdle(); return; }   // empty project: leave it
+  idleBusy = true;
+  var needSave = isBatchDirty() || Object.keys(saveQ).length || Object.keys(saveRun).length;
+  var saveP = needSave ? drainSaves() : Promise.resolve(true);
+  saveP.then(function (ok) {
+    if (!ok) { idleBusy = false; touchIdle(); return; }   // save failed / offline: keep old project
+    if (custOpen !== c) { idleBusy = false; touchIdle(); return; }
+    return createBlankProject().then(function (neu) {
+      if (!neu || !neu.notes || !neu.notes[0]) throw new Error('No note');
+      infoOpen = false;
+      setCur(neu, neu.notes[0]);
+      openCust(neu.id, neu, neu.notes[0].id);
+      toast('Saved and started a new project');
+    });
+  }).then(function () { idleBusy = false; touchIdle(); }, function () { idleBusy = false; touchIdle(); });
+}
+['pointerdown', 'keydown', 'input', 'click', 'touchstart'].forEach(function (ev) {
+  document.addEventListener(ev, touchIdle, true);
+});
+window.addEventListener('scroll', touchIdle, { passive: true, capture: true });
+window.addEventListener('focus', function () { if (session) checkIdleClose(); });
 function quoteCust() {
   var c = custOpen, n = curNote(); if (!n || quoteBusy) { quoteBtn(); return; } var it = n.items || [];
   if (!it.length) { msg($('cdMsg'), 'No items in this note yet. Add items from Search first.'); return; }
