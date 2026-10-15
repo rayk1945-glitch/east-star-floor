@@ -52,6 +52,17 @@ function cjkHay_(bundle) {
   return (ZH_CACHE_.hay = hay);
 }
 var ACCESSORY_RE_ = /\bSEAT\b|\bKIT\b|CONNECTION|REPAIR|REPLACEMENT|\bPART\b|\bGRID\b|STRAINER|BASKET|CARTRIDGE|ADAPTER|EXTENSION|SPLASH|BACKSPLASH|-BS\b|SHELF|DUCT|FILTER|\bCOVER\b|SOAP DISPENSER|BRACKET|HOSE|FLUSH VALVE|VACUUM BREAKER|WASHLET CONNECTION|TOILET SEAT/i;
+
+/** Flooring trim/molding SKUs: LF-R- / LF-RDC- (reducer), LF-BN- / LF-STN- (stair-nose),
+ *  LF-EC- / LF-ECP- (end-cap), LF-T- / LF-TM- (T-molding), LF-QR- (quarter round).
+ *  No OS/SN/TH in the bundle; RD is covered by RDC. */
+var FLOOR_MOLD_RE_ = /^LF-(?:RDC|STN|ECP|TM|BN|EC|QR|R|T)(?:-|$)/i;
+function isFloorMolding_(name) { return FLOOR_MOLD_RE_.test(String(name || '')); }
+/** Flooring plank/tile product (not trim): LF-… and not a molding prefix. */
+function isFloorProduct_(r) {
+  var n = String((r && r[0]) || '');
+  return /^LF-/i.test(n) && !isFloorMolding_(n);
+}
 var DEFAULT_SYNONYMS_ = { tokens: { WB: ['WBC'], REP: ['REFPN', 'REFPN1'] }, phrases: {} };
 
 function normCode_(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
@@ -205,9 +216,9 @@ function incomingIndex_(bundle) {
 }
 
 /**
- * f (optional) = {cat, inStock, store: 'SF'|'FRE', size, finish, offset}: narrows the ranked list and pages it ("Load more").
+ * f (optional) = {cat, inStock, store: 'SF'|'FRE', size, finish, flooring, offset}: narrows the ranked list and pages it ("Load more").
  * facets = counts over the FULL match set (all-words matches, or the closest set when nothing matches every word), each
- * computed with the other filters applied: cats [[cat, n]] in Browse order, stock / sf / fre counts, sizes [[size, n]] (Tile/Flooring),
+ * computed with the other filters applied: cats [[cat, n]] in Browse order, stock / sf / fre / flooring counts, sizes [[size, n]] (Tile/Flooring),
  * finishes [[label, n, named]] from variantIndex_ (Chrome, Brushed Nickel, …).
  * SF / FRE = the item has a shelf location at that store (the item list has one on-hand total, not per store).
  */
@@ -295,7 +306,14 @@ function searchBundle_(bundle, q, limit, f) {
     if (sizeNums.length && items[i][10] && sizeNums.indexOf(String(items[i][10]).replace(/"/g, '')) >= 0) s += 12;
     cands.push([cover[i], s, nn.length, i]);
   }
-  cands.sort(function (a, b) { return b[0] - a[0] || b[1] - a[1] || a[2] - b[2]; });
+  cands.sort(function (a, b) {
+    var ra = items[a[3]], rb = items[b[3]];
+    if (ra[7] === 'Flooring' && rb[7] === 'Flooring') {
+      var ma = isFloorMolding_(ra[0]) ? 1 : 0, mb = isFloorMolding_(rb[0]) ? 1 : 0;
+      if (ma !== mb) return ma - mb;   // plank/tile before trim/molding
+    }
+    return b[0] - a[0] || b[1] - a[1] || a[2] - b[2];
+  });
   var exactCount = cands.filter(function (c) { return c[0] === T; }).length;
   // ---- filters + facets (over the whole match set, not just the first page)
   var set = cands;                                     // exact set, or (fallback) every close match that is listed
@@ -305,14 +323,16 @@ function searchBundle_(bundle, q, limit, f) {
     var ve = vix.byName[r[0]];
     return (skip === 'cat' || !f.cat || r[7] === f.cat) && (skip === 'stock' || !f.inStock || Number(r[3]) > 0) &&
            (skip === 'store' || !store || !!r[store]) && (skip === 'size' || !f.size || !sizeOn || r[10] === f.size) &&
-           (skip === 'finish' || !f.finish || (ve && ve.label === f.finish));
+           (skip === 'finish' || !f.finish || (ve && ve.label === f.finish)) &&
+           (skip === 'flooring' || !f.flooring || isFloorProduct_(r));
   };
-  var fc = {}, sz = {}, fin = {}, facets = { stock: 0, sf: 0, fre: 0, cats: [], sizes: [], finishes: [] };
+  var fc = {}, sz = {}, fin = {}, facets = { stock: 0, sf: 0, fre: 0, flooring: 0, cats: [], sizes: [], finishes: [] };
   for (var fi = 0; fi < set.length; fi++) {
     var fr = items[set[fi][3]];
     if (pass(fr, 'cat')) fc[fr[7]] = (fc[fr[7]] || 0) + 1;
     if (pass(fr, 'stock') && Number(fr[3]) > 0) facets.stock++;
     if (pass(fr, 'store')) { if (fr[5]) facets.sf++; if (fr[6]) facets.fre++; }
+    if (pass(fr, 'flooring') && isFloorProduct_(fr)) facets.flooring++;
     if (sizeOn && fr[10] && pass(fr, 'size')) sz[fr[10]] = (sz[fr[10]] || 0) + 1;
     if (pass(fr, 'finish')) { var ve = vix.byName[fr[0]]; if (ve && ve.label) { var slot = fin[ve.label] = fin[ve.label] || { n: 0, named: 0 }; slot.n++; if (ve.named) slot.named = 1; } }
   }
@@ -320,7 +340,7 @@ function searchBundle_(bundle, q, limit, f) {
     .filter(function (k) { return fc[k]; }).map(function (k) { return [k, fc[k]]; }).sort(function (a, b) { return b[1] - a[1]; });   // biggest first (stable: Browse order on ties)
   facets.sizes = Object.keys(sz).map(function (k) { return [k, sz[k]]; }).sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); }).slice(0, 12);
   facets.finishes = Object.keys(fin).map(function (k) { return [k, fin[k].n, fin[k].named]; }).sort(function (a, b) { return b[2] - a[2] || b[1] - a[1] || (a[0] < b[0] ? -1 : 1); }).slice(0, 24);
-  var filtered = f.cat || f.inStock || store || (sizeOn && f.size) || f.finish;
+  var filtered = f.cat || f.inStock || store || (sizeOn && f.size) || f.finish || f.flooring;
   var list = filtered ? cands.filter(function (c) { return pass(items[c[3]]); }) : cands;
   var offset = Math.max(0, Math.floor(Number(f.offset) || 0));
   var out = list.slice(offset, offset + limit).map(function (c) { return itemOut_(items[c[3]], inc, c[0] === T ? 'all' : 'partial'); });

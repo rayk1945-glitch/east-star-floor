@@ -523,8 +523,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261014u"></script>
-<script src="i18n.js?v=20261014u"></script>
+<script src="search.js?v=20261015a"></script>
+<script src="i18n.js?v=20261015a"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -574,7 +574,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014u';
+var PAGE_VER = '20261015a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -889,7 +889,7 @@ function searchPage(q, my, offset) {
 function renderSearchFilters(r) {
   var fc = r.facets; if (!fc || !(r.exact || r.total)) { $('sfilt').innerHTML = ''; return; }
   var chip = function (k, v, label, n) { return '<button data-sk="' + k + '" data-sv="' + esc(v) + '" class="' + (String(sF[k] || '') === String(v) ? 'on' : '') + '">' + esc(label) + (n != null ? '<small>' + n.toLocaleString() + '</small>' : '') + '</button>'; };
-  var top = chip('inStock', 'true', 'In stock', fc.stock) + chip('store', 'SF', 'SF shelf', fc.sf) + chip('store', 'FRE', 'Fremont shelf', fc.fre);
+  var top = chip('flooring', 'true', 'Flooring', fc.flooring) + chip('inStock', 'true', 'In stock', fc.stock) + chip('store', 'SF', 'SF shelf', fc.sf) + chip('store', 'FRE', 'Fremont shelf', fc.fre);
   var cl = fc.cats.filter(function (c) { return c[0] !== sF.cat; }); if (sF.cat) cl.unshift([sF.cat, (fc.cats.filter(function (c) { return c[0] === sF.cat; })[0] || [0, 0])[1]]);   // tapped chip first, never disappears
   var cats = cl.length > 1 || sF.cat ? '<div class="schips">' + cl.map(function (c) { return chip('cat', c[0], c[0], c[1]); }).join('') + '</div>' : '';
   var sizes = (sF.cat === 'Tile' || sF.cat === 'Flooring') && fc.sizes.length > 1 ? '<div class="schips sub">' + fc.sizes.map(function (z) { return chip('size', z[0], z[0], z[1]); }).join('') + '</div>' : '';
@@ -900,7 +900,7 @@ function renderSearchFilters(r) {
   $('sfilt').innerHTML = cats + finishes + sizes + '<div class="schips sub tog">' + top + '</div>';
 }
 $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
-  var k = b.dataset.sk, v = k === 'inStock' ? true : b.dataset.sv;
+  var k = b.dataset.sk, v = (k === 'inStock' || k === 'flooring') ? true : b.dataset.sv;
   if (String(sF[k] || '') === String(v)) delete sF[k]; else sF[k] = v;                        // tap again = clear
   if (k === 'cat') delete sF.size;
   var my = ++seq; $('results').style.opacity = '.5';
@@ -1413,7 +1413,7 @@ function renderOverview() {
   if ($('cdShareProj')) $('cdShareProj').onclick = function () { flushBatch().then(function () { if (custOpen === c) openClientLink(c); }); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); };
   $('cdNewNote').onclick = function () { addNoteNow(c); };
-  $('cdSaveAll').onclick = saveProject;
+  $('cdSaveAll').onclick = saveProject; applySaveCool(c);
   [].forEach.call(document.querySelectorAll('[data-cloneproj]'), function (b) { b.onclick = function () { cloneProject(c, b); }; });
   $('cdQuote').onclick = quoteCust; $('cdQuoteAll').onclick = quoteProject;
   $('cdRec').onclick = toggleRec;
@@ -1569,15 +1569,55 @@ window.addEventListener('beforeunload', function (e) {
 });
 // customer info
 var infoT = null;
+/** Post-save cool-down: keep Save disabled with a countdown so double-taps do not re-fire.
+ *  Survives renderOverview (cache / customerGet rebuild) via custOpen._saveCoolUntil. */
+var SAVE_COOL_MS = 3000;
+function clearSaveCool(c) {
+  if (c && c._saveCoolT) { clearInterval(c._saveCoolT); c._saveCoolT = null; }
+  if (c) c._saveCoolUntil = 0;
+}
+function saveCoolLabel(sec) {
+  var T = window.I18N && I18N.t ? I18N.t : function (x) { return x; };
+  return T('Saved ✓') + ' · ' + sec + 's';
+}
+/** Apply / continue cool-down on #cdSaveAll for project c (call after wiring the button). */
+function applySaveCool(c) {
+  var b = $('cdSaveAll'); if (!b || !c) return;
+  var left = Math.ceil(((c._saveCoolUntil || 0) - Date.now()) / 1000);
+  if (left <= 0) {
+    clearSaveCool(c);
+    if (b.dataset.cooling) { delete b.dataset.cooling; b.disabled = false; b.textContent = 'Save project'; if (window.I18N && I18N.t) b.textContent = I18N.t('Save project'); }
+    return;
+  }
+  b.dataset.cooling = '1'; b.disabled = true; b.textContent = saveCoolLabel(left);
+  if (c._saveCoolT) return;
+  c._saveCoolT = setInterval(function () {
+    if (custOpen !== c) { clearSaveCool(c); return; }
+    var b2 = $('cdSaveAll'), sec = Math.ceil(((c._saveCoolUntil || 0) - Date.now()) / 1000);
+    if (!b2) return;
+    if (sec <= 0) { clearSaveCool(c); delete b2.dataset.cooling; b2.disabled = false; b2.textContent = (window.I18N && I18N.t) ? I18N.t('Save project') : 'Save project'; return; }
+    b2.dataset.cooling = '1'; b2.disabled = true; b2.textContent = saveCoolLabel(sec);
+  }, 250);
+}
+function startSaveCool(c) {
+  if (!c) return;
+  clearSaveCool(c);
+  c._saveCoolUntil = Date.now() + SAVE_COOL_MS;
+  applySaveCool(c);
+}
 /** "Save project": save the contact info and the open note right now, then push every pending save (all notes, qty, line notes,
- *  removals); shows "Saved" when the queue is empty, else "Not saved, tap to retry" (the queue keeps retrying as before). */
-function saveProject() { var c = custOpen, b = $('cdSaveAll'); if (!c || !b) return;
+ *  removals); shows "Saved" when the queue is empty, else "Not saved, tap to retry" (the queue keeps retrying as before).
+ *  On success: brief "Saved ✓" then a disabled countdown (cool-down) before Save is tappable again. */
+function saveProject() { var c = custOpen, b = $('cdSaveAll'); if (!c || !b || b.dataset.cooling) return;
   b.disabled = true; b.textContent = 'Saving…'; $('cdSaveMsg').textContent = '';
   flushBatch().then(function () { return Promise.all(Object.keys(saveQ).map(runSave)); }).then(function () {
     return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k]; })); }).then(function () {
-    if (custOpen !== c || !$('cdSaveAll')) return; var ok = !Object.keys(saveQ).length && !isBatchDirty(); if (ok) c._savedAt = Date.now(); b = $('cdSaveAll'); b.disabled = false;
-    b.textContent = ok ? 'Saved ✓' : 'Save project'; $('cdSaveMsg').innerHTML = ok ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '<span class="missing">Not saved, tap to retry</span>';
-    if (ok) { toast('Saved ' + projLabel(c)); setTimeout(function () { if ($('cdSaveAll') && $('cdSaveAll').textContent === 'Saved ✓') $('cdSaveAll').textContent = 'Save project'; }, 2500); } }); }
+    if (custOpen !== c || !$('cdSaveAll')) return; var ok = !Object.keys(saveQ).length && !isBatchDirty(); if (ok) c._savedAt = Date.now(); b = $('cdSaveAll');
+    if (!ok) { b.disabled = false; b.textContent = 'Save project'; $('cdSaveMsg').innerHTML = '<span class="missing">Not saved, tap to retry</span>'; return; }
+    b.disabled = true; b.textContent = 'Saved ✓';
+    $('cdSaveMsg').innerHTML = 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes';
+    toast('Saved ' + projLabel(c));
+    startSaveCool(c); }); }
 function queueInfo() { clearTimeout(infoT); var c = custOpen; if (!c) return; rememberInfo(c); c._infoDirty = infoChanged(c);
   if ($('cdSaved')) $('cdSaved').textContent = c._infoDirty ? 'Unsaved changes…' : 'Saved'; scheduleAutosave(); }
 function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdName')) return Promise.resolve();
