@@ -96,6 +96,8 @@
   .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:6px; }
   .stat { background:#f3f4f6; border-radius:8px; padding:3px 2px; text-align:center; line-height:1.15; }
   .stat b { display:block; font-size:13.5px; font-variant-numeric:tabular-nums; }
+  /* On hand after open missing reports: "14 (13)" — paren is smaller / red-ish */
+  .stat b .ohmiss { font-size:11px; font-weight:700; color:#b91c1c; margin-left:2px; letter-spacing:-0.02em; }
   .stat span { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   .stat.good { background:var(--ok-bg); color:var(--ok-fg); } .stat.bad { background:var(--err-bg); color:var(--err-fg); }
   .stat.inc { background:var(--info-bg); color:var(--info-fg); }
@@ -521,8 +523,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261014t"></script>
-<script src="i18n.js?v=20261014t"></script>
+<script src="search.js?v=20261014u"></script>
+<script src="i18n.js?v=20261014u"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -572,7 +574,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261014t';
+var PAGE_VER = '20261014u';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -812,7 +814,7 @@ function card(it) {
     '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + '</div></div>' +
     '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
-    '<div class="stats"><div class="stat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b>' + qty(it.onHand) + '</b><span>On hand</span></div>' +
+    '<div class="stats"><div class="stat ohstat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b class="notr">' + ohCubeHtml(it.name, it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>On order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Incoming</span></div>' +
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After ctnrs</span></div></div>' +
@@ -2813,6 +2815,22 @@ function rmOpenFor(name) {
   if (!key) return [];
   return rmList.filter(function (r) { return r && r.status !== 'resolved' && String(r.item || '').trim() === key; });
 }
+/** Total open (still-missing) qty for an item. */
+function rmOpenQty(name) {
+  var rows = rmOpenFor(name), n = 0, i;
+  for (i = 0; i < rows.length; i++) n += Number(rows[i].qty) || 0;
+  return n;
+}
+/** On-hand cube HTML: "14 (13)" when open missing reports exist; paren = max(0, onHand − missing). */
+function ohCubeHtml(name, onHand) {
+  if (onHand == null || onHand === '') return qty(onHand);
+  var oh = Number(onHand), miss;
+  if (!isFinite(oh)) return qty(onHand);
+  if (!document.body.classList.contains('rmon')) return qty(onHand);
+  miss = rmOpenQty(name);
+  if (!(miss > 0)) return qty(onHand);
+  return qty(onHand) + '<span class="ohmiss notr">(' + qty(Math.max(0, oh - miss)) + ')</span>';
+}
 function rmStoreRank(s) { return s === 'SF' ? 0 : s === 'FRE' ? 1 : 2; }
 /** Open qty summed per store. Blank store becomes "—". */
 function rmSums(name) {
@@ -2857,11 +2875,13 @@ function locStockHtml(it) {
 /** Rewrite the stock row on cards already on screen (load, new report, mark found, delete). */
 function rmSyncCards() {
   var root = $('results'); if (!root || !root.querySelector) return;
-  var cards = root.querySelectorAll('.card.item'), i, el, name, it, html, row, shelf;
+  var cards = root.querySelectorAll('.card.item'), i, el, name, it, html, row, shelf, ohB;
   for (i = 0; i < cards.length; i++) {
     el = cards[i]; name = el.getAttribute('data-name') || '';
     try { name = decodeURIComponent(name); } catch (e) {}
     it = shown[name]; if (!it) continue;
+    ohB = el.querySelector('.ohstat b');
+    if (ohB) ohB.innerHTML = ohCubeHtml(name, it.onHand);
     var miss = missBadges(name), mrow = el.querySelector('.missrow');
     if (!miss) { if (mrow) mrow.remove(); }
     else if (mrow) mrow.outerHTML = miss;
