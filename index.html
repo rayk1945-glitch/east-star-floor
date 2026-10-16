@@ -232,8 +232,13 @@
   .pline .lhead .ln { font-size:11px; font-weight:800; color:#8a93a0; }
   .pline .lhead .lnm { font-size:15px; word-break:break-word; flex:1 1 auto; min-width:0; }
   .pline .lhead .lohs { margin:0; } .pline .lqty { font-weight:800; font-size:14px; white-space:nowrap; } .pline .lcaret { color:#8a93a0; font-size:12px; }
+  .pline .lhead .lthumb { width:36px; height:36px; border-radius:7px; }
+  .pline.hasord { width:100%; max-width:100%; box-sizing:border-box; overflow:hidden; gap:6px; }
+  .pline .lbody { overflow:hidden; } .pline .lhead .lnm { overflow-wrap:anywhere; flex:1 1 90px; }
+  .pline .lhead .lohs, .pline .lhead .lohs * { overflow-wrap:anywhere; } .pline .m { flex-wrap:wrap; } .pline .m .lnote { min-width:0; flex:1 1 120px; }
+  .pline .ord { flex:0 0 auto; margin-right:2px; } .pline .ord button { width:34px; height:34px; }
   .pline .ldet { display:none; padding-top:4px; } .pline.open .ldet { display:block; } .pline.open { align-items:flex-start; }
-  .pline .ord button { width:38px; height:38px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); padding:0; display:flex; align-items:center; justify-content:center; }
+  .pline .ord button { width:34px; height:34px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); padding:0; display:flex; align-items:center; justify-content:center; }
   .pline .ord .ordh { cursor:grab; touch-action:none; background:var(--accent); color:#fff; }
   .ordhint { margin:0 0 8px; font-size:13.5px; font-weight:700; color:var(--accent); }
   .pline .ord button:disabled { opacity:.28; cursor:default; }
@@ -529,8 +534,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015d"></script>
-<script src="i18n.js?v=20261015d"></script>
+<script src="search.js?v=20261015e"></script>
+<script src="i18n.js?v=20261015e"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -580,7 +585,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015d';
+var PAGE_VER = '20261015e';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1771,11 +1776,11 @@ function renderPicked() {
     var desc = l.desc || (r ? String(r[1] || '').slice(0, 110) : '');
     var oh = r ? r[3] : null, ohN = Number(oh), open = !!lineOpen[l.id];
     // collapsed head: # · code/name · On hand (+ missing badge) · × qty · arrows (right)
-    var head = '<div class="lhead" data-ltog="1"><span class="ln">' + (i + 1) + '</span><b class="lnm notr">' + esc(l.name) + '</b>' +
+    var head = '<div class="lhead" data-ltog="1"><span class="ln">' + (i + 1) + '</span>' + (ph ? '<img class="cthumb lthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<b class="lnm notr">' + esc(l.name) + '</b>' +
       (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadges(l.name) + '</span></span>' : '') +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') +
       '<span class="lqty notr">×' + l.qty + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
-    var det = '<div class="ldet"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
+    var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
       (pr != null ? '<span class="lsub"><span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span></span>' : '') +
       '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
@@ -2321,7 +2326,10 @@ function ordHtml(i, n) {
   return '<div class="ord"><button type="button" class="ordb" data-lord="up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
     '<button type="button" class="ordb" data-lord="down" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button></div>';
 }
-function toggleLine(row, l) { var on = !lineOpen[l.id]; if (on) lineOpen[l.id] = 1; else delete lineOpen[l.id];
+function toggleLine(row, l) { var on = !lineOpen[l.id];
+  if (on) { Object.keys(lineOpen).forEach(function (k) { delete lineOpen[k]; });   // accordion: one row open at a time
+    document.querySelectorAll('#cdItems .pline.open').forEach(function (o) { if (o !== row) { o.classList.remove('open'); var oc = o.querySelector('.lcaret'); if (oc) oc.textContent = '▾'; } });
+    lineOpen[l.id] = 1; } else delete lineOpen[l.id];
   row.classList.toggle('open', on); var c = row.querySelector('.lcaret'); if (c) c.textContent = on ? '▴' : '▾'; }
 function renumberLines() {
   var rows = document.querySelectorAll('#cdItems .pline'), i, last = rows.length - 1;
@@ -2412,7 +2420,7 @@ function endLineDrag(e) {
   if (moved && n) queueOrderSave(n);
 }
 document.addEventListener('pointerdown', function (e) {
-  var h = null;   // drag handle removed (20261015d); arrows only
+  var h = null;   // drag handle removed (20261015e); arrows only
   if (!h || !h.closest('#cdItems') || ordBusy || lineDrag) return;
   if (e.button != null && e.button !== 0) return;
   var row = h.closest('.pline'), n = curNote(); if (!row || !n) return;
