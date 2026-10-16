@@ -120,7 +120,7 @@ function render(p) {
     return '<section class="note"><h2 class="notr">' + esc(n.title) + '</h2>' + (n.text ? '<p class="ntext notr">' + esc(n.text) + '</p>' : '') +
       ((n.items || []).length ? '<div class="items">' + n.items.map(function (l) {
         return '<div class="item">' + (l.photo ? '<img class="ph" loading="lazy" src="' + esc(l.photo) + '" alt="" onerror="this.className=\'ph none\';this.removeAttribute(\'src\')">' : '<div class="ph none"></div>') +
-          '<div class="it notr"><div class="nm">' + esc(l.name) + '</div>' + (l.desc ? '<div class="ds">' + esc(l.desc) + '</div>' : '') + (l.note ? '<div class="in">' + esc(l.note) + '</div>' : '') + '</div>' +
+          '<div class="it notr"><div class="nm">' + esc(l.name) + '</div>' + (l.desc ? '<div class="ds">' + esc(l.desc) + '</div>' : '') + (String(l.note || '').replace(/\s*⟦[^⟧]*⟧\s*$/, '') ? '<div class="in">' + esc(String(l.note).replace(/\s*⟦[^⟧]*⟧\s*$/, '')) + '</div>' : '') + '</div>' +
           '<div class="qty">× ' + esc(l.qty) + '</div></div>'; }).join('') + '</div>' : '') +
       ((n.photos || []).length ? '<div class="photos">' + n.photos.map(function (f) { return '<span class="ld" data-f="' + esc(f) + '"></span>'; }).join('') + '</div>' : '') + '</section>';
   }).join('');

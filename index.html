@@ -253,6 +253,16 @@
   .pline .lbody { overflow:hidden; } .pline .lhead .lnm { overflow-wrap:anywhere; flex:1 1 90px; }
   .pline .lhead .lohs, .pline .lhead .lohs * { overflow-wrap:anywhere; } .pline .m { flex-wrap:wrap; } .pline .m .lnote { min-width:0; flex:1 1 120px; }
   .pline .ord { flex:0 0 auto; margin-right:2px; } .pline .ord button { width:34px; height:34px; }
+  .lbtns { display:grid; grid-template-columns:40px 40px; column-gap:8px; row-gap:10px; flex:none; align-self:flex-start; } .lbrow { display:contents; } .lbtns .x.lmenu { margin-right:0; }
+  .lbtns .discpill { grid-column:1; justify-self:center; }
+  .discpill { border:1.5px solid var(--accent); color:var(--accent); background:#fff; border-radius:999px; font-size:12px; font-weight:700; padding:0 6px; line-height:1; cursor:pointer; min-width:40px; height:40px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+  .discpill:not(.on) { width:40px; padding:0; font-size:16px; background:#eef0f3; border:0; color:#374151; font-weight:800; }
+  .dsrow { display:flex; gap:5px; margin:10px 0 8px; } .dsopt { flex:1; border:1.5px solid var(--accent); color:var(--accent); background:#fff; border-radius:999px; font:inherit; font-size:12.5px; font-weight:700; padding:7px 2px; white-space:nowrap; cursor:pointer; }
+  .dsopt.on { background:var(--accent); color:#fff; } .dsopt.dsclr { border-color:#d0d5dd; color:#475467; flex:.7; }
+  .dsin { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:700; } .dsin input { width:110px; flex:none; }
+  .discpill.on { background:#fdecec; border-color:#b42318; color:#b42318; } .povr { font-size:10.5px; background:#eef2ff; color:#3730a3; border-radius:6px; padding:0 4px; }
+  .kv input.pin { min-height:0 !important; height:26px !important; margin:0 !important; display:inline-block; }
+  .pin { width:64px; padding:2px 4px; font:inherit; font-weight:700; text-align:right; border:1px solid var(--line-strong); border-radius:6px; height:26px; }
   .pline .ldet { display:none; padding-top:4px; } .pline.open .ldet { display:block; } .pline.open { align-items:flex-start; }
   .pline .ord button { width:34px; height:34px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); padding:0; display:flex; align-items:center; justify-content:center; }
   .pline .ord .ordh { cursor:grab; touch-action:none; background:var(--accent); color:#fff; }
@@ -619,7 +629,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016f';
+var PAGE_VER = '20261016g';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -866,7 +876,7 @@ function card(it) {
     chip('SF', it.sf) + chip('FRE', it.fre) + '</div>' +
     missBadges(it.name) + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
-    '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
+    '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))">Molding calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))">Accessories <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
     (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
@@ -1182,7 +1192,25 @@ function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} 
     b.textContent = 'Added ✓'; b.disabled = true; };
 }
 function itemRow(name) { if (!localData) return null; var i = nameIndex_(localData)[name]; return i == null ? null : localData.items[i]; }
-function linePrice(l) { var r = itemRow(l.name); return priceState.prices && r && r[2] != null ? r[2] : null; }
+// Per-line price override (p) and discount % (d) ride at the end of the line note as a hidden tag " ⟦p3.09;d15⟧"
+// (the server stores qty + note only). The tag is never shown: noteText() strips it for inputs, read-only views, quotes.
+var LTOK_RE = /\s*⟦([^⟧]*)⟧\s*$/;
+function lmeta(l) { var m = String(l && l.note || '').match(LTOK_RE), o = {}; if (m) m[1].split(';').forEach(function (x) { var v = parseFloat(x.slice(1)); if (!isNaN(v) && v >= 0) o[x.charAt(0)] = v; }); return o; }
+function noteText(n) { return String(n || '').replace(LTOK_RE, ''); }
+function withMeta(text, o) { var b = []; if (o.p != null) b.push('p' + o.p); if (o.d) b.push('d' + o.d); else if (o.a) b.push('a' + o.a); return noteText(text) + (b.length ? ' ⟦' + b.join(';') + '⟧' : ''); }
+/** Unit size the $/sq ft (or $/pc for molding) override multiplies: sq ft per box (flooring), sq ft per piece (tile), 1 (molding). */
+function lineUnitSize(r) { if (!r) return null; var it = itemFromRow(r), f = floorOf(it); if (f) return f.sf || null; if (moldOf(it)) return 1; return isTileRow(r) ? r[11].sqftPc : null; }
+/** Max line discount: #3007/#3008 cabinets 35% (store rule); everything else up to 100% (clearance). $ off never exceeds the cap share of the line total. */
+function discCap(name) { return /#300[78]\b/.test(name) ? 35 : 100; }
+function lineBase(l) { var r = itemRow(l.name); if (!priceState.prices || !r || r[2] == null) return null; var m = lmeta(l), u = m.p != null ? lineUnitSize(r) : null;
+  return u ? Math.round(m.p * u * 100) / 100 : r[2]; }
+function lineDisc(l) { var d = lmeta(l).d || 0; return Math.min(d, discCap(l.name)); }
+/** $ off the whole line (a), capped at the same % cap applied to the line's retail. */
+function lineDiscAmt(l) { var a = lmeta(l).a || 0, b = lineBase(l); if (!a || b == null || lmeta(l).d) return 0; return Math.min(a, Math.round(b * l.qty * discCap(l.name)) / 100); }
+function hasDisc(l) { return !!(lineDisc(l) || lineDiscAmt(l)); }
+function discLabel(l) { return lineDisc(l) ? '−' + lineDisc(l) + '%' : lineDiscAmt(l) ? '−$' + (+lineDiscAmt(l).toFixed(2)).toLocaleString('en-US') : ''; }
+function linePrice(l) { var b = lineBase(l); if (b == null) return null; var d = lineDisc(l), a = lineDiscAmt(l);
+  return d ? Math.round(b * (1 - d / 100) * 100) / 100 : a ? b - a / l.qty : b; }
 function noteOf(cid, nid) { return custOpen && custOpen.id === cid ? (custOpen.notes || []).filter(function (n) { return n.id === nid; })[0] : null; }
 function curNote() { return noteOf(custOpen && custOpen.id, noteOpenId); }
 
@@ -1637,7 +1665,7 @@ function itemsHtmlRO(n) { var it = n.items || [];
     return '<div class="pline ro"><div class="lbody"><div class="lhead"><span class="ln">' + (i + 1) + '</span>' + (ph ? '<img class="cthumb lthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<b class="lnm notr">' + esc(l.name) + '</b>' +
       (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + lineLocHtml(l.name, r) + missBadges(l.name) + '</span></span>' : '') +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '<span class="lqty notr">×' + l.qty + '</span></div>' +
-      (l.note ? '<div class="lronote notr">' + esc(l.note) + '</div>' : '') + '</div></div>';
+      (noteText(l.note) ? '<div class="lronote notr">' + esc(noteText(l.note)) + '</div>' : '') + '</div></div>';
   }).join(''); }
 function totalsHtmlRO(n) { var it = n.items || []; if (!it.length || !priceState.prices) return '';
   var sub = 0, miss = 0; it.forEach(function (l) { var p = linePrice(l); if (p == null) miss++; else sub += p * l.qty; });
@@ -1897,13 +1925,14 @@ function renderPicked() {
       '<span class="lqty notr">×' + l.qty + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
-      (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') +
+      (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (hasDisc(l) ? '<s>' + money(lineBase(l)) + '</s> ' : '') + money(pr) + '</b>' + (lmeta(l).p != null ? ' <span class="povr">set</span>' : '') + '</span>' : '') +
         (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">Accessories <span class="notr">(' + relOf(l.name).length + ')</span></button>' : '') + '</span>' : '') +
-      '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
+      '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
+        (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
       lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
-      '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
-      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
+      '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(noteText(l.note)) + '" maxlength="280"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
+      (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isMoldRow(r) ? '<button class="link ltc" data-lmc="1">▦ Molding calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
       '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button></div>';
     return '<div class="pline hasord' + (open ? ' open' : '') + '" data-lid="' + esc(l.id) + '"><div class="lbody">' + head + det + '</div>' + (it.length > 1 ? ordHtml(i, it.length) : '') + '</div>';
   }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
@@ -2056,7 +2085,7 @@ function renderTotals() { var n = curNote(), el = $('cdTotals'); if (!el || !n) 
   var sub = 0, miss = 0; it.forEach(function (l) { var p = linePrice(l); if (p == null) miss++; else sub += p * l.qty; });
   var t = TAX[custOpen.tax] || TAX.SF, tax = Math.round(sub * t * 100) / 100;
   el.innerHTML = '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + taxLabel(custOpen.tax) + '</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>' +
-    '<p class="note">Retail list prices, no discount. Discounts are applied on the official quote.</p>'; }
+    '<p class="note">' + (it.some(function (l) { return hasDisc(l) || lmeta(l).p != null; }) ? 'Includes line discounts / set prices.' : 'Retail list prices, no discount.') + ' Discounts are applied on the official quote.</p>'; }
 function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !n) return; var ps = n.photos || [];
   $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
   el.innerHTML = ps.length ? ps.map(function (f) {
@@ -2423,6 +2452,8 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
   if (t.closest('[data-rmiss]')) { var rr = itemRow(l.name); reportMissing(l.name, rr ? rr[1] : (l.desc || '')); return; }
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
   if (t.closest('[data-lfc]')) { var r1 = itemRow(l.name); if (isFloorRow(r1)) floorCalcFor(itemFromRow(r1), { c: custOpen, n: curNote(), line: l }); return; }
+  if (t.closest('[data-lmc]')) { var r2 = itemRow(l.name); if (isMoldRow(r2)) moldCalcFor(itemFromRow(r2), { c: custOpen, n: curNote(), line: l }); return; }
+  if (t.closest('[data-ldisc]')) { discSheet(l); return; }
   if (t.closest('[data-ltc]')) { var r0 = itemRow(l.name); if (isTileRow(r0)) tileCalcFor(itemFromRow(r0), { c: custOpen, n: curNote(), line: l }); return; }
   if (q) { l.qty = Math.max(1, l.qty + (+q.dataset.lq)); t.closest('.m').querySelector('[data-lqv]').value = l.qty; renderTotals(); updateAmt(t, l);
     var nq = curNote(); if (nq) lineHold[l.id] = nq.id; scheduleAutosave(); }
@@ -2986,7 +3017,7 @@ function restoreNoteVersion(c, n, snap) {
 function versionPreview(h, i) {
   var s = h.list[i]; if (!s) return;
   var rows = (s.items || []).map(function (l, k) {
-    return '<div class="shrow" style="cursor:default"><span><b class="notr">' + (k + 1) + '. ' + esc(l.name) + '</b><span class="s notr">× ' + esc(l.qty || 1) + (l.note ? ' · ' + esc(l.note) : '') + '</span></span></div>';
+    return '<div class="shrow" style="cursor:default"><span><b class="notr">' + (k + 1) + '. ' + esc(l.name) + '</b><span class="s notr">× ' + esc(l.qty || 1) + (noteText(l.note) ? ' · ' + esc(noteText(l.note)) : '') + '</span></span></div>';
   }).join('');
   openSheet('<h3>Version history</h3><div class="hint" style="margin:0 0 8px"><span class="notr">' + esc(histWhen(s.at)) + '</span> · ' + (s.items || []).length + ' items' +
     ((s.photos || []).length ? ' · ' + s.photos.length + ' photos' : '') + '</div>' +
@@ -3013,10 +3044,10 @@ function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
   if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); var nq = curNote(); if (nq) lineHold[l.id] = nq.id; scheduleAutosave(); }
-  else if (t.dataset.lnote) { l.note = t.value; var nn = curNote(); if (nn) lineHold[l.id] = nn.id; scheduleAutosave(); }
+  else if (t.dataset.lnote) { l.note = withMeta(t.value, lmeta(l)); var nn = curNote(); if (nn) lineHold[l.id] = nn.id; scheduleAutosave(); }
 });
 document.addEventListener('input', function (e) { var t = e.target; if (!t.dataset.lnote || !t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
-  l.note = t.value; var nIn = curNote(); if (nIn) lineHold[l.id] = nIn.id; scheduleAutosave(); });
+  l.note = withMeta(t.value, lmeta(l)); var nIn = curNote(); if (nIn) lineHold[l.id] = nIn.id; scheduleAutosave(); });
 /** Phone photos are shrunk before upload (longest side 1600 px, JPEG): fast on the floor's Wi-Fi, small in Drive. */
 function shrinkPhoto(file) { return new Promise(function (res, rej) { var rd = new FileReader(); rd.onerror = function () { rej(new Error('Could not read the photo.')); };
   rd.onload = function () { var img = new Image(); img.onerror = function () { rej(new Error('This photo type is not supported here. Try a JPG.')); };
@@ -3031,7 +3062,10 @@ function quoteBtn(keep) { var b = $('cdQuote'), a = $('cdQuoteAll'); if (!b) ret
   if (!quoteBusy) { b.disabled = !n; if (a) a.disabled = false; }
   if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; if (!quoteBusy && !keep) msg($('cdMsg'), ''); } }
 function quoteLock(on) { quoteBusy = on; if (on) { var b = $('cdQuote'), a = $('cdQuoteAll'); if (b) b.disabled = true; if (a) a.disabled = true; } else quoteBtn(true); }
-function lineNoteBits(it) { return (it || []).filter(function (l) { return String(l.note || '').trim(); }).map(function (l) { return l.name + ': ' + String(l.note).trim(); }); }
+function lineNoteBits(it) { return (it || []).map(function (l) { var t = noteText(l.note).trim(), d = lineDisc(l), m = lmeta(l);
+  var bits = [t, d ? 'line discount ' + d + '%' : lineDiscAmt(l) ? 'line discount ' + money(lineDiscAmt(l)) + ' off' : '', m.p != null && lineBase(l) != null ? 'set unit price ' + money(lineBase(l)) : ''].filter(Boolean).join(' · ');
+  return bits ? l.name + ': ' + bits : ''; }).filter(Boolean); }
+function lineQ(l) { var o = { name: l.name, qty: l.qty }, d = lineDisc(l); if (d) o.discount_pct = d; if (lineDiscAmt(l)) o.discount_amount = lineDiscAmt(l); if (lmeta(l).p != null && lineBase(l) != null) o.unit_price = lineBase(l); return o; }
 function quoteSent(r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Max.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); }
 function drainSaves() {
   return flushBatch().then(function () {
@@ -3105,7 +3139,7 @@ function quoteCust() {
     n = curNote(); if (!n || custOpen !== c) return; var it2 = n.items || [];
     var notes = [String(n.text || '').trim()].concat(lineNoteBits(it2)).filter(Boolean).join('\n');
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
-      items: it2.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it2.map(function (l) { return { name: l.name, qty: l.qty }; }) } });
+      items: it2.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it2.map(lineQ) } });
   }).then(function (r) { if (r) quoteSent(r); }).catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { quoteLock(false); });
 }
 function quoteProject() {
@@ -3119,10 +3153,10 @@ function quoteProject() {
     var notes = c.notes || [], items = [], lines = [], sections = [], projectNotes = [];
     notes.forEach(function (n) {
       var it = n.items || [], text = String(n.text || '').trim(), title = n.title || 'Note';
-      it.forEach(function (l) { items.push({ item: l.name, qty: l.qty }); lines.push({ name: l.name, qty: l.qty }); });
+      it.forEach(function (l) { items.push({ item: l.name, qty: l.qty }); lines.push(lineQ(l)); });
       var body = [text].concat(lineNoteBits(it)).filter(Boolean).join('\n');
       sections.push(body ? title + '\n' + body : title);
-      projectNotes.push({ title: title, text: text, items: it.map(function (l) { return { name: l.name, qty: l.qty, note: String(l.note || '').trim() }; }) });
+      projectNotes.push({ title: title, text: text, items: it.map(function (l) { return { name: l.name, qty: l.qty, note: noteText(l.note).trim(), discount_pct: lineDisc(l) || undefined, discount_amount: lineDiscAmt(l) || undefined }; }) });
     });
     msg($('cdMsg'), 'Sending…', true);
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: sections.join('\n\n'), note_title: projLabel(c),
@@ -3539,14 +3573,15 @@ function tileCalc(name) { if (shown[name] && shown[name].cat === 'Flooring') ret
 function itemFromRow(r) { return { name: r[0], desc: r[1] || '', price: priceState.prices ? r[2] : null, tile: r[11], photo: r[13] || '', cat: r[7] || '' }; }
 /** A tile line = an item with tile sizes the math can use (sq ft per piece). Only those get the calculator. */
 function isTileRow(r) { return !!(r && r[7] !== 'Flooring' && r[11] && r[11].sqftPc > 0); }  // tile = pieces; flooring never uses it
+var MOLD_NOTE_RE = /\s*(?:·\s*)?\d+(?:\.\d+)?\s*lin ft(?:\s*\+\s*\d+(?:\.\d+)?%)?(?:\s*·\s*\d+\s*pcs?(?:\s*of\s*[\d.]+\s*ft)?)?\s*(?:·\s*)?/i;
 var CALC_NOTE_RE = /\s*(?:·\s*)?\d+(?:\.\d+)?\s*sq ft(?:\s*\+\s*\d+(?:\.\d+)?%)?(?:\s*·\s*\d+\s*(?:boxes|pcs?)(?:\s*\([\d.]+ box(?:es)? of \d+ pcs\))?)?\s*(?:·\s*)?/i;
 /** target: null = the current "Adding to" note (Search tile card: adds a line);
  *  {c, n, line} = a tile line inside a note: "Set this line" SETS that line's qty and note ("120 sq ft + 10%"). */
 function tileCalcFor(it, target) {
-  var t = it.tile, ln = target && target.line, prev = ln ? String(ln.note || '').match(/(\d+(?:\.\d+)?)\s*sq ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
+  var t = it.tile, ln = target && target.line, cat0 = it.price != null ? +(it.price / t.sqftPc).toFixed(2) : null, m0 = ln ? lmeta(ln) : {}, prev = ln ? String(ln.note || '').match(/(\d+(?:\.\d+)?)\s*sq ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
   openSheet('<h3>Tile calculator</h3><div style="font-size:13px;color:var(--muted)">' + esc(it.name) + (ln ? ' · line in ' + esc(target.n.title) : '') + '</div>' +
     '<div class="kv"><span>Tile</span><b>' + (t.w ? (+t.w).toFixed(2).replace(/\.00$/, '') + '" × ' + (+t.h).toFixed(2).replace(/\.00$/, '') + '"' : '—') + ' · ' + t.sqftPc + ' sq ft/pc' + (t.pcsBox ? ' · ' + t.pcsBox + ' pcs/box' : '') + '</b></div>' +
-    (it.price != null ? '<div class="kv"><span>Price</span><b>' + money(it.price) + '/pc · ' + money(perSqft(it)) + '/sq ft' + (t.pcsBox ? ' · ' + money(it.price * t.pcsBox) + '/box' : '') + '</b></div>' : '') +
+    (it.price != null ? '<div class="kv"><span>Price</span><b><span id="tcPc"></span> · $<input class="pin" id="tcPs" type="number" inputmode="decimal" step="0.01" min="0" value="' + (m0.p != null ? m0.p : cat0) + '">/sq ft</b></div>' : '') +
     '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 100) + '"></div>' +
     '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 0) + '" min="0" max="50"></div></div>' +
     '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">Changes fill this line\'s qty (pieces) right away.</div>' : '') +
@@ -3554,59 +3589,66 @@ function tileCalcFor(it, target) {
   var calc = function () {
     var A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0)), waste = 1 + wp / 100;
     var pcs = A > 0 ? Math.ceil(+(A * waste / t.sqftPc).toFixed(6)) : 0 /* whole PIECES (not full boxes) */, buy = pcs;
-    var boxes = t.pcsBox ? +(pcs / t.pcsBox).toFixed(1) : null /* reference only */, cost = it.price != null ? buy * it.price : null;
+    var ps = it.price != null ? parseFloat($('tcPs').value) : NaN, ovr = ps >= 0 && Math.abs(ps - cat0) > 0.004 ? +ps.toFixed(2) : null;
+    var unit = it.price == null ? null : ovr != null ? Math.round(ovr * t.sqftPc * 100) / 100 : it.price;
+    if (unit != null) $('tcPc').textContent = money(unit) + '/pc' + (t.pcsBox ? ' · ' + money(unit * t.pcsBox) + '/box' : '');
+    var boxes = t.pcsBox ? +(pcs / t.pcsBox).toFixed(1) : null /* reference only */, cost = unit != null ? buy * unit : null;
     var pcTxt = function (n) { return n.toLocaleString() + (n === 1 ? ' pc' : ' pcs'); };
-    tcState = { buy: buy, boxes: boxes, cost: cost, it: it, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') + ' · ' + pcTxt(buy) };
+    tcState = { buy: buy, boxes: boxes, cost: cost, it: it, p: ovr, priced: it.price != null, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') + ' · ' + pcTxt(buy) };
     $('tcRes').innerHTML = '<div class="big">' + pcTxt(buy) + '</div>' +
       '<div class="kv"><span>Covers</span><b>' + (+(buy * t.sqftPc).toFixed(2)) + ' sq ft · ' + pcTxt(buy) + '</b></div>' +
       (boxes != null ? '<div class="kv"><span>Boxes (reference)</span><b>' + boxes + (boxes <= 1 ? ' box' : ' boxes') + ' of ' + t.pcsBox + ' pcs</b></div>' : '') +
       (cost != null ? '<div class="kv"><span>Tile cost (retail)</span><b>' + money(cost) + '</b></div>' : '');
   };
   var live = function () { calc(); if (ln) liveLine(target, tcState, 'pcs'); };
-  $('tcA').oninput = live; $('tcWp').oninput = live;
+  $('tcA').oninput = live; $('tcWp').oninput = live; if ($('tcPs')) $('tcPs').oninput = live;
   calc();
   $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast('Enter the area first'); return; }
     closeSheet();
-    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note }]); };
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
 }
 /** Calculator result -> THIS line: qty = pieces to buy, note = "120 sq ft + 10%" (replaces an older sq ft note, keeps other words). Autosaved. */
 function setTileLine(c, n, l, s, unit) {
-  var rest = String(l.note || '').replace(CALC_NOTE_RE, ' ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
-  l.qty = s.buy; l.note = (s.note + (rest ? ' · ' + rest : '')).slice(0, 300);
+  var m = lmeta(l), rest = noteText(l.note).replace(MOLD_NOTE_RE, ' ').replace(CALC_NOTE_RE, ' ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
+  if (s.priced) m.p = s.p == null ? undefined : s.p;
+  l.qty = s.buy; l.note = withMeta((s.note + (rest ? ' · ' + rest : '')).slice(0, 280), { p: m.p, d: m.d, a: m.a });
   if (custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
   setLine(l, { qty: l.qty, note: l.note });
 }
 /** Line calculators write straight into the line as the numbers change (debounced autosave); Done / tap outside flushes. */
 var lineFlush = null, lineTimer = null;
 function liveLine(target, s, unit) {
-  var ln = target.line; if (!s.buy || (ln.qty === s.buy && String(ln.note || '').indexOf(s.note) === 0)) return;
+  var ln = target.line, pm = lmeta(ln).p; if (!s.buy || (ln.qty === s.buy && noteText(ln.note).indexOf(s.note) === 0 && (!s.priced || (pm == null ? null : pm) === (s.p == null ? null : s.p)))) return;
   clearTimeout(lineTimer);
   lineFlush = function () { clearTimeout(lineTimer); lineFlush = null; setTileLine(target.c, target.n, ln, s, unit); };
   lineTimer = setTimeout(function () { if (lineFlush) lineFlush(); }, 700);
-  var st = $('tcLive'); if (st) st.textContent = 'Line: ' + s.buy + ' ' + unit + ' · ' + s.note + ' (saved automatically)';
+  var st = $('tcLive'); if (st) st.textContent = 'Line: ' + s.buy + ' ' + unit + ' · ' + s.note + (s.p != null ? ' · price set' : '') + ' (saved automatically)';
 }
 var tcState = null;
 function floorCalc(name) { floorCalcFor(shown[name], null); }
 /** Flooring calculator: area + waste % -> whole boxes, sq ft covered, total. sq ft per box is pre-filled and editable. */
 function floorCalcFor(it, target) {
-  var f = floorOf(it) || { sf: null, src: '' }, base = floorParse(it.cat, it.desc, it.tile) || {}, ln = target && target.line;
+  var f = floorOf(it) || { sf: null, src: '' }, base = floorParse(it.cat, it.desc, it.tile) || {}, ln = target && target.line, m0 = ln ? lmeta(ln) : {};
+  var cat0 = function (sf) { return it.price != null && sf > 0 ? +(it.price / sf).toFixed(2) : null; }, psTouched = m0.p != null;
   var prev = ln ? String(ln.note || '').match(/(\d+(?:\.\d+)?)\s*sq ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
   var srcTxt = { desc: 'from the description', pcs: 'pcs/box × sq ft/pc', staff: 'set on this phone', '': 'not in the description: enter it' }[f.src];
   openSheet('<h3>Flooring calculator</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(it.name) + '</span>' + (ln ? ' · line in <span class="notr">' + esc(target.n.title) + '</span>' : '') + '</div>' +
     '<div class="calcgrid"><div><label class="f">Sq ft per box</label><input id="fcSf" type="number" inputmode="decimal" step="0.01" min="0" value="' + (f.sf || '') + '"></div>' +
     '<div class="hint" id="fcSrc" style="align-self:end;padding-bottom:12px">' + srcTxt + '</div></div>' +
-    '<div class="kv hidden" id="fcPrice"></div>' +
+    (it.price != null ? '<div class="kv" id="fcPrice"><span>Price</span><b><span id="fcBox"></span> · $<input class="pin" id="fcPs" type="number" inputmode="decimal" step="0.01" min="0" value="' + (m0.p != null ? m0.p : cat0(f.sf) == null ? '' : cat0(f.sf)) + '">/sq ft</b></div>' : '') +
     '<div class="calcgrid"><div><label class="f">Area (sq ft)</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 100) + '"></div>' +
     '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 0) + '" min="0" max="50"></div></div>' +
     '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">Changes fill this line\'s qty (boxes) right away.</div>' : '') +
     '<button class="btn" id="tcAdd">' + (ln ? 'Done' : 'Add flooring to note') + '</button>');
   var calc = function () {
     var sf = parseFloat($('fcSf').value) || 0, A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0));
-    var pe = $('fcPrice'); pe.classList.toggle('hidden', it.price == null);
-    if (it.price != null) pe.innerHTML = '<span>Price</span><b>' + money(it.price) + '/box' + (sf > 0 ? ' · ' + money(it.price / sf) + '/sq ft' : '') + '</b>';
+    var c0 = cat0(sf), ps = it.price != null ? parseFloat($('fcPs').value) : NaN;
+    if (it.price != null && !psTouched && c0 != null && document.activeElement !== $('fcPs')) { $('fcPs').value = c0; ps = c0; }  // follows sq ft/box until edited
+    var ovr = c0 != null && ps >= 0 && Math.abs(ps - c0) > 0.004 ? +ps.toFixed(2) : null, unit = it.price == null ? null : ovr != null ? Math.round(ovr * sf * 100) / 100 : it.price;
+    if (it.price != null) $('fcBox').textContent = money(unit) + '/box';
     if (!(sf > 0)) { tcState = { buy: 0 }; $('tcRes').innerHTML = '<div class="hint">Enter the sq ft per box (on the box label or price list).</div>'; return; }
-    var boxes = A > 0 ? Math.ceil(A * (1 + wp / 100) / sf - 1e-9) : 0, cost = it.price != null ? boxes * it.price : null;
-    tcState = { buy: boxes, it: it, sf: sf, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') };
+    var boxes = A > 0 ? Math.ceil(A * (1 + wp / 100) / sf - 1e-9) : 0, cost = unit != null ? boxes * unit : null;
+    tcState = { buy: boxes, it: it, sf: sf, p: ovr, priced: it.price != null, note: (+A.toFixed(1)) + ' sq ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') };
     $('tcRes').innerHTML = '<div class="big">' + boxes + ' boxes</div>' +
       '<div class="kv"><span>Covers</span><b>' + (boxes * sf).toFixed(1) + ' sq ft</b></div>' +
       (cost != null ? '<div class="kv"><span>Total (retail)</span><b>' + money(cost) + '</b></div>' : '');
@@ -3615,11 +3657,80 @@ function floorCalcFor(it, target) {
     try { if (v > 0 && v !== base.sf) localStorage.setItem('esFloorSf:' + it.name, String(v)); else localStorage.removeItem('esFloorSf:' + it.name); } catch (e) {}
     $('fcSrc').textContent = v > 0 && v !== base.sf ? 'set on this phone' : base.sf ? 'from the description' : 'not in the description: enter it'; live(); };
   var live = function () { calc(); if (ln) liveLine(target, tcState, 'boxes'); };
-  $('tcA').oninput = live; $('tcWp').oninput = live;
+  $('tcA').oninput = live; $('tcWp').oninput = live; if ($('fcPs')) $('fcPs').oninput = function () { psTouched = true; live(); };
   calc();
   $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(s.sf ? 'Enter the area first' : 'Enter the sq ft per box first'); return; }
     closeSheet();
-    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: s.note }]); };
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
+}
+// ---------------- molding calculator: flooring moldings (codes -R- reducer, -BN- stair nose, -EC- end cap, -T- T-molding, or
+// the same words in the description). Linear ft + waste % -> whole pieces. Piece length from the description (94", 7.87ft,
+// 2100mm, 8'), else an editable length (kept on this phone). Price per piece editable, $/lin ft shown alongside.
+var MOLD_CODE_RE = /^[A-Z0-9]+-(?:R|BN|EC|T|QR|TH)-/i, MOLD_WORD_RE = /REDUCER|STAIR ?NOS|BULLNOSE|END ?- ?CAP|T- ?MOLD|QUARTER ROUND|THRESHOLD|MOULDING|MOLDING|勾绳|楼梯线|高底线|平口线|T 型线/i;
+function moldParseLen(desc) { var d = String(desc || '').toUpperCase(), best = 0, m, re;
+  var take = function (ft) { if (ft >= 2 && ft <= 16 && ft > best) best = ft; };
+  re = /(\d+(?:\.\d+)?)\s*(?:FT\b|FT\.|FEET|'|’)(?!')/g; while ((m = re.exec(d))) take(+m[1]);
+  re = /(\d+(?:\.\d+)?)(?:-(\d+)\/(\d+))?\s*(?:"|''|IN\b|INCH)/g; while ((m = re.exec(d))) take((+m[1] + (m[2] ? m[2] / m[3] : 0)) / 12);
+  re = /(\d{3,4})\s*MM\b/g; while ((m = re.exec(d))) take(m[1] / 304.8);
+  return best ? +best.toFixed(2) : null; }
+function moldOf(it) { if (!it || it.cat !== 'Flooring') return null; if (!MOLD_CODE_RE.test(it.name) && !MOLD_WORD_RE.test(it.desc)) return null;
+  if (/ADHESIVE|GLUE|UNDERLAY|CLEANER|\bKIT\b/i.test(it.desc)) return null;
+  var len = moldParseLen(it.desc), own = null; try { own = parseFloat(localStorage.getItem('esMoldLen:' + it.name)); } catch (e) {}
+  return own > 0 ? { len: own, src: 'staff', base: len } : { len: len, src: len ? 'desc' : '', base: len }; }
+function isMoldRow(r) { return !!(r && moldOf(itemFromRow(r))); }
+function moldCalc(name) { moldCalcFor(shown[name], null); }
+function moldCalcFor(it, target) {
+  var mo = moldOf(it), ln = target && target.line, m0 = ln ? lmeta(ln) : {};
+  var prev = ln ? noteText(ln.note).match(/(\d+(?:\.\d+)?)\s*lin ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
+  var srcTxt = function (src) { return { desc: 'from the description', staff: 'set on this phone', '': 'not in the description: enter it' }[src]; };
+  openSheet('<h3>Molding calculator</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(it.name) + '</span>' + (ln ? ' · line in <span class="notr">' + esc(target.n.title) + '</span>' : '') + '</div>' +
+    '<div class="calcgrid"><div><label class="f">Length per piece (ft)</label><input id="mcL" type="number" inputmode="decimal" step="0.01" min="0" value="' + (mo.len || '') + '"></div>' +
+    '<div class="hint" id="mcSrc" style="align-self:end;padding-bottom:12px">' + srcTxt(mo.src) + '</div></div>' +
+    (it.price != null ? '<div class="kv"><span>Price</span><b>$<input class="pin" id="mcPp" type="number" inputmode="decimal" step="0.01" min="0" value="' + (m0.p != null ? m0.p : it.price) + '">/pc · <span id="mcLf"></span></b></div>' : '') +
+    '<div class="calcgrid"><div><label class="f">Linear ft</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 20) + '"></div>' +
+    '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 10) + '" min="0" max="50"></div></div>' +
+    '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">Changes fill this line\'s qty (pieces) right away.</div>' : '') +
+    '<button class="btn" id="tcAdd">' + (ln ? 'Done' : 'Add molding to note') + '</button>');
+  var calc = function () {
+    var L = parseFloat($('mcL').value) || 0, A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0));
+    var pp = it.price != null ? parseFloat($('mcPp').value) : NaN, ovr = it.price != null && pp >= 0 && Math.abs(pp - it.price) > 0.004 ? +pp.toFixed(2) : null;
+    var unit = it.price == null ? null : ovr != null ? ovr : it.price;
+    if (unit != null) $('mcLf').textContent = L > 0 ? money(unit / L) + '/lin ft' : '—/lin ft';
+    if (!(L > 0)) { tcState = { buy: 0 }; $('tcRes').innerHTML = '<div class="hint">Enter the length per piece (on the label or price list).</div>'; return; }
+    var pcs = A > 0 ? Math.ceil(A * (1 + wp / 100) / L - 1e-9) : 0, cost = unit != null ? pcs * unit : null;
+    tcState = { buy: pcs, it: it, len: L, p: ovr, priced: it.price != null, note: (+A.toFixed(1)) + ' lin ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') + ' · ' + pcs + (pcs === 1 ? ' pc' : ' pcs') + ' of ' + (+L.toFixed(2)) + ' ft' };
+    $('tcRes').innerHTML = '<div class="big">' + pcs + (pcs === 1 ? ' piece' : ' pieces') + '</div>' +
+      '<div class="kv"><span>Covers</span><b>' + (pcs * L).toFixed(1) + ' lin ft</b></div>' +
+      (cost != null ? '<div class="kv"><span>Total (retail)</span><b>' + money(cost) + '</b></div>' : '');
+  };
+  var live = function () { calc(); if (ln) liveLine(target, tcState, 'pcs'); };
+  $('mcL').oninput = function () { var v = parseFloat(this.value);
+    try { if (v > 0 && v !== mo.base) localStorage.setItem('esMoldLen:' + it.name, String(v)); else localStorage.removeItem('esMoldLen:' + it.name); } catch (e) {}
+    $('mcSrc').textContent = srcTxt(v > 0 && v !== mo.base ? 'staff' : mo.base ? 'desc' : ''); live(); };
+  $('tcA').oninput = live; $('tcWp').oninput = live; if ($('mcPp')) $('mcPp').oninput = live;
+  calc();
+  $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(s.len ? 'Enter the linear ft first' : 'Enter the length per piece first'); return; }
+    closeSheet();
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
+}
+// ---------------- line discount: % or $ off this line (staff, prices visible only). Cap: #3007/#3008 cabinets 35%, others 100%.
+function discSheet(l) { if (linePrice(l) == null) return; var cap = discCap(l.name), base = lineBase(l), full = Math.round(base * l.qty * 100) / 100, maxAmt = Math.round(full * cap) / 100;
+  var m = lmeta(l), mode = m.d ? 'pct' : m.a ? 'amt' : 'pct';
+  openSheet('<h3>Line discount</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(l.name) + '</span> · ' + money(base) + ' × ' + l.qty + ' = ' + money(full) + (cap < 100 ? ' · max ' + cap + '%' : '') + '</div>' +
+    '<div class="dsrow"><button class="dsopt" data-dsq="5">5%</button><button class="dsopt" data-dsq="10">10%</button><button class="dsopt" data-dsm="amt">$ amount</button><button class="dsopt" data-dsm="pct">Custom %</button><button class="dsopt dsclr" data-dsclr="1">Clear</button></div>' +
+    '<div class="dsin"><span id="dsU"></span><input id="dsV" type="number" inputmode="decimal" min="0" step="0.5"><span class="hint" id="dsRes" style="margin:0"></span></div>' +
+    '<button class="btn" id="dsOk">Set</button>');
+  var setMode = function (md) { mode = md; document.querySelectorAll('[data-dsm]').forEach(function (b) { b.classList.toggle('on', b.dataset.dsm === md); });
+    $('dsU').textContent = md === 'amt' ? '$ off' : '% off'; $('dsV').max = md === 'amt' ? maxAmt : cap; show(); };
+  var val = function () { var v = Math.max(0, parseFloat($('dsV').value) || 0); return mode === 'amt' ? Math.min(maxAmt, +v.toFixed(2)) : Math.min(cap, +v.toFixed(1)); };
+  var show = function () { var v = val(), raw = parseFloat($('dsV').value) || 0, off = mode === 'amt' ? v : full - Math.round(base * (1 - v / 100) * 100) / 100 * l.qty;
+    $('dsRes').textContent = (raw > v ? 'capped · ' : '') + 'line ' + money(full - off); };
+  var apply = function (o) { var mm = lmeta(l); l.note = withMeta(l.note, { p: mm.p, d: o.d || undefined, a: o.a || undefined }); var nn = curNote(); if (nn) lineHold[l.id] = nn.id;
+    setLine(l, { qty: l.qty, note: l.note }); closeSheet(); renderPicked(); };
+  $('dsV').value = m.d ? lineDisc(l) : m.a ? lineDiscAmt(l) : ''; $('dsV').oninput = show; setMode(mode);
+  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-dsm],[data-dsq],[data-dsclr]'); if (!b) return;
+    if (b.dataset.dsq) apply({ d: Math.min(+b.dataset.dsq, cap) }); else if (b.dataset.dsclr) apply({}); else { setMode(b.dataset.dsm); $('dsV').focus(); } };
+  $('dsOk').onclick = function () { var v = val(); apply(mode === 'amt' ? { a: v } : { d: v }); };
 }
 
 // ---------------- send plan to the bot (separate page)
