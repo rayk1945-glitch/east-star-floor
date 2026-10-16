@@ -342,6 +342,12 @@
   .actions { display:flex; gap:8px; margin-top:10px; }
   .actions button { flex:1; min-height:40px; border-radius:999px; border:1px solid var(--line-strong); background:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
   .actions button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .actions .aqty { display:flex; align-items:center; flex:0 0 auto; border:1px solid var(--line-strong); border-radius:999px; background:#fff; overflow:hidden; }
+  .actions .aqty button { flex:0 0 22px; min-height:38px; border:0; border-radius:0; padding:0; font-size:17px; background:transparent; }
+  .actions .aqty input { width:28px; border:0; padding:0; text-align:center; font:inherit; font-size:14px; font-weight:700; background:transparent; -moz-appearance:textfield; }
+  .actions .aqty input::-webkit-inner-spin-button, .actions .aqty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+  .actions.sact { gap:6px; } .actions.sact > button { min-width:0; padding:0 4px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  @media (max-width:480px) { .actions.sact > button { font-size:13px; } .actions.sact > button.primary { flex:1.25; } }
   .persq { font-size:11.5px; color:var(--muted); text-align:right; font-weight:600; }
   .sheet-bg { position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:40; display:none; } .sheet-bg.on { display:block; }
   .sheet { position:fixed; left:0; right:0; bottom:0; z-index:41; background:#fff; border-radius:18px 18px 0 0; max-height:88vh; overflow:auto;
@@ -645,7 +651,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016o';
+var PAGE_VER = '20261016p';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -892,10 +898,11 @@ function card(it) {
     chip('SF', it.sf) + chip('FRE', it.fre) + '</div>' +
     missBadges(it.name) + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
-    '<div class="actions">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))">Molding calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
+    '<div class="actions sact">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))">Molding calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))">Accessories <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
-    (it.price != null || !priceState.prices ? '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'))">Add to note</button>' : '') + '</div></div>';
+    (it.price != null || !priceState.prices ? '<span class="aqty"><button type="button" aria-label="Less" onclick="aqStep(this,-1)">−</button><input type="number" inputmode="numeric" min="1" max="99999" value="1" aria-label="Qty" onfocus="this.select()"><button type="button" aria-label="More" onclick="aqStep(this,1)">+</button></span>' +
+    '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'), this)">Add to note</button>' : '') + '</div></div>';
 }
 
 // ---------------- search
@@ -1202,7 +1209,8 @@ function addToNote(lines) {
   lines.forEach(function (l, i) {
     var tmp = 'tmpl-' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5);
     var line = { id: tmp, name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' };
-    if (n) n.items = (n.items || []).concat([line]);
+    var dup = n && (n.items || []).filter(function (x) { return x.name === line.name; })[0];   // server merges same name: qty += (mirror it here)
+    if (dup) dup.qty = Math.min(99999, (Number(dup.qty) || 0) + line.qty); else if (n) n.items = (n.items || []).concat([line]);
     autoSave('add:' + tmp, function () {
       return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: { name: line.name, desc: line.desc, qty: line.qty, photo: line.photo, note: line.note } }).then(function (r) {
         if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
@@ -1212,8 +1220,8 @@ function addToNote(lines) {
           var known = {}; (nn.items || []).forEach(function (x) { if (x.id !== tmp) known[x.id] = 1; });
           var got = r.items.filter(function (x) { return !known[x.id]; })[0] ||
             r.items.filter(function (x) { return x.name === line.name; }).pop();
-          var ix = nn.items ? nn.items.indexOf(line) : -1;
-          if (got && ix >= 0) nn.items[ix] = got; else if (r.items) nn.items = r.items;
+          var ix = nn.items ? nn.items.indexOf(line) : -1; if (dup) { nn.items = r.items; ix = -2; }
+          if (ix === -2) {} else if (got && ix >= 0) nn.items[ix] = got; else if (r.items) nn.items = r.items;
           nn.updated = r.note.updated; nn.updated_by = r.note.updated_by;
         }
         if (noteOpenId === nn.id && $('cdItems')) renderPicked();
@@ -1226,7 +1234,10 @@ function addToNote(lines) {
     else if ($('cdNotes') && custOpen && custOpen.id === c.id) { keepTyped(); renderNoteCards(); }
   }
 }
-function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' });
+function aqStep(b, d) { var i = b.parentNode.querySelector('input'); i.value = Math.max(1, Math.min(99999, (Math.round(Number(i.value)) || 1) + d)); }
+function addItem(name, btn) { var it = shown[name], qi = btn && btn.previousElementSibling && btn.previousElementSibling.querySelector('input');
+  var q = qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1; if (qi) qi.value = 1;
+  addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' });
   if (relOf(name).length && curCust) setTimeout(function () { accSheet(name, true); }, 350); }
 // ---- sink -> compatible accessories (bundle.related from accessories.csv: {sink: [[accessory, note, kind], ...]}), Blanco + Franke
 function relOf(name) { var m = localData && localData.related; return (m && m[name]) || []; }
