@@ -179,7 +179,7 @@
   .proj .ngroup.act, .ngroup.act { border:2px solid #1A8BC9; border-left:6px solid #1A8BC9; background:#f0f8fd; box-shadow:0 0 0 3px rgba(26,139,201,.15); }
   .ngroup.act .cur { background:#1A8BC9; color:#fff; }
   .ngroup.nro { border:1px dashed #9aa4b2; } .ngroup.nro.act { border:2px solid #1A8BC9; border-left:6px solid #1A8BC9; } .ngroup.nedit:not(.act) { border-left:6px solid #1f2937; }
-  .ngroup.nro .ntitle-ro { flex:1; min-width:0; font-size:17px; cursor:pointer; } .nroedit { flex:none; font:inherit; font-size:15px; font-weight:700; color:#3f3200; background:#FACC15; border:1px solid #CA8A04; border-radius:9px; padding:9px 15px; min-height:38px; cursor:pointer; white-space:nowrap; } .nroedit.on { background:#16A34A; border-color:#15803D; color:#fff; cursor:default; } .ngroup.nedit { outline:3px solid #1A8BC9; outline-offset:2px; box-shadow:0 0 0 6px rgba(26,139,201,.18); } .nrotext { white-space:pre-wrap; font-size:17px; line-height:1.5; color:#374151; background:#f8fafc; border-radius:8px; padding:8px; margin-top:6px; } #nText { font-size:17px; line-height:1.5; }
+  .ngroup.nro .ntitle-ro { flex:1; min-width:0; font-size:17px; cursor:pointer; } .nroedit { flex:none; font:inherit; font-size:13px; font-weight:700; color:#3f3200; background:#FACC15; border:1px solid #CA8A04; border-radius:8px; padding:6px 10px; cursor:pointer; white-space:nowrap; } .nroedit.on { background:#16A34A; border-color:#15803D; color:#fff; cursor:default; } .ngroup.nedit { outline:3px solid #1A8BC9; outline-offset:2px; box-shadow:0 0 0 6px rgba(26,139,201,.18); } .nrotext { white-space:pre-wrap; font-size:17px; line-height:1.5; color:#374151; background:#f8fafc; border-radius:8px; padding:8px; margin-top:6px; } #nText { font-size:17px; line-height:1.5; }
   .pline.ro .lhead { cursor:default; } .lronote { font-size:12.5px; color:var(--muted); margin:2px 0 0 26px; } [data-nro] { cursor:pointer; }
   .ngroup .chev { color:#8a93a0; font-size:16px; } .ngroup .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; white-space:nowrap; }
   .ngroup.open { border:2px solid #1f2937; } .ngtop { display:flex; align-items:center; gap:8px; } .ngtop .ntitle { flex:1; min-width:0; }
@@ -539,8 +539,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015m"></script>
-<script src="i18n.js?v=20261015m"></script>
+<script src="search.js?v=20261015n"></script>
+<script src="i18n.js?v=20261015n"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -590,7 +590,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015m';
+var PAGE_VER = '20261015n';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -3786,7 +3786,7 @@ $('photoZoomStage').addEventListener('touchend', function (e) {
   if (!e.touches.length) pzPan = null;
   if (photoScale <= 1) { photoScale = 1; photoTx = 0; photoTy = 0; pzApply(); }
 });
-// ---- live auto-refresh (20261015m): while a project is open, quietly re-fetch it every ~20s and when the app comes
+// ---- live auto-refresh (20261015n): while a project is open, quietly re-fetch it every ~20s and when the app comes
 // back to the front, so saves from another device show up. Never touches a field being typed in, never runs while
 // anything local is unsaved / saving / uploading / dragging / recording; it just retries on the next tick.
 var AR_MS = 20000, arT = null, arBusy = false;
