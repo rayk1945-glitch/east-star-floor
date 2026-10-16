@@ -178,6 +178,9 @@
   .ngroup .nghead .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; } .ngroup .nghead .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .proj .ngroup.act, .ngroup.act { border:2px solid #1A8BC9; border-left:6px solid #1A8BC9; background:#f0f8fd; box-shadow:0 0 0 3px rgba(26,139,201,.15); }
   .ngroup.act .cur { background:#1A8BC9; color:#fff; }
+  .ngroup.nro { border:1px dashed #9aa4b2; } .ngroup.nro.act { border:2px solid #1A8BC9; border-left:6px solid #1A8BC9; } .ngroup.nedit:not(.act) { border-left:6px solid #1f2937; }
+  .ngroup.nro .ntitle-ro { flex:1; min-width:0; font-size:17px; cursor:pointer; } .nroedit { font-weight:700; } .nrotext { white-space:pre-wrap; font-size:14px; color:#374151; background:#f8fafc; border-radius:8px; padding:8px; margin-top:6px; }
+  .pline.ro .lhead { cursor:default; } .lronote { font-size:12.5px; color:var(--muted); margin:2px 0 0 26px; } [data-nro] { cursor:pointer; }
   .ngroup .chev { color:#8a93a0; font-size:16px; } .ngroup .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; white-space:nowrap; }
   .ngroup.open { border:2px solid #1f2937; } .ngtop { display:flex; align-items:center; gap:8px; } .ngtop .ntitle { flex:1; min-width:0; }
   .ngclose { border:0; background:#e6e9ee; border-radius:999px; width:34px; height:34px; font-size:15px; color:#475569; cursor:pointer; flex-shrink:0; }
@@ -536,8 +539,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015h"></script>
-<script src="i18n.js?v=20261015h"></script>
+<script src="search.js?v=20261015i"></script>
+<script src="i18n.js?v=20261015i"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -587,7 +590,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015h';
+var PAGE_VER = '20261015i';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -977,7 +980,9 @@ function renderPriceBar() { var el = $('priceBar'), off = !priceState.prices;
 // title, free text, picked items (qty + short note) and photos at the bottom. "Add to note" on Search goes into the
 // CURRENT note of the current customer ("Adding to: Mr. Wong · Kitchen"). Each staff member's customers are private
 // unless shared. Stored on the server (sheet "Customers", photos/voice in the app's private Drive folder).
-var noteOpenMem = {};   // project id -> note the user left open (stays open until they collapse it)
+var noteOpenMem = {};   // project id -> note the user left open for EDIT (stays open until they collapse it)
+var noteOpenSet = {}, noteSetMem = {};   // Stage A: note ids expanded (read-only or edit); noteSetMem: project id -> that set
+// noteOpenId is the ONE note in full edit mode (editNoteId); curNote() returns it.
 var curCust = null, custOpen = null, noteOpenId = null, pickThen = null, fileCache = {}, infoOpen = false;
 function curKey() { return 'esRedCur:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
 function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) || 'null'); } catch (e) { curCust = null; } if (curCust && !curCust.noteId) curCust = null; renderCustBar(); }
@@ -1512,11 +1517,14 @@ function paintNoteChips(n) {
 function syncCurTitle(n) { if (!n || !custOpen || !isCurNote(custOpen.id, n.id) || !curCust || curCust.noteTitle === n.title) return; curCust.noteTitle = n.title; saveCur(); }
 /** All note groups. Only the open one has the editing ids (nTitle, cdItems, nPhotos, cdQuote...). */
 function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNotes')) return;
-  if (c && c.id) noteOpenMem[c.id] = noteOpenId;
+  if (c && c.id) { if (noteSetMem[c.id] !== noteOpenSet) noteOpenSet = noteSetMem[c.id] = (noteSetMem[c.id] || {}); if (noteOpenId) noteOpenSet[noteOpenId] = 1;
+    Object.keys(noteOpenSet).forEach(function (k) { if (!ns.some(function (x) { return x.id === k; })) delete noteOpenSet[k]; });
+    noteOpenMem[c.id] = noteOpenId; }
   $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
+    if (n.id !== noteOpenId && noteOpenSet[n.id]) return noteRoHtml(n, isCur, pill);
     if (n.id !== noteOpenId) return '<div class="card ngroup' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div></button>' +
       noteChipRow(n) + '<button class="nghead" data-nopen="' + esc(n.id) + '"><span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
-    return '<div class="card ngroup open' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
+    return '<div class="card ngroup open nedit' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
       '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
         '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
@@ -1527,7 +1535,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" multiple data-nph="1"></label><span class="hint" id="nPhProg" style="margin:0;align-self:center;display:none"></span><span class="hint nphp" style="margin:0;align-self:center">or paste (Ctrl+V)</span></div><div class="nphd">Drop photos here (up to 20)</div></div>' +
       '<div style="text-align:center;margin-top:10px"><button class="link" id="nDel" style="color:#7f1d1d">Delete this note</button></div></div>';
   }).join('') : '<div class="ngroup"><div class="empty" style="padding:14px">No notes yet. Tap + Add note.</div></div>';
-  quoteBtn();
+  quoteBtn(); loadRoPhotos();
   var n = curNote(); if (!n) return;
   rememberNote(n);
   if ($('cdUse')) $('cdUse').onclick = function () { setCur(c, n); renderNoteCards(); toast('Adding to ' + projLabel(c) + ' · ' + n.title); };
@@ -1556,7 +1564,42 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   var nm = e.target.closest('[data-nmenu]'); if (nm) { noteMenu(nm.dataset.nmenu); return; }
   var chip = e.target.closest('[data-nchip]'); if (chip) { e.preventDefault(); applyNoteChip(chip); return; }
   var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]'); if (!b && !x) return;
-  var id = b ? b.dataset.nopen : null; saveBg().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
+  var ro = e.target.closest('[data-nro]'), ph = e.target.closest('.nphro img[data-fid]');
+  if (ph) { openPhotoZoom(ph.src); return; }
+  if (ro && e.target.closest('img.cthumb')) return;   // item thumb in a read-only note: full-screen only (global handler), don't switch edit
+  if (x && x.dataset.nclose === 'ro') { delete noteOpenSet[x.dataset.nid]; keepTyped(); renderNoteCards(); return; }
+  if (!b && !x && ro) b = { dataset: { nopen: ro.dataset.nro } };   // tap a read-only expanded note: make it the edit note
+  if (!b && !x) return;
+  var id = b ? b.dataset.nopen : null, was = noteOpenId;
+  if (x) { if (was) delete noteOpenSet[was]; id = null;   // collapse the edit note: hand edit to another still-open note
+    var rest = (custOpen.notes || []).filter(function (q) { return noteOpenSet[q.id]; }); if (rest.length) id = rest[0].id; }
+  else noteOpenSet[id] = 1;   // open this one; others stay expanded (read-only)
+  saveBg().then(function () { keepTyped(); flushNote(); noteOpenId = id; renderNoteCards(); if (id && !x) scrollToNote(id); }); });
+/** Stage A: read-only expanded note (no editor ids). Tap the body to make it the edit note. */
+function itemsHtmlRO(n) { var it = n.items || [];
+  if (!it.length) return '<div class="empty">No items yet.</div>';
+  return it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', oh = r ? r[3] : null, ohN = Number(oh);
+    return '<div class="pline ro"><div class="lbody"><div class="lhead"><span class="ln">' + (i + 1) + '</span>' + (ph ? '<img class="cthumb lthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<b class="lnm notr">' + esc(l.name) + '</b>' +
+      (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadges(l.name) + '</span></span>' : '') +
+      (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '<span class="lqty notr">×' + l.qty + '</span></div>' +
+      (l.note ? '<div class="lronote notr">' + esc(l.note) + '</div>' : '') + '</div></div>';
+  }).join(''); }
+function totalsHtmlRO(n) { var it = n.items || []; if (!it.length || !priceState.prices) return '';
+  var sub = 0, miss = 0; it.forEach(function (l) { var p = linePrice(l); if (p == null) miss++; else sub += p * l.qty; });
+  var t = TAX[custOpen.tax] || TAX.SF, tax = Math.round(sub * t * 100) / 100;
+  return '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + (custOpen.tax || 'SF') + ' tax ' + (t * 100).toFixed(t === 0.1025 ? 2 : 3) + '%</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>'; }
+function photosHtmlRO(n) { var ps = n.photos || []; if (!ps.length) return '<span class="hint" style="margin:0">No photos yet.</span>';
+  return ps.map(function (f) { return fileCache[f] ? '<span class="nphi"><img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo"></span>' : '<span class="nphi"><span class="ld" data-rofid="' + esc(f) + '"></span></span>'; }).join(''); }
+function loadRoPhotos() { var c = custOpen; if (!c) return;
+  document.querySelectorAll('#cdNotes .nphro .ld[data-rofid]').forEach(function (s) { var f = s.dataset.rofid;
+    api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); }); }
+function noteRoHtml(n, isCur, pill) { var cnt = (n.items || []).length;
+  return '<div class="card ngroup open nro' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
+    '<div class="ngtop"><b class="notr ntitle-ro" data-nro="' + esc(n.id) + '">' + esc(n.title) + '</b>' + pill + '<button class="link nroedit" data-nro="' + esc(n.id) + '">Edit</button><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
+      '<button class="ngclose" data-nclose="ro" data-nid="' + esc(n.id) + '" aria-label="Collapse note">▴</button></div>' +
+    '<div data-nro="' + esc(n.id) + '">' + (n.text ? '<div class="nrotext">' + esc(n.text) + '</div>' : '') +
+    '<div class="sec-h" style="margin-top:10px"><h2>Items' + (cnt ? ' (' + cnt + ')' : '') + '</h2></div>' + itemsHtmlRO(n) + '<div>' + totalsHtmlRO(n) + '</div></div>' +
+    ((n.photos || []).length ? '<div class="sec-h" style="margin-top:12px"><h2>Photos (' + n.photos.length + ')</h2></div><div class="nph nphro">' + photosHtmlRO(n) + '</div>' : '') + '</div>'; }
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
 function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
 // ---- autosave: EVERY project write waits SAVE_AFTER (60s) after the LAST change, then one flush.
@@ -2344,7 +2387,7 @@ function ordHtml(i, n) {
     '<button type="button" class="ordb" data-lord="down" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button></div>';
 }
 function toggleLine(row, l) { var on = !lineOpen[l.id];
-  if (on) { Object.keys(lineOpen).forEach(function (k) { delete lineOpen[k]; });   // accordion: one row open at a time
+  if (on) { var cn = curNote(); ((cn && cn.items) || []).forEach(function (x) { delete lineOpen[x.id]; });   // accordion: one row open at a time, within this note only
     document.querySelectorAll('#cdItems .pline.open').forEach(function (o) { if (o !== row) { o.classList.remove('open'); var oc = o.querySelector('.lcaret'); if (oc) oc.textContent = '▾'; } });
     lineOpen[l.id] = 1; } else delete lineOpen[l.id];
   row.classList.toggle('open', on); var c = row.querySelector('.lcaret'); if (c) c.textContent = on ? '▴' : '▾'; }
