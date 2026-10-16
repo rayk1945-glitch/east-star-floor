@@ -651,7 +651,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016p';
+var PAGE_VER = '20261016q';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1420,8 +1420,8 @@ function shareText(c) {
   return c.shared ? 'Shared with ' + (c.team ? 'your whole team' + (w.length ? ' + ' : '') : '') + '<b>' + w.join(', ') + '</b>' : 'Private to you';
 }
 /** "Share with client": a read-only, no-login link to this project (client.html?c=TOKEN). The server sends no prices,
- *  stock, shelves, contact info or voice notes for it. After the link exists: email, text, copy, send to bot, and share.
- *  Send to bot calls sendClientLinkToBot. The webhook URL and key stay in Script Properties, never on this page. */
+ *  stock, shelves, contact info or voice notes for it. After the link exists: email, text, copy, send to quote (runs quoteProject), and share.
+ */
 function clientUrl(t) { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'client.html?c=' + t + (window.I18N && I18N.lang() === 'zh' ? '&l=zh' : ''); }   // &l=zh: the client page starts in Chinese when shared from 中文
 function clT(s) { return window.I18N ? I18N.t(s) : s; }
 var CL_NOTE = 'Hi, here is the project we put together for you. Open the link to see your items and photos. No sign-in needed.';
@@ -1480,7 +1480,7 @@ function openClientLink(c) {
       '<div class="clbtns"><a class="btn" id="clEmail" href="' + esc(mailHref(bits.email, bits.subject, bits.emailBody)) + '">Email</a>' +
       '<a class="btn" id="clText" href="' + esc(smsHrefMany(bits.phones, bits.smsBody)) + '">Text</a>' +
       '<button class="btn" id="clCopy" type="button">Copy link</button>' +
-      '<button class="btn" id="clBot" type="button">Send to bot</button>' +
+      '<button class="btn" id="clQuote" type="button">Send to quote</button>' +
       (navigator.share ? '<button class="btn sec" id="clShare" type="button">Share…</button>' : '') + '</div>' +
       '<div class="clrow"><a class="link" id="clOpen" href="' + esc(u) + '" target="_blank" rel="noopener">Preview</a><span style="flex:1"></span><button class="link" id="clNew">New link</button><button class="link" id="clStop" style="color:#7f1d1d">Stop client link</button></div>'
       : '<button class="btn" id="clMake">Make client link</button>') + '<div id="clMsg" class="msg hidden"></div>');
@@ -1496,41 +1496,10 @@ function openClientLink(c) {
     bits = clientShareBits(c, u);
     $('clEmail').setAttribute('href', mailHref(bits.email, bits.subject, bits.emailBody));
     $('clText').setAttribute('href', smsHrefMany(bits.phones, bits.smsBody)); };
-  if ($('clBot')) $('clBot').onclick = function () { openClientBotForm(c, u); };
+  if ($('clQuote')) $('clQuote').onclick = function () { closeSheet(); if (custOpen === c) quoteProject(); };
   if ($('clShare')) $('clShare').onclick = function () { navigator.share({ title: bits.subject, text: bits.emailBody, url: u }).catch(function () {}); };
   if ($('clNew')) $('clNew').onclick = function () { var b = this; askOk('Make a new link? The link your client already has stops working right away. Send them the new one.', { ok: 'Make new link' }).then(function (yes) { if (yes) run('new', b).then(function (r) { if (r) toast('New client link (old one stopped)'); }); }); };
   if ($('clStop')) $('clStop').onclick = function () { var b = this; askOk('Stop the client link? Anyone who has it can no longer open this project.', { danger: true, ok: 'Stop link' }).then(function (yes) { if (yes) run('stop', b).then(function (r) { if (r) { closeSheet(); toast('Client link stopped'); } }); }); };
-}
-/** Ask Apps Script to forward the project. No email prompt: contacts and notes go as stored. No webhook URL or key is on this page. */
-function botNotesSummary(c) {
-  return (c.notes || []).map(function (n) {
-    return {
-      title: String(n.title || ''),
-      text: String(n.text || '').trim(),
-      items: (n.items || []).map(function (l) { return { name: String(l.name || ''), qty: l.qty }; }),
-      photos: (n.photos || []).length
-    };
-  });
-}
-function openClientBotForm(c, u) {
-  openSheet('<h3>Send to bot</h3><div class="hint" style="margin:0 0 10px">The bot reads the contacts and notes on this project, then drafts the message for approval.</div>' +
-    '<label class="f">Note to bot</label><textarea id="clBotNote" rows="4" maxlength="500" placeholder="' + esc(clT('e.g. email the homeowner the link and mention the quote is ready')) + '"></textarea>' +
-    '<div class="clbtns"><button class="btn" id="clBotSend" type="button">Send to bot</button><button class="btn sec" id="clBotCancel" type="button">Cancel</button></div>' +
-    '<div id="clMsg" class="msg hidden"></div>');
-  $('clBotCancel').onclick = function () { openClientLink(c); };
-  $('clBotSend').onclick = function () {
-    var b = this, instructions = $('clBotNote').value.trim();
-    var contacts = projectContacts(c).slice(0, 2).map(function (ct) { return { name: ct.name || '', role: ct.role || '', phone: ct.phone || '', email: ct.email || '' }; });
-    var emails = [], phones = [], names = [];
-    contacts.forEach(function (ct) { if (ct.email) emails.push(ct.email); var ph = clientPhoneOf({ phone: ct.phone }); if (ph) phones.push(ph); if (ct.name) names.push(ct.name); });
-    b.disabled = true; b.textContent = 'Sending…';
-    serverApi('sendClientLinkToBot', {
-      projectId: c.id, projectName: projLabel(c), clientName: names.join(' · ') || String(c.name || '').trim(),
-      clientEmail: emails.join(','), clientPhone: phones.join(', '), link: u,
-      sender: session && session.name || '', instructions: instructions, note: instructions, contacts: contacts, notes: botNotesSummary(c)
-    }).then(function () { closeSheet(); toast('Sent to bot — it will draft the email for approval'); })
-      .catch(function (er) { b.disabled = false; b.textContent = 'Send to bot'; msg($('clMsg'), er.message); });
-  };
 }
 function openShare(c) {
   openSheet('<h3>Share ' + esc(projLabel(c)) + '</h3><div class="hint" style="margin:0 0 8px">They see this project with all its notes, and can add items, edit and quote. Only ' + (c.mine ? 'you' : esc(c.owner)) + ' (or admin) can change sharing or delete.</div><div id="shList"><div class="spinner"></div></div>');

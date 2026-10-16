@@ -123,7 +123,7 @@
     '= not in our item list,': '= 不在我们的商品清单中，', '= the reader guessed or the label looks cut off.': '= 读取时是猜的，或标签看起来被截断。', 'check': '核对', 'odd': '可疑',
     'Send this list': '发送这个清单', 'Recently sent plans': '最近发送的图纸', 'All history ›': '全部历史 ›', 'Pick the plan photo first.': '请先选图纸照片。',
     'Reading cabinet codes from the plan…': '正在从图纸读取柜子代码…', 'Could not read the plan.': '无法读取图纸。', 'Could not read the photo.': '无法读取照片。', 'Trying again…': '正在重试…',
-    'Google is still busy reading photos.': 'Google 仍在忙着读取照片。', 'Sending…': '发送中…', 'Send to bot': '发给机器人', 'Cart request': '购物车请求', 'Plan request': '图纸请求',
+    'Google is still busy reading photos.': 'Google 仍在忙着读取照片。', 'Sending…': '发送中…', 'Send to bot': '发给机器人', 'Send to quote': '发送报价', 'Cart request': '购物车请求', 'Plan request': '图纸请求',
     'Read the codes again? Your edits to the list will be replaced.': '重新读取代码？你对清单的修改会被替换。', 'Read the photo again from scratch? Your edits to the list will be replaced.': '从头重新读取照片？你对清单的修改会被替换。',
     'Tap “Read again” to read cabinet codes from this photo.': '点「重新读取」从这张照片读取柜子代码。', 'Copied into a new plan form': '已复制到新的图纸表单', 'Revised from': '修改自',
     'No cabinet codes found on this photo. You can still send the photo alone, or add the codes yourself.': '这张照片上没找到柜子代码。你仍然可以只发照片，或自己添加代码。',
