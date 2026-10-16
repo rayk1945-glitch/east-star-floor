@@ -390,6 +390,8 @@
   .btn.sec { color:var(--accent); border-color:var(--accent); background:#fff; }
   .link { color:var(--accent); }
   .chip { background:#e6f2fa; color:#005d9a; }
+  .addsrch { flex:none; height:32px; padding:0 14px; border:0; border-radius:999px; background:var(--accent); color:#fff; font:inherit; font-size:14px; font-weight:700; line-height:32px; white-space:nowrap; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+  .addsrch:hover, .addsrch:active { background:var(--brand-dark); }
   .toplinks button { border-color:var(--line-strong); color:var(--navy); }
   .toplinks button.plan.primary { background:var(--accent); border-color:var(--accent); color:#fff; border-radius:999px; font-weight:600; font-size:14px; }
   #bnav button.active { color:var(--accent); }
@@ -601,7 +603,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016a';
+var PAGE_VER = '20261016c';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1564,7 +1566,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
         '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
-      '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><h2 id="cdItemsH">Items</h2><button class="link" id="cdAddMore">+ Add from Search</button></div>' +
+      '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px"><h2 id="cdItemsH">Items</h2><button type="button" class="addsrch" id="cdAddMore">+ Add from Search</button></div>' +
       '<div id="cdItems"></div><div id="cdTotals"></div>' +
       '<div class="sec-h" style="margin-top:14px"><h2 id="nPhH">Photos</h2></div><div class="nphz"><div class="nph" id="nPhotos"></div>' +
       '<div class="nphb"><label class="phbtn">📷 Add photo<input type="file" accept="image/*" capture="environment" data-nph="1"></label><label class="phbtn">Upload<input type="file" accept="image/*" multiple data-nph="1"></label><span class="hint" id="nPhProg" style="margin:0;align-self:center;display:none"></span><span class="hint nphp" style="margin:0;align-self:center">or paste (Ctrl+V)</span></div><div class="nphd">Drop photos here (up to 20)</div></div>' +
