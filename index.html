@@ -165,6 +165,10 @@
   .ncard .cur, .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; }
   .cbar .cbnew { margin-left:auto; border:1px solid var(--line-strong) !important; background:#fff !important; border-radius:999px; padding:4px 10px !important; font-weight:700; font-size:13px; color:#1f2937; white-space:nowrap; }
   .cbar .cnt + .cbnew { margin-left:6px; }
+  .cbar .cbcli { border:1px solid var(--line-strong) !important; border-radius:999px; padding:0 !important; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; color:#1e3a6e; flex-shrink:0; }
+  .cbar .cbcli svg { width:16px; height:16px; } .cbar .cbcli.has { background:#e3ecfa !important; border-color:#9fb6dc !important; }
+  .cbar.hascli .nm { min-width:0; flex:0 1 auto; } .cbar.hascli { gap:4px; }
+  .cisheet .twocol input { min-width:0; } .cisheet label.f { margin-top:6px; }
   .savest { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:55; border-radius:999px; padding:7px 14px; font-size:13.5px; font-weight:700; border:0; box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .savest.saving { background:#eef2f7; color:#334155; } .savest.ok { background:var(--ok-bg); color:var(--ok-fg); } .savest.bad { background:#fde8e6; color:#8a1c12; cursor:pointer; }
   .pline .ltc { display:block; margin:6px 0 0 2px; font-size:13.5px; font-weight:600; color:#1e3a6e; text-decoration:underline; background:none; border:0; padding:2px 0; }
@@ -633,7 +637,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016m';
+var PAGE_VER = '20261016n';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1070,13 +1074,53 @@ function saveCur() { if (curCust) localStorage.setItem(curKey(), JSON.stringify(
 function renderCustBar() {
   var b = $('custBar'); b.classList.toggle('none', !curCust);
   b.innerHTML = curCust ? '<span class="lbl">Adding to:</span><button class="nm" id="cbOpen">' + esc(curCust.name) + ' · ' + esc(curCust.noteTitle) + '</button><span class="lbl">·</span><button class="chg" id="cbChange">change</button>' +
+      '<button class="cbcli" id="cbCli" title="Client info" aria-label="Client info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></button>' +
       '<span class="cnt">' + (curCust.count || 0) + ' item' + (curCust.count === 1 ? '' : 's') + '</span>'
     : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">pick a project</button>';
   b.innerHTML += '<button class="cbnew" id="cbNew" title="New project with the next number">+ New project</button>';
   $('cbChange').onclick = function () { openPicker(null); };
   $('cbNew').onclick = function () { this.disabled = true; newCustomerOpen(); };
   if ($('cbOpen')) $('cbOpen').onclick = function () { openCust(curCust.id, null, curCust.noteId); };
+  b.classList.toggle('hascli', !!curCust);
+  if ($('cbCli')) { var cc = cliProj(curCust.id); if (cc && (projectContacts(cc).some(contactHas) || String(cc.city || '').trim())) $('cbCli').classList.add('has');
+    $('cbCli').onclick = function () { openClientInfo(curCust.id); }; }
   var bd = $('custBadge'); bd.textContent = curCust && curCust.count ? curCust.count : ''; bd.classList.toggle('hidden', !(curCust && curCust.count));
+}
+/** "Client" chip on the Adding-to bar: compact sheet to fill contact 1 (name/role/phone/email), address and tax of the
+ *  current project without leaving Search. Writes the same project fields the project page uses, then the normal autosave. */
+function cliProj(id) { return custOpen && custOpen.id === id && custOpen.notes ? custOpen : pcGet('c:' + id); }
+function openClientInfo(id) {
+  var c = cliProj(id);
+  if (!c) { openSheet('<h3>Client info</h3><div class="spinner"></div>');
+    api('customerGet', { id: id }).then(function (r) { pcSave(r); openClientInfo(id); }).catch(function (er) { $('sheetBody').innerHTML = '<h3>Client info</h3><div class="msg err">' + esc(er.message) + '</div>'; }); return; }
+  var ct = projectContacts(c)[0], role = ct.role || '', sel = !role ? '' : (CONTACT_ROLES.indexOf(role) >= 0 ? role : 'Other');
+  openSheet('<div class="cisheet"><h3>Client · ' + esc(projLabel(c)) + '</h3>' +
+    '<div class="twocol"><div><label class="f">Name</label><input id="ciName" autocapitalize="words" value="' + esc(ct.name) + '"></div>' +
+    '<div><label class="f">Role</label><select id="ciRole"><option value=""></option>' + CONTACT_ROLES.map(function (r) { return '<option' + (sel === r ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></div></div>' +
+    '<div class="twocol"><div><label class="f">Phone</label><input id="ciPhone" type="tel" inputmode="tel" value="' + esc(ct.phone) + '"></div>' +
+    '<div><label class="f">Email</label><input id="ciEmail" type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(ct.email) + '"></div></div>' +
+    '<label class="f">Address</label><input id="ciCity" autocapitalize="words" value="' + esc(c.city) + '">' +
+    '<div class="seg2" id="ciTax" style="margin-top:8px"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
+    '<button class="btn" id="ciSave" style="margin-top:10px">Save</button></div>');
+  var tax = c.tax === 'Fremont' ? 'Fremont' : 'SF';
+  $('ciTax').onclick = function (e) { var t = e.target.closest('button'); if (!t) return; tax = t.getAttribute('data-t');
+    [].forEach.call($('ciTax').children, function (x) { x.classList.toggle('active', x === t); }); };
+  $('ciSave').onclick = function () {
+    var live = custOpen && custOpen.id === id && custOpen.notes ? custOpen : c;
+    rememberInfo(live);
+    var list = projectContacts(live).map(normContact), r = $('ciRole').value;
+    list[0] = normContact({ name: $('ciName').value, role: r === 'Other' && CONTACT_ROLES.indexOf(role) < 0 && role ? role : r, phone: $('ciPhone').value, email: $('ciEmail').value });
+    live.contacts = list; live.name = list[0].name; live.phone = list[0].phone; live.email = list[0].email; live.city = $('ciCity').value.trim(); live.tax = tax;
+    live._infoDirty = infoChanged(live); pcSave(live); closeSheet();
+    if (!live._infoDirty) return;
+    autoSave('info:' + id, function () { var sl = savedContacts(live), sent = infoSnap(live);
+      return api('customerSave', { customer: { id: id, name: sl[0].name, phone: sl[0].phone, email: sl[0].email, city: live.city || '', tax: live.tax, contacts: sl } }).then(function (res) {
+        live.label = res.label; live.num = res.num; if (infoSnap(live) === sent) { live._baseInfo = sent; live._infoDirty = false; } pcSave(live);
+        if (curCust && curCust.id === res.id && curCust.name !== projLabel(live)) { curCust.name = projLabel(live); saveCur(); }
+        if (custOpen === live && $('cdTitle')) renderCustDetail(); }); });
+    if (custOpen === live && $('cdTitle')) renderCustDetail();
+    renderCustBar(); toast('Client info saved');
+  };
 }
 function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCust.noteId === nid); }
 /** New customer in one tap: the server gives the next note number (#1012) and an empty "Note 1"; info is added later. */
