@@ -307,6 +307,10 @@
   /* Full-screen product photo. Sits above the bottom sheet. Pinch is handled on .stage only; the page itself stays pinchable. */
   #photoZoom { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.92); display:none; }
   #photoZoom.on { display:block; }
+  #photoZoomDocs { position:absolute; z-index:2; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom)); display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  #photoZoomDocs a { background:#fff; color:#111; border-radius:999px; padding:9px 16px; font-size:14px; font-weight:700; text-decoration:none; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .pline .n .lsub.hasacc { position:relative; min-height:20px; } .pline .n .accpill span { display:inline; font-size:inherit; color:inherit; }
+  .pline .n .lsub .accpill { position:absolute; right:0; bottom:0; white-space:nowrap; width:auto; margin:0; border:1px solid var(--line); background:var(--card, #fff); color:inherit; border-radius:999px; padding:1px 9px; font-size:12px; font-weight:700; line-height:18px; min-height:0; cursor:pointer; }
   #photoZoom .x { position:absolute; z-index:2; right:max(12px, env(safe-area-inset-right)); top:calc(10px + env(safe-area-inset-top));
     border:0; background:rgba(255,255,255,.94); color:#111; border-radius:999px; width:44px; height:44px; font-size:22px; line-height:1; cursor:pointer; }
   #photoZoom .stage { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden; touch-action:none; }
@@ -551,7 +555,7 @@
 <div class="sheet-bg cfm" id="cfmBg"></div>
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
-<div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
+<div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
 <script src="i18n.js?v=20261015o"></script>
 <script>
@@ -603,7 +607,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016c';
+var PAGE_VER = '20261016d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1143,24 +1147,26 @@ function addItem(name) { var it = shown[name]; addToNote({ name: it.name, desc: 
   if (relOf(name).length && curCust) setTimeout(function () { accSheet(name, true); }, 350); }
 // ---- sink -> compatible accessories (bundle.related from accessories.csv: {sink: [[accessory, note, kind], ...]}), Blanco + Franke
 function relOf(name) { var m = localData && localData.related; return (m && m[name]) || []; }
-var ACC_KIND = { grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6 };
-function accSheet(sink, justAdded) {
+var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6 };
+function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} = add picks to that note (note page pill)
   var rel = relOf(sink).slice().sort(function (a, b) { return (ACC_KIND[a[2]] || 9) - (ACC_KIND[b[2]] || 9); });
   if (!rel.length) return;
   var rows = rel.map(function (a) { var r = itemRow(a[0]); if (!r) return '';
     var it = itemFromRow(r), oh = r[3], enc = encodeURIComponent(a[0]).replace(/'/g, '%27');
-    return '<div class="accrow">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
+    return '<div class="accrow" data-name="' + esc(a[0]) + '">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
       '<div style="flex:1;min-width:0"><div class="name notr" style="font-weight:700">' + esc(a[0]) + '</div>' +
       '<div class="notr" style="font-size:12px;color:var(--muted)">' + esc(a[1] || '') + '</div>' +
       '<div style="font-size:12px"><span class="' + (oh > 0 ? 'accok' : 'accbad') + '">On hand</span> <b class="notr">' + (oh == null ? '—' : qty(oh)) + '</b>' +
       (priceState.prices && r[2] != null ? ' · <span class="notr">' + money(r[2]) + '</span>' : '') + '</div></div>' +
       '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }).join('');
-  openSheet('<h3>Compatible accessories</h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
+  openSheet('<h3>' + (rel.every(function (a) { return a[2] === 'seat'; }) ? '<span>Compatible seats</span>' : '<span>Compatible accessories</span>') + '</h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
     '<div class="acclist">' + rows + '</div>');
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-accadd]'); if (!b) return;
     var n = b.getAttribute('data-accadd'); try { n = decodeURIComponent(n); } catch (er) {}
     var r = itemRow(n); if (!r) return; var it = itemFromRow(r);
-    addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' });
+    var line = { name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' };
+    if (toNote && toNote.c && toNote.n) { var keep = curCust; setCur(toNote.c, toNote.n); addToNote(line); curCust = keep; if (keep) saveCur(); else { localStorage.removeItem(curKey()); renderCustBar(); } }
+    else addToNote(line);
     b.textContent = 'Added ✓'; b.disabled = true; };
 }
 function itemRow(name) { if (!localData) return null; var i = nameIndex_(localData)[name]; return i == null ? null : localData.items[i]; }
@@ -1879,7 +1885,8 @@ function renderPicked() {
       '<span class="lqty notr">×' + l.qty + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
-      (pr != null ? '<span class="lsub"><span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span></span>' : '') +
+      (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') +
+        (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">Accessories <span class="notr">(' + relOf(l.name).length + ')</span></button>' : '') + '</span>' : '') +
       '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
@@ -2394,6 +2401,7 @@ var qtyT = {};
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return;
   var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
   var t = e.target, l = lineOf(t); if (!l) return;
+  var acc = t.closest('[data-lacc]'); if (acc) { var nNow = curNote(); accSheet(acc.getAttribute('data-lacc'), false, custOpen && nNow ? { c: custOpen, n: nNow } : null); return; }
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), mv = t.closest('[data-lord]');
   var found = t.closest('[data-found]'), rdel = t.closest('[data-rdel]');
   if (found) { reportAct(found.dataset.found, false); return; }
@@ -3733,9 +3741,17 @@ function pzApply() {
 }
 function pzReset() { photoScale = 1; photoTx = 0; photoTy = 0; pzPinch = null; pzPan = null; pzApply(); }
 function pzDist(a, b) { var dx = a.clientX - b.clientX, dy = a.clientY - b.clientY; return Math.sqrt(dx * dx + dy * dy); }
-function openPhotoZoom(src) {
+// ---- spec sheet / install guide links (bundle.docs from doc-links.csv: {code: [spec_url, install_url]}) under the zoomed photo (20261016d)
+function docsOf(name) { var m = localData && localData.docs; return (name && m && m[name]) || null; }
+function thumbName(im) { var c = im.closest('[data-name]'); if (c) return c.getAttribute('data-name');
+  var l = im.closest('.lhead'); var b = l && l.querySelector('.lnm'); return b ? b.textContent : ''; }
+function renderZoomDocs(name) { var box = $('photoZoomDocs'); if (!box) return; var d = docsOf(name), h = '';
+  if (d && /^https:\/\//.test(d[0] || '')) h += '<a href="' + esc(d[0]) + '" target="_blank" rel="noopener">Spec sheet</a>';
+  if (d && /^https:\/\//.test(d[1] || '')) h += '<a href="' + esc(d[1]) + '" target="_blank" rel="noopener">Install guide</a>';
+  box.innerHTML = h; box.classList.toggle('hidden', !h); }
+function openPhotoZoom(src, name) {
   var el = $('photoZoom'), img = $('photoZoomImg'); if (!el || !src) return;
-  pzReset(); img.src = src; el.classList.add('on'); document.body.classList.add('pzopen');
+  pzReset(); img.src = src; renderZoomDocs(name); el.classList.add('on'); document.body.classList.add('pzopen');
   var x = $('photoZoomX'); if (x) x.focus();
 }
 function closePhotoZoom() {
@@ -3750,12 +3766,12 @@ document.addEventListener('click', function (e) {
   var src = im.currentSrc || im.getAttribute('src') || '';
   if (!src) return;
   e.preventDefault(); e.stopPropagation();
-  openPhotoZoom(src);
+  openPhotoZoom(src, thumbName(im));
 }, true);
 $('photoZoomX').addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); closePhotoZoom(); });
 $('photoZoom').addEventListener('click', function (e) {
   if (pzIgnoreClick) { pzIgnoreClick = false; return; }
-  if (e.target.closest('#photoZoomImg, #photoZoomX')) return;
+  if (e.target.closest('#photoZoomImg, #photoZoomX, #photoZoomDocs')) return;
   closePhotoZoom();
 });
 document.addEventListener('keydown', function (e) {
