@@ -357,6 +357,10 @@
   .trimgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .trimgrid label { font-size:12.5px; font-weight:700; color:#374151; } .trimgrid input { min-height:40px; padding:8px; text-align:center; }
   .twocol { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .schips { display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; margin:0 -2px; scrollbar-width:none; } .schips::-webkit-scrollbar { display:none; }
+  .hsw { position:relative; min-width:0; } .hsw > .hsa { position:absolute; top:50%; transform:translateY(calc(-50% - 2px)); z-index:2; width:26px; height:26px; border-radius:999px; border:1px solid var(--line-strong); background:rgba(255,255,255,.96); box-shadow:0 1px 4px rgba(0,0,0,.18); font:inherit; font-size:17px; font-weight:800; line-height:22px; color:#111; cursor:pointer; padding:0; display:none; }
+  .hsw > .hsa.l { left:-4px; } .hsw > .hsa.r { right:-4px; } .hsw.cl > .hsa.l, .hsw.cr > .hsa.r { display:block; }
+  .schips.hdrag { cursor:grabbing; user-select:none; } .schips.hdrag button { cursor:grabbing; }
+  @media (hover:hover) and (pointer:fine) { .schips { scrollbar-width:thin; scrollbar-color:#c4c8cf transparent; padding-bottom:2px; } .schips::-webkit-scrollbar { display:block; height:4px; } .schips::-webkit-scrollbar-thumb { background:#c4c8cf; border-radius:4px; } .schips::-webkit-scrollbar-track { background:transparent; } }
   .schips button { flex:none; border:1px solid var(--line-strong); background:#fff; color:#111; border-radius:999px; padding:6px 11px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
   .schips button small { color:var(--muted); font-weight:500; margin-left:4px; } .schips button.on { background:#111; color:#fff; border-color:#111; } .schips button.on small { color:#ddd; }
   .schips.sub button { font-size:12.5px; padding:4px 10px; background:#f4f4f5; } .schips.sub button.on { background:#374151; border-color:#374151; }
@@ -629,7 +633,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016i';
+var PAGE_VER = '20261016j';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -952,6 +956,7 @@ function renderSearchFilters(r) {
   var fins = fc.finishes || [], namedF = fins.filter(function (x) { return x[2]; }), useF = namedF.length >= 2 ? namedF : fins;
   useF = useF.slice(0, 14);
   if (sF.finish && !useF.some(function (x) { return x[0] === sF.finish; })) useF.unshift([sF.finish, 0, 1]);
+  useF = sortFinishes(useF.map(function (x) { return x[0]; })).map(function (k) { return useF.filter(function (x) { return x[0] === k; })[0]; });
   var finishes = useF.length > 1 ? '<div class="schips sub fin"><span class="flab">Finish</span>' + useF.map(function (z) { return chip('finish', z[0], z[0], z[1]); }).join('') + '</div>' : '';
   $('sfilt').innerHTML = cats + finishes + sizes + '<div class="schips sub tog">' + top + '</div>';
 }
@@ -1939,7 +1944,7 @@ function renderPicked() {
   if (ordBase[n.id] == null) ordBase[n.id] = noteOrderKey(n);
   renderTotals();
 }
-var FINISH_RANK_ = ['Chrome', 'Polished Chrome', 'Polished Nickel', 'Brushed Nickel', 'Satin Nickel', 'SuperSteel', 'Brushed Bronze', 'Oil Rubbed Bronze', 'Venetian Bronze', 'Champagne Bronze', 'Brushed Brass', 'Unlacquered Brass', 'Polished Brass', 'Brushed Gold', 'Brushed Gold Optic', 'Brushed Black Chrome', 'Brushed Black', 'Brushed Graphite', 'Hard Graphite', 'Matte Black', 'Matte White', 'Stainless Steel', 'Gunmetal', 'Warm Sunset', 'Cool Sunrise'];
+var FINISH_RANK_ = ['Chrome', 'Brushed Nickel', 'Matte Black', 'Polished Chrome', 'Polished Nickel', 'Satin Nickel', 'SuperSteel', 'Brushed Bronze', 'Oil Rubbed Bronze', 'Venetian Bronze', 'Champagne Bronze', 'Brushed Brass', 'Unlacquered Brass', 'Polished Brass', 'Brushed Gold', 'Brushed Gold Optic', 'Brushed Black Chrome', 'Brushed Black', 'Brushed Graphite', 'Hard Graphite', 'Matte White', 'Stainless Steel', 'Gunmetal', 'Warm Sunset', 'Cool Sunrise'];
 var varMiss = null, varBusy = false;
 function sortFinishes(labels) { return labels.slice().sort(function (a, b) { var ia = FINISH_RANK_.indexOf(a), ib = FINISH_RANK_.indexOf(b); if (ia < 0) ia = 80; if (ib < 0) ib = 80; return ia - ib || (a < b ? -1 : a > b ? 1 : 0); }); }
 function variantSiblings(name) { return localData && typeof variantSiblings_ === 'function' ? variantSiblings_(localData, name) : []; }
@@ -4035,6 +4040,40 @@ document.addEventListener('visibilitychange', function () { if (!document.hidden
 window.addEventListener('focus', function () { setTimeout(autoRefresh, 800); });
 document.addEventListener('focusout', function (e) { if ($('cuDetail') && $('cuDetail').contains(e.target)) setTimeout(autoRefresh, 1500); });
 (function () { var g = document.getElementById('storeTg'); if (!g) return; paintStoreTg(); g.onclick = function (e) { var b = e.target.closest('button[data-st]'); if (b) setStore(b.dataset.st); }; })();
+
+// Horizontal chip rows (.schips): wheel scrolls sideways, ‹ › edge arrows, mouse drag, thin scrollbar (desktop). Touch swipe is native.
+(function () {
+  function upd(w) { var r = w.querySelector('.schips'); if (!r) return; var m = r.scrollWidth - r.clientWidth;
+    w.classList.toggle('cl', m > 2 && r.scrollLeft > 2); w.classList.toggle('cr', m > 2 && r.scrollLeft < m - 2); }
+  function wrap(r) {
+    if (r.dataset.hs) return; r.dataset.hs = '1';
+    var w = r.parentNode && r.parentNode.classList && r.parentNode.classList.contains('hsw') ? r.parentNode : null;
+    if (!w) { w = document.createElement('div'); w.className = 'hsw'; r.parentNode.insertBefore(w, r); w.appendChild(r); }
+    ['l', 'r'].forEach(function (d) { var b = document.createElement('button'); b.type = 'button'; b.className = 'hsa ' + d; b.tabIndex = -1;
+      b.setAttribute('aria-label', d === 'l' ? 'Scroll left' : 'Scroll right'); b.textContent = d === 'l' ? '\u2039' : '\u203A';
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); r.scrollBy({ left: (d === 'l' ? -1 : 1) * Math.max(120, r.clientWidth * 0.7), behavior: 'smooth' }); });
+      w.appendChild(b); });
+    r.addEventListener('scroll', function () { upd(w); }, { passive: true });
+    r.addEventListener('wheel', function (e) { var m = r.scrollWidth - r.clientWidth; if (m <= 2 || e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      var dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.clientWidth : 1);
+      if ((dy < 0 && r.scrollLeft <= 0) || (dy > 0 && r.scrollLeft >= m - 1)) return;   // at the end: let the page scroll
+      e.preventDefault(); r.scrollLeft += dy; }, { passive: false });
+    var sx = 0, sl = 0, down = false, moved = false;
+    r.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse' || e.button !== 0 || r.scrollWidth <= r.clientWidth + 2) return; down = true; moved = false; sx = e.clientX; sl = r.scrollLeft; });
+    r.addEventListener('pointermove', function (e) { if (!down) return; var dx = e.clientX - sx;
+      if (!moved && Math.abs(dx) > 5) { moved = true; r.classList.add('hdrag'); try { r.setPointerCapture(e.pointerId); } catch (x) {} }
+      if (moved) { r.scrollLeft = sl - dx; e.preventDefault(); } });
+    var end = function () { if (!down) return; down = false; r.classList.remove('hdrag');
+      if (moved) { var kill = function (e) { e.stopPropagation(); e.preventDefault(); }; r.addEventListener('click', kill, true); setTimeout(function () { r.removeEventListener('click', kill, true); }, 0); } };
+    r.addEventListener('pointerup', end); r.addEventListener('pointercancel', end);
+    r.addEventListener('dragstart', function (e) { if (down) e.preventDefault(); });
+    upd(w); requestAnimationFrame(function () { upd(w); });
+  }
+  function scan(root) { (root.querySelectorAll ? root.querySelectorAll('.schips') : []).forEach(wrap); if (root.classList && root.classList.contains('schips')) wrap(root); }
+  new MutationObserver(function (ms) { ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n); }); }); }).observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener('resize', function () { document.querySelectorAll('.hsw').forEach(upd); });
+  scan(document);
+})();
 </script>
 </body>
 </html>
