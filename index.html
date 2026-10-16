@@ -629,7 +629,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016h';
+var PAGE_VER = '20261016i';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -3062,10 +3062,19 @@ function quoteBtn(keep) { var b = $('cdQuote'), a = $('cdQuoteAll'); if (!b) ret
   if (!quoteBusy) { b.disabled = !n; if (a) a.disabled = false; }
   if ((n && n.id) !== quoteFor) { quoteFor = n && n.id; if (!quoteBusy && !keep) msg($('cdMsg'), ''); } }
 function quoteLock(on) { quoteBusy = on; if (on) { var b = $('cdQuote'), a = $('cdQuoteAll'); if (b) b.disabled = true; if (a) a.disabled = true; } else quoteBtn(true); }
-function lineNoteBits(it) { return (it || []).map(function (l) { var t = noteText(l.note).trim(), d = lineDisc(l), m = lmeta(l);
-  var bits = [t, d ? 'line discount ' + d + '%' : lineDiscAmt(l) ? 'line discount ' + money(lineDiscAmt(l)) + ' off' : '', m.p != null && lineBase(l) != null ? 'set unit price ' + money(lineBase(l)) : ''].filter(Boolean).join(' · ');
-  return bits ? l.name + ': ' + bits : ''; }).filter(Boolean); }
-function lineQ(l) { var o = { name: l.name, qty: l.qty }, d = lineDisc(l); if (d) o.discount_pct = d; if (lineDiscAmt(l)) o.discount_amount = lineDiscAmt(l); if (lmeta(l).p != null && lineBase(l) != null) o.unit_price = lineBase(l); return o; }
+/** Quote rule (Ray): the line goes at its unit price (set price if a calculator set one, else catalog) and any % / $ discount
+ *  goes as its OWN line right after it ("DISCOUNT — CODE 10%", negative amount), never baked into the unit price. */
+function lineDiscOut(l) { var d = lineDisc(l), a = lineDiscAmt(l), b = lineBase(l); if (!d && !a) return null;
+  var amt = d ? (b != null ? Math.round(b * l.qty * d) / 100 : null) : a;
+  return { name: 'DISCOUNT — ' + l.name + ' ' + (d ? d + '%' : money(a)), discount_for: l.name, qty: 1, discount_pct: d || undefined,
+    amount: amt != null ? -amt : undefined, unit_price: amt != null ? -amt : undefined, is_discount: true }; }
+function lineNoteBits(it) { var out = []; (it || []).forEach(function (l) { var t = noteText(l.note).trim(), m = lmeta(l), x = lineDiscOut(l);
+  var bits = [t, m.p != null && lineBase(l) != null ? 'unit price ' + money(lineBase(l)) : ''].filter(Boolean).join(' · ');
+  if (bits) out.push(l.name + ': ' + bits);
+  if (x) out.push(x.name + (x.amount != null ? ': ' + '−' + money(-x.amount) : '')); }); return out; }
+function lineQs(l) { var o = { name: l.name, qty: l.qty }; if (lmeta(l).p != null && lineBase(l) != null) o.unit_price = lineBase(l);
+  var x = lineDiscOut(l); if (x && o.unit_price == null && lineBase(l) != null) o.unit_price = lineBase(l) /* catalog, undiscounted */; return x ? [o, x] : [o]; }
+function linesQ(it) { return (it || []).reduce(function (a, l) { return a.concat(lineQs(l)); }, []); }
 function quoteSent(r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Max.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); }
 function drainSaves() {
   return flushBatch().then(function () {
@@ -3139,7 +3148,7 @@ function quoteCust() {
     n = curNote(); if (!n || custOpen !== c) return; var it2 = n.items || [];
     var notes = [String(n.text || '').trim()].concat(lineNoteBits(it2)).filter(Boolean).join('\n');
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: notes, note_title: n.title,
-      items: it2.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: it2.map(lineQ) } });
+      items: it2.map(function (l) { return { item: l.name, qty: l.qty }; }), lines: linesQ(it2) } });
   }).then(function (r) { if (r) quoteSent(r); }).catch(function (er) { msg($('cdMsg'), er.message); }).then(function () { quoteLock(false); });
 }
 function quoteProject() {
@@ -3153,10 +3162,10 @@ function quoteProject() {
     var notes = c.notes || [], items = [], lines = [], sections = [], projectNotes = [];
     notes.forEach(function (n) {
       var it = n.items || [], text = String(n.text || '').trim(), title = n.title || 'Note';
-      it.forEach(function (l) { items.push({ item: l.name, qty: l.qty }); lines.push(lineQ(l)); });
+      it.forEach(function (l) { items.push({ item: l.name, qty: l.qty }); lines.push.apply(lines, lineQs(l)); });
       var body = [text].concat(lineNoteBits(it)).filter(Boolean).join('\n');
       sections.push(body ? title + '\n' + body : title);
-      projectNotes.push({ title: title, text: text, items: it.map(function (l) { return { name: l.name, qty: l.qty, note: noteText(l.note).trim(), discount_pct: lineDisc(l) || undefined, discount_amount: lineDiscAmt(l) || undefined }; }) });
+      projectNotes.push({ title: title, text: text, items: it.map(function (l) { return { name: l.name, qty: l.qty, note: noteText(l.note).trim(), unit_price: lineQs(l)[0].unit_price, discount: lineDiscOut(l) || undefined }; }) });
     });
     msg($('cdMsg'), 'Sending…', true);
     return api('cartQuote', { cart: { customer_name: custLabel(c), customer_number: c.num || '', customer_phone: c.phone, job_city: c.city, tax_store: c.tax, discount_pct: '', notes: sections.join('\n\n'), note_title: projLabel(c),
