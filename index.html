@@ -176,6 +176,8 @@
   .ngroup .nghead { display:block; width:100%; text-align:left; background:none; border:0; padding:0; font:inherit; color:inherit; cursor:pointer; }
   .ngroup .nghead .t { display:flex; align-items:center; gap:6px; } .ngroup .nghead .t b { flex:1; font-size:17px; }
   .ngroup .nghead .s { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; } .ngroup .nghead .p { display:block; font-size:13px; color:#374151; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .proj .ngroup.act, .ngroup.act { border:2px solid #1A8BC9; border-left:6px solid #1A8BC9; background:#f0f8fd; box-shadow:0 0 0 3px rgba(26,139,201,.15); }
+  .ngroup.act .cur { background:#1A8BC9; color:#fff; }
   .ngroup .chev { color:#8a93a0; font-size:16px; } .ngroup .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; white-space:nowrap; }
   .ngroup.open { border:2px solid #1f2937; } .ngtop { display:flex; align-items:center; gap:8px; } .ngtop .ntitle { flex:1; min-width:0; }
   .ngclose { border:0; background:#e6e9ee; border-radius:999px; width:34px; height:34px; font-size:15px; color:#475569; cursor:pointer; flex-shrink:0; }
@@ -534,8 +536,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015g"></script>
-<script src="i18n.js?v=20261015g"></script>
+<script src="search.js?v=20261015h"></script>
+<script src="i18n.js?v=20261015h"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -585,7 +587,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015g';
+var PAGE_VER = '20261015h';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -975,6 +977,7 @@ function renderPriceBar() { var el = $('priceBar'), off = !priceState.prices;
 // title, free text, picked items (qty + short note) and photos at the bottom. "Add to note" on Search goes into the
 // CURRENT note of the current customer ("Adding to: Mr. Wong · Kitchen"). Each staff member's customers are private
 // unless shared. Stored on the server (sheet "Customers", photos/voice in the app's private Drive folder).
+var noteOpenMem = {};   // project id -> note the user left open (stays open until they collapse it)
 var curCust = null, custOpen = null, noteOpenId = null, pickThen = null, fileCache = {}, infoOpen = false;
 function curKey() { return 'esRedCur:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
 function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) || 'null'); } catch (e) { curCust = null; } if (curCust && !curCust.noteId) curCust = null; renderCustBar(); }
@@ -1210,10 +1213,11 @@ function openCust(id, pre, noteId) {
   if (!$('p-cust').classList.contains('on')) go('cust', true);
   var d = $('cuDetail'); window.scrollTo(0, 0);
   if (!pre || !pre.notes) infoOpen = false;
-  noteOpenId = noteId || (curCust && curCust.id === id ? curCust.noteId : null);
-  if (pre && pre.notes) { custOpen = pre; if (!noteOpenId || !curNote()) noteOpenId = pre.notes.length ? pre.notes[0].id : null; renderCustDetail(); return; }
+  noteOpenId = noteId || (Object.prototype.hasOwnProperty.call(noteOpenMem, id) ? noteOpenMem[id] : (curCust && curCust.id === id ? curCust.noteId : null));
+  var keepClosed = !noteId && noteOpenMem[id] === null;   // user collapsed every note: don't auto-open the first
+  if (pre && pre.notes) { custOpen = pre; if ((!noteOpenId && !keepClosed) || (noteOpenId && !curNote())) noteOpenId = pre.notes.length ? pre.notes[0].id : null; renderCustDetail(); return; }
   var cached = pcGet('c:' + id);
-  if (cached) { custOpen = cached; if (!noteOpenId || !curNote()) noteOpenId = cached.notes.length ? cached.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId); }
+  if (cached) { custOpen = cached; if ((!noteOpenId && !keepClosed) || (noteOpenId && !curNote())) noteOpenId = cached.notes.length ? cached.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId); }
   else { custOpen = { id: id };
     d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="spinner"></div></div>'; $('cdBack').onclick = loadCustList; }
   api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return;
@@ -1222,7 +1226,7 @@ function openCust(id, pre, noteId) {
       if (projPending(id) || document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && $('cuDetail').contains(document.activeElement)) { pcSave(c); return; }   // don't yank what they're typing; next open shows it
       if (JSON.stringify(c) === JSON.stringify(cached)) return; }
     custOpen = c; pcSave(c);
-    if (!noteOpenId || !curNote()) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
+    if ((!noteOpenId && !keepClosed) || (noteOpenId && !curNote())) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
     if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title || curCust.name !== projLabel(c)) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = custLabel(c); saveCur(); } } })
     .catch(function (er) { if (cached && !/not found/i.test(er.message)) return;             // offline: keep the cached copy on screen
       if (cached) pcPut('c:' + id, null); d.innerHTML = '<div class="card"><div class="crumb"><button class="back" id="cdBack">‹</button>Project</div><div class="msg err">' + esc(er.message) + '</div></div>'; $('cdBack').onclick = loadCustList;
@@ -1418,7 +1422,7 @@ function renderOverview() {
   $('cuDetail').innerHTML = '<div class="proj" id="cdProj"><div class="phead">' +
       '<div class="nhead"><button class="back" id="cdBack" aria-label="Back to projects">‹</button><b id="cdTitle">' + esc(projLabel(c)) + '</b>' +
       (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
-      '<div class="ndacts"><button type="button" class="ndnew" id="ndNew">+ New project</button><button type="button" class="ndnew" id="cdCloneTop" data-cloneproj="1">Clone project</button></div>' +
+      '<div class="ndacts"><button type="button" class="ndnew" id="ndNew">+ New project</button></div>' +
       '<button class="infolink" id="cdInfoT" aria-expanded="' + infoOpen + '">' + infoLinkText(c) + '</button></div>' +
       '<div class="pinfo' + (infoOpen ? '' : ' hidden') + '" id="cdInfo">' +
       contactFieldsHtml(c, projectContacts(c)[0], '', projectContacts(c).length > 1) +
@@ -1426,12 +1430,12 @@ function renderOverview() {
       '<label class="f">Address</label><input id="cdCity" autocapitalize="words" value="' + esc(c.city) + '">' +
       '<div class="seg2" id="cdTax"><button data-t="SF"' + (c.tax !== 'Fremont' ? ' class="active"' : '') + '>SF tax 8.625%</button><button data-t="Fremont"' + (c.tax === 'Fremont' ? ' class="active"' : '') + '>Fremont tax 10.25%</button></div>' +
       '<div class="saved" id="cdSaved">Changes save automatically.</div></div>' +
-      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + (canShare ? '<button class="shbtn" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
+      '<div class="shline" id="cdShareLine"><span>' + shareText(c) + ' · all notes save automatically</span>' + '<button class="shbtn' + (c.clientToken ? ' on' : '') + '" id="cdClient">' + (c.clientToken ? 'Client link on' : 'Share with client') + '</button></div></div>' +
     '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
       '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div>' +
-      '<button type="button" class="btn sec" id="cdShareProj">Share</button>' +
+      '<div class="qrow"><button type="button" class="btn sec" id="cdShareProj">Share</button>' + (canShare ? '<button type="button" class="btn sec" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '</div>' +
       '<button type="button" class="btn sec" id="cdCloneProj" data-cloneproj="1">Clone project</button>' +
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
@@ -1508,10 +1512,11 @@ function paintNoteChips(n) {
 function syncCurTitle(n) { if (!n || !custOpen || !isCurNote(custOpen.id, n.id) || !curCust || curCust.noteTitle === n.title) return; curCust.noteTitle = n.title; saveCur(); }
 /** All note groups. Only the open one has the editing ids (nTitle, cdItems, nPhotos, cdQuote...). */
 function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNotes')) return;
+  if (c && c.id) noteOpenMem[c.id] = noteOpenId;
   $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
-    if (n.id !== noteOpenId) return '<div class="card ngroup" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div></button>' +
+    if (n.id !== noteOpenId) return '<div class="card ngroup' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div></button>' +
       noteChipRow(n) + '<button class="nghead" data-nopen="' + esc(n.id) + '"><span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
-    return '<div class="card ngroup open" data-ng="' + esc(n.id) + '">' +
+    return '<div class="card ngroup open' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
       '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
         '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
