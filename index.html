@@ -410,6 +410,10 @@
   /* warehouse role: search, stock, and reported inventory (the server still refuses projects, prices, and quotes) */
   body.wh #custBar, body.wh .toplinks .plan, body.wh #adminBtn, body.wh #bnav [data-go="cust"], body.wh #bnav [data-go="history"],
   body:not(.rmon) .rmfeat { display:none !important; }
+  .toplinks .storetg { display:inline-flex; border:1px solid var(--line-strong); border-radius:999px; overflow:hidden; background:#fff; flex:none; }
+  .toplinks .storetg button { border:0; border-radius:0; min-height:38px; padding:0 9px; background:transparent; font-weight:700; }
+  .toplinks .storetg button.active { background:var(--navy, #0b2545); color:#fff; }
+  #bnav button { position:relative; }
   .rmbadge { display:inline-block; min-width:18px; margin-left:5px; padding:0 5px; border-radius:999px; background:#b91c1c; color:#fff; font-size:11px; line-height:18px; text-align:center; }
   /* One short chip per store with open missing reports, right after that store's qty chip. Hidden until listReports says supported. */
   .locstock { align-items: center; }
@@ -458,7 +462,7 @@
 <section id="app" class="hidden">
   <header><div class="head-in">
     <div class="toprow"><h1><img src="logo.png" alt="East Star Max" class="hd-logo" width="640" height="272"><span class="hd-txt">East Star Max</span> <small id="hdName" class="notr"></small></h1>
-      <div class="toplinks"><button class="plan primary" data-go="plan">Kitchen quote</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><button class="rmfeat" id="rmBtn" title="Reported missing" aria-label="Reported missing">Missing<span class="rmbadge hidden" id="rmBadge"></span></button><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
+      <div class="toplinks"><button class="plan primary" data-go="plan">Kitchen quote</button><button class="hidden" id="adminBtn" data-go="admin">Admin</button><span class="storetg" id="storeTg" role="group" aria-label="Store (sets tax)"><button type="button" data-st="SF" title="SF tax 8.625%">SF</button><button type="button" data-st="Fremont" title="Fremont tax 10.25%">Fremont</button></span><button id="pwBtn" aria-label="Change my password" title="Change my password">🔑</button><button id="outBtn">Sign out</button><button class="langbtn" data-lang-toggle="1">中文</button></div></div>
   </div></header>
   <main>
     <!-- SEARCH -->
@@ -549,7 +553,7 @@
     <button data-go="search" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
     <button data-go="cust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2.5h8.5A1.5 1.5 0 0 1 21 10v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><path d="M8 13.5h8M8 16.5h5"/></svg>Project<span class="badge hidden" id="custBadge"></span></button>
     <button data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
-    <button data-go="reported" id="navReported" class="hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.8 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.8a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Reported</button>
+    <button data-go="reported" id="navReported" class="hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.8 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.8a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Reported<span class="badge hidden" id="rmBadge"></span></button>
   </nav>
 </section>
 <div class="sheet-bg" id="sheetBg"></div>
@@ -566,7 +570,14 @@
 // phone with search.js (= apps-script/Search.gs, byte for byte). Signing out (or a dead session) wipes the local copy.
 var API_URL = 'https://script.google.com/macros/s/AKfycbzmMaB6B78-sJABGFGZ9vpLGsCSN67lPF3hf0aGIM8AVLbsKJrdCKovVZDi6nKdXNTO/exec';   // set by set_exec_url.sh (the rayk1945 web app /exec URL)
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) API_URL = '/api';   // local test server only
-var SESSION_KEY = 'esRedSession', PEXP_KEY = 'esRedPriceExp', TAX = { SF: 0.08625, Fremont: 0.1025 };
+var SESSION_KEY = 'esRedSession', PEXP_KEY = 'esRedPriceExp', TAX = { SF: 0.08625, Fremont: 0.1025 };   // Fremont: CDTFA city rate table effective 10/1/2026, 10.250%
+/** Each user's store (top-bar SF | Fremont toggle), remembered per signed-in name on this phone. Sets the tax on notes and quotes. */
+function storeKey() { return 'esStore:' + (meName || ''); }
+function myStore() { try { return localStorage.getItem(storeKey()) === 'Fremont' ? 'Fremont' : 'SF'; } catch (e) { return 'SF'; } }
+function taxLabel(t) { t = t === 'Fremont' ? 'Fremont' : 'SF'; return t + ' tax ' + (TAX[t] * 100).toFixed(t === 'Fremont' ? 2 : 3) + '%'; }
+function paintStoreTg() { var g = document.getElementById('storeTg'), st = myStore(); if (!g) return; [].forEach.call(g.children, function (b) { b.classList.toggle('active', b.dataset.st === st); b.setAttribute('aria-pressed', b.dataset.st === st ? 'true' : 'false'); }); }
+function setStore(st) { try { localStorage.setItem(storeKey(), st); } catch (e) {} paintStoreTg();
+  if (typeof custOpen !== 'undefined' && custOpen && custOpen.tax !== st) { custOpen.tax = st; try { queueInfo(); } catch (e) {} var ct = document.getElementById('cdTax'); if (ct) [].forEach.call(ct.children, function (x) { x.classList.toggle('active', x.dataset.t === st); }); try { renderPicked(); } catch (e) {} } }
 var TRIM_KEYS = ['WSP40', 'BSP', 'TK8', 'WF3X40', 'WF3X96', 'DWP1', 'DWP3', 'REP', '4X8', 'OCM', 'CM2', '25.5X96', 'SM8'];
 var session = (function () { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return s && s.token ? s : null; } catch (e) { return null; } })();
 var $ = function (id) { return document.getElementById(id); };
@@ -608,7 +619,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016e';
+var PAGE_VER = '20261016f';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -732,7 +743,7 @@ function setHeader(m) {
   document.body.classList.toggle('wh', m.role === 'warehouse');
   var nb = $('naBox'); if (nb) nb.classList.toggle('hidden', !(m.role === 'admin' || m.role === 'account_admin'));   // add / edit accounts: admin + account admins
   var ra = $('stRoleAdmin'); if (ra) { var full = m.role === 'admin'; ra.hidden = !full; ra.disabled = !full; ra.classList.toggle('hidden', !full); if (!full && $('stRole').value === 'admin') $('stRole').value = 'staff'; }
-  meName = m.name || ''; rmProbe();
+  meName = m.name || ''; paintStoreTg(); rmProbe();
   var hn = $('hdName'); if (hn) hn.textContent = m.name || '';
   $('planBot').textContent = m.bot || 'the bot'; $('plSend').textContent = m.bot ? 'Send to ' + m.bot : 'Send';
   if (m.bot && session && session.bot !== m.bot) { session.bot = m.bot; try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {} }   // "Send to" may point this login at another bot
@@ -1056,7 +1067,7 @@ function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCus
 /** New customer in one tap: the server gives the next note number (#1012) and an empty "Note 1"; info is added later. */
 var newBusy = false;
 function createBlankProject() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
-  return api('customerSave', { customer: { tax: 'SF' } }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
+  return api('customerSave', { customer: { tax: myStore() } }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
 function newCustomer() { return createBlankProject().then(function (c) { setCur(c, c.notes[0]); return c; }); }
 /** "+ New" from Search / the bar: create, make it the current note, open it. */
 function newCustomerOpen() { newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); scrollToNote(c.notes[0].id); toast('New ' + projLabel(c) + ' (adding here)'); }).catch(function () { renderCustBar(); }); }
@@ -1631,7 +1642,7 @@ function itemsHtmlRO(n) { var it = n.items || [];
 function totalsHtmlRO(n) { var it = n.items || []; if (!it.length || !priceState.prices) return '';
   var sub = 0, miss = 0; it.forEach(function (l) { var p = linePrice(l); if (p == null) miss++; else sub += p * l.qty; });
   var t = TAX[custOpen.tax] || TAX.SF, tax = Math.round(sub * t * 100) / 100;
-  return '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + (custOpen.tax || 'SF') + ' tax ' + (t * 100).toFixed(t === 0.1025 ? 2 : 3) + '%</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>'; }
+  return '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + taxLabel(custOpen.tax) + '</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>'; }
 function photosHtmlRO(n) { var ps = n.photos || []; if (!ps.length) return '<span class="hint" style="margin:0">No photos yet.</span>';
   return ps.map(function (f) { return fileCache[f] ? '<span class="nphi"><img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo"></span>' : '<span class="nphi"><span class="ld" data-rofid="' + esc(f) + '"></span></span>'; }).join(''); }
 function loadRoPhotos() { var c = custOpen; if (!c) return;
@@ -2044,7 +2055,7 @@ function renderTotals() { var n = curNote(), el = $('cdTotals'); if (!el || !n) 
   if (!it.length || !priceState.prices) { el.innerHTML = ''; return; }
   var sub = 0, miss = 0; it.forEach(function (l) { var p = linePrice(l); if (p == null) miss++; else sub += p * l.qty; });
   var t = TAX[custOpen.tax] || TAX.SF, tax = Math.round(sub * t * 100) / 100;
-  el.innerHTML = '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + (custOpen.tax || 'SF') + ' tax ' + (t * 100).toFixed(t === 0.1025 ? 2 : 3) + '%</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>' +
+  el.innerHTML = '<div class="kv"><span>Subtotal (retail' + (miss ? ', ' + miss + ' without price' : '') + ')</span><b>' + money(sub) + '</b></div><div class="kv"><span>' + taxLabel(custOpen.tax) + '</span><b>' + money(tax) + '</b></div><div class="kv big"><span>Total</span><b>' + money(sub + tax) + '</b></div>' +
     '<p class="note">Retail list prices, no discount. Discounts are applied on the official quote.</p>'; }
 function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !n) return; var ps = n.photos || [];
   $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
@@ -3514,7 +3525,7 @@ function rmOpen() { openSheet('<div class="sec-h"><h3>Reported missing</h3><butt
       rmCount(); rmRender(); toast(del ? 'Report deleted.' : 'Marked found.'); })
       .catch(function (er) { msg($('rmLMsg'), er.message); b.disabled = false; }); }); };
 }
-$('rmBtn').onclick = rmOpen;
+
 if ($('rpStore')) $('rpStore').addEventListener('click', function (e) { var b = e.target.closest('[data-st]'); if (!b) return; reportStore = b.dataset.st; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); renderReportedPage(); });
 if ($('rpMode')) $('rpMode').addEventListener('click', function (e) { var b = e.target.closest('[data-mode]'); if (!b) return; reportMode = b.dataset.mode === 'history' ? 'history' : 'open'; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); renderReportedPage(); });
 if ($('rpRefresh')) $('rpRefresh').onclick = function () { var b = this; b.disabled = true; rmProbe().then(function () { b.disabled = false; renderReportedPage(); }, function () { b.disabled = false; }); };
@@ -3903,6 +3914,7 @@ arStart();
 document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(autoRefresh, 800); });
 window.addEventListener('focus', function () { setTimeout(autoRefresh, 800); });
 document.addEventListener('focusout', function (e) { if ($('cuDetail') && $('cuDetail').contains(e.target)) setTimeout(autoRefresh, 1500); });
+(function () { var g = document.getElementById('storeTg'); if (!g) return; paintStoreTg(); g.onclick = function (e) { var b = e.target.closest('button[data-st]'); if (b) setStore(b.dataset.st); }; })();
 </script>
 </body>
 </html>
