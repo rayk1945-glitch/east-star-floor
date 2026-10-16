@@ -260,7 +260,7 @@
   .dsrow { display:flex; gap:5px; margin:10px 0 8px; } .dsopt { flex:1; border:1.5px solid var(--accent); color:var(--accent); background:#fff; border-radius:999px; font:inherit; font-size:12.5px; font-weight:700; padding:7px 2px; white-space:nowrap; cursor:pointer; }
   .dsopt.on { background:var(--accent); color:#fff; } .dsopt.dsclr { border-color:#d0d5dd; color:#475467; flex:.7; }
   .dsin { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:700; } .dsin input { width:110px; flex:none; }
-  .discpill.on { background:#fdecec; border-color:#b42318; color:#b42318; } .povr { font-size:10.5px; background:#eef2ff; color:#3730a3; border-radius:6px; padding:0 4px; }
+  .discpill.on { background:#fdecec; border-color:#b42318; color:#b42318; }
   .kv input.pin { min-height:0 !important; height:26px !important; margin:0 !important; display:inline-block; }
   .pin { width:64px; padding:2px 4px; font:inherit; font-weight:700; text-align:right; border:1px solid var(--line-strong); border-radius:6px; height:26px; }
   .pline .ldet { display:none; padding-top:4px; } .pline.open .ldet { display:block; } .pline.open { align-items:flex-start; }
@@ -629,7 +629,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016g';
+var PAGE_VER = '20261016h';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1925,7 +1925,7 @@ function renderPicked() {
       '<span class="lqty notr">×' + l.qty + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
-      (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (hasDisc(l) ? '<s>' + money(lineBase(l)) + '</s> ' : '') + money(pr) + '</b>' + (lmeta(l).p != null ? ' <span class="povr">set</span>' : '') + '</span>' : '') +
+      (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + money(pr) + '</b></span>' : '') +
         (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">Accessories <span class="notr">(' + relOf(l.name).length + ')</span></button>' : '') + '</span>' : '') +
       '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
         (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
