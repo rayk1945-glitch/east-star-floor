@@ -232,6 +232,14 @@
   .hselbar .n { font-weight:700; font-size:14px; min-width:5.2em; }
   .hselbar .link { min-height:40px; padding:8px 4px; }
   .hselbar .hdel { margin-left:auto; background:#7f1d1d; color:#fff; border:0; border-radius:999px; font:inherit; font-size:14px; font-weight:800; min-height:40px; padding:0 14px; cursor:pointer; }
+  .hselbar .hsold { margin-left:auto; background:#15803d; color:#fff; border:0; border-radius:999px; font:inherit; font-size:14px; font-weight:800; min-height:40px; padding:0 14px; cursor:pointer; }
+  .hselbar .hsold.un { background:#fff; color:#15803d; box-shadow:inset 0 0 0 2px #15803d; }
+  .hselbar .hsold + .hdel { margin-left:0; }
+  .hselbar:has(.hsold) { flex-wrap:nowrap; gap:4px; }
+  .hselbar:has(.hsold) .n { min-width:0; white-space:nowrap; }
+  .hselbar .hsold, .hselbar:has(.hsold) .hdel { padding:0 10px; white-space:nowrap; }
+  .crow2 b.sold { text-decoration:line-through; text-decoration-thickness:2px; color:var(--muted, #667085); }
+  .crow2 .soldb { font-size:11px; font-weight:800; background:#dcfce7; color:#15803d; border-radius:6px; padding:1px 6px; margin-left:6px; white-space:nowrap; }
   .hselbar .hdel:disabled { opacity:.55; }
   body.hselon main { padding-bottom:150px; }
   .crow2 b { font-size:15.5px; } .crow2 .s { display:block; font-size:12.5px; color:var(--muted); margin-top:1px; }
@@ -531,7 +539,7 @@
         <div class="twocol"><div><label class="f">From</label><input id="hFrom" type="date"></div><div><label class="f">To</label><input id="hTo" type="date"></div></div></div>
       </div>
       <div class="card"><div id="hMeta" class="hint" style="margin:0 0 4px"></div><div id="hList"><div class="spinner"></div></div></div>
-      <div id="hSelBar" class="hselbar hidden"><span id="hSelN" class="n">0 selected</span><button type="button" class="link" id="hSelAll">Select all</button><button type="button" class="link" id="hSelCancel">Cancel</button><button type="button" class="hdel" id="hSelDel">Delete (0)</button></div>
+      <div id="hSelBar" class="hselbar hidden"><span id="hSelN" class="n">0 selected</span><button type="button" class="link" id="hSelAll">Select all</button><button type="button" class="link" id="hSelCancel">Cancel</button><button type="button" class="hsold" id="hSelSold">Sold</button><button type="button" class="hdel" id="hSelDel">Delete (0)</button></div>
     </div>
     <!-- REPORTED INVENTORY: hidden until listReports returns supported:true -->
     <div class="page" id="p-reported">
@@ -637,7 +645,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016n';
+var PAGE_VER = '20261016o';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1036,7 +1044,11 @@ var curCust = null, custOpen = null, noteOpenId = null, pickThen = null, fileCac
 function curKey() { return 'esRedCur:' + (session.account || '') + ':' + String(session.name || '').toLowerCase(); }
 function loadCur() { try { curCust = JSON.parse(localStorage.getItem(curKey()) || 'null'); } catch (e) { curCust = null; } if (curCust && !curCust.noteId) curCust = null; renderCustBar(); }
 /** Current customer + note: {id, name, noteId, noteTitle, count (items in that note)}. */
-function custLabel(c) { return c.label || c.name || (c.num ? '#' + c.num : ''); }
+function custLabel(c) { return String(c.label || c.name || (c.num ? '#' + c.num : '')).replace(/\u00c2\u00b7/g, '\u00b7'); }
+/** Sold mark {at, by}: from the server (customerSold) when it has it, else this phone's copy. */
+function soldMap() { try { return JSON.parse(localStorage.getItem('esSold') || '{}') || {}; } catch (e) { return {}; } }
+function soldOf(c) { if (c && c.sold !== undefined) return c.sold && c.sold.at ? c.sold : null; var m = soldMap(); return c && m[c.id] || null; }
+function soldTxt(s) { var d = new Date(Number(s.at)); return 'SOLD ' + d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' PT' + (s.by ? ' · ' + s.by : ''); }
 /** What staff see for the top level: "Project #1001" until a name is typed, then "Mrs. Chen · #1001" (quotes/API keep custLabel). */
 function projLabel(c) { var l = custLabel(c); return /^#\d+$/.test(l) ? 'Project ' + l : l; }
 /** Up to two contacts. Old projects only have name, phone, city, and tax: that becomes contact 1, and an email
@@ -1163,7 +1175,7 @@ function pickDone(c, n) { setCur(c, n); closeSheet(); var t = pickThen; pickThen
 function custRowHtml(c, withCheck) { var ago = c.updated ? whenTxt(c.updated) : '', nl = c.noteList || [],   // note count, plus the names when any note was renamed (not just "Note 2")
     named = nl.some(function (n) { return !/^Note \d+$/.test(n.title || 'Note 1'); }),
     secs = [nl.length + ' note' + (nl.length === 1 ? '' : 's') + (named ? ': ' + nl.map(function (n) { return n.title || 'Note'; }).join(', ') : '')];
-  var body = '<b>' + esc(projLabel(c)) + '</b>' + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
+  var sd = soldOf(c), body = '<b' + (sd ? ' class="sold"' : '') + '>' + esc(projLabel(c)) + '</b>' + (sd ? '<span class="soldb notr">' + esc(soldTxt(sd)) + '</span>' : '') + (curCust && curCust.id === c.id ? '<span class="cur">adding here</span>' : '') +
     (c.sharedToMe ? '<span class="sh">shared by ' + esc(c.owner) + '</span>' : !c.mine ? '<span class="sh">' + esc(c.owner) + '</span>' : c.shared ? '<span class="sh">shared</span>' : '') +
     (function () { var bits = [], list = projectContacts(c); list.forEach(function (ct) { if (ct.phone) bits.push(ct.phone); else if (ct.email) bits.push(ct.email); }); if (c.city && bits.indexOf(c.city) < 0) bits.push(c.city); return bits.length ? '<span class="s">' + esc(bits.join(' · ')) + '</span>' : ''; })() +
     '<span class="s">' + (secs.length ? esc(secs.join(', ')) + ' · ' : '') + c.count + ' item' + (c.count === 1 ? '' : 's') +
@@ -1296,6 +1308,8 @@ function renderHSelBar() {
   document.body.classList.toggle('hselon', show);
   if (!show) return;
   $('hSelN').textContent = n + ' selected';
+  var ids = hSelIds(), allS = ids.every(function (id) { var c = null; hRows.forEach(function (r) { if (r.id === id) c = r; }); return soldOf(c || { id: id }); });
+  $('hSelSold').textContent = allS ? 'Unsold' : 'Sold'; $('hSelSold').classList.toggle('un', allS);
   var del = $('hSelDel'); del.textContent = 'Delete (' + n + ')'; del.disabled = false;
 }
 function syncHPicks() {
@@ -1308,6 +1322,23 @@ $('hSelAll').onclick = function () {
   var allOn = ids.every(function (id) { return hSel[id]; });
   ids.forEach(function (id) { if (allOn) delete hSel[id]; else hSel[id] = true; });
   syncHPicks();
+};
+$('hSelSold').onclick = function () {
+  var rows = hSelIds().map(function (id) { var c = null; hRows.forEach(function (r) { if (r.id === id) c = r; }); return c || { id: id }; });
+  if (!rows.length) return;
+  var unmark = rows.every(function (c) { return soldOf(c); }), m = soldMap(), mark = unmark ? null : { at: Date.now(), by: session.name || '' };
+  var btn = $('hSelSold'); btn.disabled = true;
+  Promise.all(rows.map(function (c) {
+    if (!unmark && soldOf(c)) return null;                    // keep the first sold time
+    return api('customerSold', { id: c.id, sold: !unmark }).then(function (r) { c.sold = r && r.sold !== undefined ? r.sold : mark; },
+      function () { c.sold = undefined; if (mark) m[c.id] = mark; else delete m[c.id]; });   // server without customerSold: keep it on this phone
+  })).then(function () {
+    rows.forEach(function (c) { if (c.sold !== undefined) { if (c.sold) m[c.id] = c.sold; else delete m[c.id]; } });
+    localStorage.setItem('esSold', JSON.stringify(m)); btn.disabled = false;
+    var l = pcGet('list'); if (l) { l.forEach(function (x) { rows.forEach(function (c) { if (x.id === c.id) x.sold = c.sold; }); }); pcPut('list', l); }
+    hSel = {}; $('hList').innerHTML = listHtml(hRows, $('hQ').value.trim()); syncHPicks();
+    toast((unmark ? 'Unmarked ' : 'Marked sold: ') + rows.length + (rows.length === 1 ? ' project' : ' projects'));
+  });
 };
 $('hSelCancel').onclick = function () { hSel = {}; syncHPicks(); };
 $('hSelDel').onclick = function () {
