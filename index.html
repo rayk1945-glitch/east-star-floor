@@ -244,10 +244,10 @@
   .pline .lbody { flex:1; min-width:0; }
   .pline .ord { display:flex; flex-direction:row; gap:4px; flex:none; order:2; }
   .pline { padding:6px 0; } .pline.hasord { align-items:center; }
-  .pline .lhead { display:flex; align-items:center; gap:6px; min-height:40px; cursor:pointer; flex-wrap:wrap; }
+  .pline .lhead { display:flex; align-items:center; gap:4px; min-height:40px; cursor:pointer; flex-wrap:wrap; }
   .pline .lhead .ln { font-size:11px; font-weight:800; color:#8a93a0; }
   .pline .lhead .lnm { font-size:15px; word-break:break-word; flex:1 1 auto; min-width:0; }
-  .pline .lhead .lohs { margin:0; } .pline .lqty { font-weight:800; font-size:14px; white-space:nowrap; } .pline .lcaret { color:#8a93a0; font-size:12px; }
+  .pline .lhead .lohs { margin:0; } .pline .lqty { font-weight:800; font-size:14px; white-space:nowrap; display:inline-flex; flex-direction:column; align-items:flex-end; line-height:1.1; } .pline .lqty .lup { font-size:10.5px; font-weight:700; color:var(--muted); line-height:1.1; } .pline .lcaret { color:#8a93a0; font-size:12px; }
   .pline .lhead .lthumb { width:36px; height:36px; border-radius:7px; }
   .pline.hasord { width:100%; max-width:100%; box-sizing:border-box; overflow:hidden; gap:6px; }
   .pline .lbody { overflow:hidden; } .pline .lhead .lnm { overflow-wrap:anywhere; flex:1 1 90px; }
@@ -633,7 +633,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016l';
+var PAGE_VER = '20261016m';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1664,12 +1664,13 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   else noteOpenSet[id] = 1;   // open this one; others stay expanded (read-only)
   saveBg().then(function () { keepTyped(); flushNote(); noteOpenId = id; renderNoteCards(); if (id && !x) scrollToNote(id); }); });
 /** Stage A: read-only expanded note (no editor ids). Tap the body to make it the edit note. */
+function lupHtml(l) { var pr = linePrice(l); return pr != null ? '<small class="lup">$' + Math.round(pr).toLocaleString('en-US') + '</small>' : ''; }
 function itemsHtmlRO(n) { var it = n.items || [];
   if (!it.length) return '<div class="empty">No items yet.</div>';
   return it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', oh = r ? r[3] : null, ohN = Number(oh);
     return '<div class="pline ro"><div class="lbody"><div class="lhead"><span class="ln">' + (i + 1) + '</span>' + (ph ? '<img class="cthumb lthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<b class="lnm notr">' + esc(l.name) + '</b>' +
       (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + lineLocHtml(l.name, r) + missBadges(l.name) + '</span></span>' : '') +
-      (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '<span class="lqty notr">×' + l.qty + '</span></div>' +
+      (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '<span class="lqty notr">×' + l.qty + lupHtml(l) + '</span></div>' +
       (noteText(l.note) ? '<div class="lronote notr">' + esc(noteText(l.note)) + '</div>' : '') + '</div></div>';
   }).join(''); }
 function totalsHtmlRO(n) { var it = n.items || []; if (!it.length || !priceState.prices) return '';
@@ -1927,7 +1928,7 @@ function renderPicked() {
     var head = '<div class="lhead" data-ltog="1"><span class="ln">' + (i + 1) + '</span>' + (ph ? '<img class="cthumb lthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<b class="lnm notr">' + esc(l.name) + '</b>' +
       (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + lineLocHtml(l.name, r) + missBadges(l.name) + '</span></span>' : '') +
       (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') +
-      '<span class="lqty notr">×' + l.qty + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
+      '<span class="lqty notr">×' + l.qty + lupHtml(l) + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
       (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + money(pr) + '</b></span>' : '') +
