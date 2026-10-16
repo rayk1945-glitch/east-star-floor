@@ -633,7 +633,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016k';
+var PAGE_VER = '20261016l';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -3677,53 +3677,78 @@ function floorCalcFor(it, target) {
     closeSheet();
     addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
 }
-// ---------------- molding calculator: flooring moldings (codes -R- reducer, -BN- stair nose, -EC- end cap, -T- T-molding, or
-// the same words in the description). Linear ft + waste % -> whole pieces. Piece length from the description (94", 7.87ft,
-// 2100mm, 8'), else an editable length (kept on this phone). Price per piece editable, $/lin ft shown alongside.
-var MOLD_CODE_RE = /^[A-Z0-9]+-(?:R|BN|EC|T|QR|TH)-/i, MOLD_WORD_RE = /REDUCER|STAIR ?NOS|BULLNOSE|END ?- ?CAP|T- ?MOLD|QUARTER ROUND|THRESHOLD|MOULDING|MOLDING|勾绳|楼梯线|高底线|平口线|T 型线/i;
-function moldParseLen(desc) { var d = String(desc || '').toUpperCase(), best = 0, m, re;
+// ---------------- molding calculator: MOLDING- trim only (base, casing, crown, chair rail, jambs...). Flooring moldings
+// (LMF-/LF-/HWF-...) get no calculator. Piece length from the description (16 ft, 16', 94", 2100mm, leading 2400*45*12mm),
+// else editable (kept on this phone). Pcs/bundle from the description (6pcs/bundle). Input: Linear ft (+waste -> whole pieces,
+// bundle count shown) or Bundles (x pcs/bundle -> pieces + lin ft). Price per piece editable.
+function moldParseLen(desc) { var d = String(desc || '').toUpperCase().replace(/[′]/g, "'").replace(/[″]/g, '"'), best = 0, m, re;
   var take = function (ft) { if (ft >= 2 && ft <= 16 && ft > best) best = ft; };
-  re = /(\d+(?:\.\d+)?)\s*(?:FT\b|FT\.|FEET|'|’)(?!')/g; while ((m = re.exec(d))) take(+m[1]);
-  re = /(\d+(?:\.\d+)?)(?:-(\d+)\/(\d+))?\s*(?:"|''|IN\b|INCH)/g; while ((m = re.exec(d))) take((+m[1] + (m[2] ? m[2] / m[3] : 0)) / 12);
+  if ((m = /^\D{0,40}?(\d{3,4})\s*(?:MM)?\s*[*×X]\s*\d/.exec(d)) || (m = /^\D{0,40}?(\d{3,4})\s*MM\b/.exec(d))) { take(m[1] / 304.8); if (best) return +best.toFixed(2); }   // leading NNNN* / NNNNmm = length in mm
+  re = /(\d+(?:\.\d+)?)\s*-?\s*(?:FT\b|FT\.|FEET|FOOT|'|’)(?!')/g; while ((m = re.exec(d))) take(+m[1]);
+  re = /(\d+(?:\.\d+)?)(?:-(\d+)\/(\d+))?\s*(?:"|''|”|IN\b|INCH)/g; while ((m = re.exec(d))) take((+m[1] + (m[2] ? m[2] / m[3] : 0)) / 12);
   re = /(\d{3,4})\s*MM\b/g; while ((m = re.exec(d))) take(m[1] / 304.8);
+  re = /(?:^|[^\d.])(\d{3,4})\s*(?:MM)?\s*[*×X]\s*\d/g; while ((m = re.exec(d))) take(m[1] / 304.8);
   return best ? +best.toFixed(2) : null; }
-function moldOf(it) { if (!it || it.cat !== 'Flooring') return null; if (!MOLD_CODE_RE.test(it.name) && !MOLD_WORD_RE.test(it.desc)) return null;
-  if (/ADHESIVE|GLUE|UNDERLAY|CLEANER|\bKIT\b/i.test(it.desc)) return null;
-  var len = moldParseLen(it.desc), own = null; try { own = parseFloat(localStorage.getItem('esMoldLen:' + it.name)); } catch (e) {}
-  return own > 0 ? { len: own, src: 'staff', base: len } : { len: len, src: len ? 'desc' : '', base: len }; }
+function moldParseBox(desc) { var m = /(\d+)\s*(?:PCS?|PIECES?|根|支)\s*(?:\/|PER\s*)\s*(?:BOX|BUNDLE|BDL|CTN|CARTON|CASE|箱|捆)/i.exec(String(desc || '')); return m && +m[1] > 0 ? +m[1] : null; }
+function moldOf(it) { if (!it || !/^MOLDING-/i.test(it.name)) return null;   // only MOLDING- trim (base, casing, crown, jambs...); flooring moldings get no calculator
+  var len = moldParseLen(it.desc), own = null, box = moldParseBox(it.desc), ownB = null;
+  try { own = parseFloat(localStorage.getItem('esMoldLen:' + it.name)); ownB = parseInt(localStorage.getItem('esMoldBox:' + it.name), 10); } catch (e) {}
+  var r = own > 0 ? { len: own, src: 'staff', base: len } : { len: len, src: len ? 'desc' : '', base: len };
+  r.box = ownB > 0 ? ownB : box; r.boxBase = box; return r; }
 function isMoldRow(r) { return !!(r && moldOf(itemFromRow(r))); }
 function moldCalc(name) { moldCalcFor(shown[name], null); }
 function moldCalcFor(it, target) {
+  var zh = !!(window.I18N && I18N.lang() === 'zh'), z = function (e, c) { return zh ? c : e; };
   var mo = moldOf(it), ln = target && target.line, m0 = ln ? lmeta(ln) : {};
-  var prev = ln ? noteText(ln.note).match(/(\d+(?:\.\d+)?)\s*lin ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
-  var srcTxt = function (src) { return { desc: 'from the description', staff: 'set on this phone', '': 'not in the description: enter it' }[src]; };
-  openSheet('<h3>Molding calculator</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(it.name) + '</span>' + (ln ? ' · line in <span class="notr">' + esc(target.n.title) + '</span>' : '') + '</div>' +
-    '<div class="calcgrid"><div><label class="f">Length per piece (ft)</label><input id="mcL" type="number" inputmode="decimal" step="0.01" min="0" value="' + (mo.len || '') + '"></div>' +
-    '<div class="hint" id="mcSrc" style="align-self:end;padding-bottom:12px">' + srcTxt(mo.src) + '</div></div>' +
-    (it.price != null ? '<div class="kv"><span>Price</span><b>$<input class="pin" id="mcPp" type="number" inputmode="decimal" step="0.01" min="0" value="' + (m0.p != null ? m0.p : it.price) + '">/pc · <span id="mcLf"></span></b></div>' : '') +
-    '<div class="calcgrid"><div><label class="f">Linear ft</label><input id="tcA" type="number" inputmode="decimal" value="' + (prev ? prev[1] : 20) + '"></div>' +
-    '<div><label class="f">Waste %</label><input id="tcWp" type="number" inputmode="decimal" value="' + (prev ? prev[2] || 0 : 10) + '" min="0" max="50"></div></div>' +
-    '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">Changes fill this line\'s qty (pieces) right away.</div>' : '') +
-    '<button class="btn" id="tcAdd">' + (ln ? 'Done' : 'Add molding to note') + '</button>');
+  var nt = ln ? noteText(ln.note) : '', prevB = nt.match(/(\d+(?:\.\d+)?)\s*bundles?/i);
+  var prev = ln && !prevB ? nt.match(/(\d+(?:\.\d+)?)\s*lin ft(?:\s*\+\s*(\d+(?:\.\d+)?)%)?/i) : null;
+  var mode = prevB ? 'b' : 'lf', wasteV = prev ? prev[2] || 0 : 10, lfV = prev ? prev[1] : 20, bV = prevB ? prevB[1] : 1;
+  var srcTxt = function (src) { return { desc: z('from desc', '取自描述'), staff: z('set here', '本機設定'), '': z('enter it', '請輸入') }[src]; };
+  openSheet('<h3>' + z('Molding calculator', '線條計算器') + '</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(it.name) + '</span>' + (ln ? ' · line in <span class="notr">' + esc(target.n.title) + '</span>' : '') + '</div>' +
+    '<div class="calcgrid"><div><label class="f">' + z('Length/pc (ft)', '每支長度 (尺)') + ' <span class="hint" id="mcSrc" style="font-weight:400;white-space:nowrap">' + srcTxt(mo.src) + '</span></label><input id="mcL" type="number" inputmode="decimal" step="0.01" min="0" value="' + (mo.len || '') + '"></div>' +
+    '<div><label class="f">' + z('Pcs per bundle', '每捆支數') + '</label><input id="mcB" type="number" inputmode="numeric" step="1" min="0" placeholder="—" value="' + (mo.box || '') + '"></div></div>' +
+    (it.price != null ? '<div class="kv"><span>' + z('Price', '價格') + '</span><b>$<input class="pin" id="mcPp" type="number" inputmode="decimal" step="0.01" min="0" value="' + (m0.p != null ? m0.p : it.price) + '">/' + z('pc', '支') + ' · <span id="mcLf"></span></b></div>' : '') +
+    '<div class="calcgrid"><div><label class="f" style="display:flex;gap:4px"><span class="seg" style="padding:2px;border-radius:8px;flex:1" id="mcMode"><button type="button" data-m="lf" style="min-height:22px;padding:0 4px;font-size:12px">' + z('Linear ft', '長度 (尺)') + '</button><button type="button" data-m="b" style="min-height:22px;padding:0 4px;font-size:12px">' + z('Bundles', '捆數') + '</button></span></label><input id="tcA" type="number" inputmode="decimal"></div>' +
+    '<div id="mcWc"><label class="f">' + z('Waste %', '損耗 %') + '</label><input id="tcWp" type="number" inputmode="decimal" value="' + wasteV + '" min="0" max="50"></div></div>' +
+    '<div class="calcres" id="tcRes"></div>' + (ln ? '<div class="note" id="tcLive" style="margin:4px 0 8px">' + z('Changes fill this line\'s qty (pieces) right away.', '更改會立即更新此行數量 (支)。') + '</div>' : '') +
+    '<button class="btn" id="tcAdd">' + (ln ? z('Done', '完成') : z('Add molding to note', '加入備註')) + '</button>');
+  var setMode = function (m) { if (mode === 'lf') lfV = $('tcA').value; else bV = $('tcA').value; mode = m;
+    $('tcA').value = m === 'lf' ? lfV : bV; $('mcWc').style.visibility = m === 'lf' ? '' : 'hidden';
+    [].forEach.call($('mcMode').children, function (b) { b.classList.toggle('active', b.getAttribute('data-m') === m); }); };
+  var kv = function (k, v) { return '<div class="kv"><span>' + k + '</span><b>' + v + '</b></div>'; };
   var calc = function () {
-    var L = parseFloat($('mcL').value) || 0, A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0));
+    var L = parseFloat($('mcL').value) || 0, B = parseInt($('mcB').value, 10) || 0, A = Math.max(0, parseFloat($('tcA').value) || 0), wp = Math.min(50, Math.max(0, parseFloat($('tcWp').value) || 0));
     var pp = it.price != null ? parseFloat($('mcPp').value) : NaN, ovr = it.price != null && pp >= 0 && Math.abs(pp - it.price) > 0.004 ? +pp.toFixed(2) : null;
-    var unit = it.price == null ? null : ovr != null ? ovr : it.price;
-    if (unit != null) $('mcLf').textContent = L > 0 ? money(unit / L) + '/lin ft' : '—/lin ft';
-    if (!(L > 0)) { tcState = { buy: 0 }; $('tcRes').innerHTML = '<div class="hint">Enter the length per piece (on the label or price list).</div>'; return; }
-    var pcs = A > 0 ? Math.ceil(A * (1 + wp / 100) / L - 1e-9) : 0, cost = unit != null ? pcs * unit : null;
-    tcState = { buy: pcs, it: it, len: L, p: ovr, priced: it.price != null, note: (+A.toFixed(1)) + ' lin ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') + ' · ' + pcs + (pcs === 1 ? ' pc' : ' pcs') + ' of ' + (+L.toFixed(2)) + ' ft' };
-    $('tcRes').innerHTML = '<div class="big">' + pcs + (pcs === 1 ? ' piece' : ' pieces') + '</div>' +
-      '<div class="kv"><span>Covers</span><b>' + (pcs * L).toFixed(1) + ' lin ft</b></div>' +
-      (cost != null ? '<div class="kv"><span>Total (retail)</span><b>' + money(cost) + '</b></div>' : '');
+    var unit = it.price == null ? null : ovr != null ? ovr : it.price, pcsW = function (n) { return n + (zh ? ' 支' : n === 1 ? ' pc' : ' pcs'); };
+    if (unit != null) $('mcLf').textContent = L > 0 ? money(unit / L) + '/' + z('lin ft', '尺') : '—/' + z('lin ft', '尺');
+    var pcs, note, extra = '';
+    if (mode === 'b') {
+      if (!(B > 0)) { tcState = { buy: 0 }; $('tcRes').innerHTML = '<div class="hint">' + z('Enter the pieces per bundle.', '請輸入每捆支數。') + '</div>'; return; }
+      var nb = Math.max(0, Math.ceil(A - 1e-9)); pcs = nb * B;
+      note = nb + (nb === 1 ? ' bundle' : ' bundles') + ' × ' + B + ' = ' + pcs + ' pcs' + (L > 0 ? ' of ' + (+L.toFixed(2)) + ' ft (' + (+(pcs * L).toFixed(1)) + ' lin ft)' : '');
+      extra = kv(z('Bundles', '捆數'), nb + ' × ' + B + ' ' + z('pcs', '支'));
+    } else {
+      if (!(L > 0)) { tcState = { buy: 0 }; $('tcRes').innerHTML = '<div class="hint">' + z('Enter the length per piece (on the label or price list).', '請輸入每支長度 (見標籤或價目表)。') + '</div>'; return; }
+      pcs = A > 0 ? Math.ceil(A * (1 + wp / 100) / L - 1e-9) : 0;
+      note = (+A.toFixed(1)) + ' lin ft' + (wp ? ' + ' + (+wp.toFixed(1)) + '%' : '') + ' · ' + pcs + (pcs === 1 ? ' pc' : ' pcs') + ' of ' + (+L.toFixed(2)) + ' ft';
+      if (B > 0) { var bf = Math.floor(pcs / B), rem = pcs % B; extra = kv(z('Bundles', '捆數'), (+(pcs / B).toFixed(2)) + (rem ? ' (' + (bf ? bf + ' + ' : '') + pcsW(rem) + ')' : '') + ' · ' + B + ' ' + z('pcs', '支') + '/' + z('bundle', '捆')); }
+    }
+    var cost = unit != null ? pcs * unit : null;
+    tcState = { buy: pcs, it: it, len: L, p: ovr, priced: it.price != null, note: note };
+    $('tcRes').innerHTML = '<div class="big">' + (zh ? pcs + ' 支' : pcs + (pcs === 1 ? ' piece' : ' pieces')) + '</div>' + extra +
+      (L > 0 ? kv(z('Covers', '總長'), (pcs * L).toFixed(1) + ' ' + z('lin ft', '尺')) : '') +
+      (cost != null ? kv(z('Total (retail)', '總價 (零售)'), money(cost)) : '');
   };
   var live = function () { calc(); if (ln) liveLine(target, tcState, 'pcs'); };
   $('mcL').oninput = function () { var v = parseFloat(this.value);
     try { if (v > 0 && v !== mo.base) localStorage.setItem('esMoldLen:' + it.name, String(v)); else localStorage.removeItem('esMoldLen:' + it.name); } catch (e) {}
     $('mcSrc').textContent = srcTxt(v > 0 && v !== mo.base ? 'staff' : mo.base ? 'desc' : ''); live(); };
+  $('mcB').oninput = function () { var v = parseInt(this.value, 10);
+    try { if (v > 0 && v !== mo.boxBase) localStorage.setItem('esMoldBox:' + it.name, String(v)); else localStorage.removeItem('esMoldBox:' + it.name); } catch (e) {} live(); };
+  [].forEach.call($('mcMode').children, function (b) { b.onclick = function () { setMode(b.getAttribute('data-m')); live(); }; });
   $('tcA').oninput = live; $('tcWp').oninput = live; if ($('mcPp')) $('mcPp').oninput = live;
-  calc();
-  $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(s.len ? 'Enter the linear ft first' : 'Enter the length per piece first'); return; }
+  $('tcA').value = mode === 'lf' ? lfV : bV; mode = mode; setMode(mode); calc();
+  $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(mode === 'b' ? z('Enter the bundles and pcs per bundle first', '請先輸入捆數和每捆支數') : s.len ? z('Enter the linear ft first', '請先輸入長度') : z('Enter the length per piece first', '請先輸入每支長度')); return; }
     closeSheet();
     addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
 }
