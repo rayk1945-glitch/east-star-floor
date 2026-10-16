@@ -226,8 +226,14 @@
   .pline .x { border:0; background:#eef0f3; border-radius:999px; width:40px; height:40px; font-size:18px; cursor:pointer; flex:none; } .pline .x.lmenu { margin-right:-4px; font-weight:800; color:#374151; }
   .pline.hasord { display:flex; gap:8px; align-items:flex-start; }
   .pline .lbody { flex:1; min-width:0; }
-  .pline .ord { display:flex; flex-direction:column; gap:4px; flex:none; }
-  .pline .ord button { width:44px; height:44px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); padding:0; display:flex; align-items:center; justify-content:center; }
+  .pline .ord { display:flex; flex-direction:row; gap:4px; flex:none; order:2; }
+  .pline { padding:6px 0; } .pline.hasord { align-items:center; }
+  .pline .lhead { display:flex; align-items:center; gap:6px; min-height:40px; cursor:pointer; flex-wrap:wrap; }
+  .pline .lhead .ln { font-size:11px; font-weight:800; color:#8a93a0; }
+  .pline .lhead .lnm { font-size:15px; word-break:break-word; flex:1 1 auto; min-width:0; }
+  .pline .lhead .lohs { margin:0; } .pline .lqty { font-weight:800; font-size:14px; white-space:nowrap; } .pline .lcaret { color:#8a93a0; font-size:12px; }
+  .pline .ldet { display:none; padding-top:4px; } .pline.open .ldet { display:block; } .pline.open { align-items:flex-start; }
+  .pline .ord button { width:38px; height:38px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); padding:0; display:flex; align-items:center; justify-content:center; }
   .pline .ord .ordh { cursor:grab; touch-action:none; background:var(--accent); color:#fff; }
   .ordhint { margin:0 0 8px; font-size:13.5px; font-weight:700; color:var(--accent); }
   .pline .ord button:disabled { opacity:.28; cursor:default; }
@@ -523,8 +529,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015c"></script>
-<script src="i18n.js?v=20261015c"></script>
+<script src="search.js?v=20261015d"></script>
+<script src="i18n.js?v=20261015d"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -574,7 +580,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015c';
+var PAGE_VER = '20261015d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1761,21 +1767,24 @@ function renderPicked() {
   var n = curNote(); if (!n || !$('cdItems')) { if ($('cdNotes')) { keepTyped(); renderNoteCards(); } return; }
   var it = n.items || [];
   $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
-  $('cdItems').innerHTML = (it.length > 1 ? '<p class="ordhint">Drag the handle, or the arrows, to reorder.</p>' : '') + (it.length ? variantBar(n) : '') + (it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
+  $('cdItems').innerHTML = (it.length ? variantBar(n) : '') + (it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
     var desc = l.desc || (r ? String(r[1] || '').slice(0, 110) : '');
-    var oh = r ? r[3] : null, ohN = Number(oh);
-    var body = '<div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
-      '<div class="n"><b class="notr"><span class="ln">' + (i + 1) + '</span>' + esc(l.name) + '</b><span class="notr">' + esc(desc) + '</span>' +
-      (r ? '<span class="lsub"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadges(l.name) + '</span>' +
-        (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span>' : '') + '</span>' : '') +
-      (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') + '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
+    var oh = r ? r[3] : null, ohN = Number(oh), open = !!lineOpen[l.id];
+    // collapsed head: # · code/name · On hand (+ missing badge) · × qty · arrows (right)
+    var head = '<div class="lhead" data-ltog="1"><span class="ln">' + (i + 1) + '</span><b class="lnm notr">' + esc(l.name) + '</b>' +
+      (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + missBadges(l.name) + '</span></span>' : '') +
+      (!r && localData ? '<span class="missing">no longer in the item list</span>' : '') +
+      '<span class="lqty notr">×' + l.qty + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
+    var det = '<div class="ldet"><div class="t">' + (ph ? '<img class="cthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '<div class="cthumb"></div>') +
+      '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
+      (pr != null ? '<span class="lsub"><span class="muted"><span>retail</span> <b class="notr">' + money(pr) + '</b></span></span>' : '') +
+      '</div><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
       lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
       '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(l.note) + '" maxlength="300"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
       (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
-      '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button>';
-    return '<div class="pline' + (it.length > 1 ? ' hasord' : '') + '" data-lid="' + esc(l.id) + '">' + (it.length > 1 ? ordHtml(i, it.length) : '') +
-      (it.length > 1 ? '<div class="lbody">' + body + '</div>' : body) + '</div>';
+      '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button></div>';
+    return '<div class="pline hasord' + (open ? ' open' : '') + '" data-lid="' + esc(l.id) + '"><div class="lbody">' + head + det + '</div>' + (it.length > 1 ? ordHtml(i, it.length) : '') + '</div>';
   }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
   if (ordBase[n.id] == null) ordBase[n.id] = noteOrderKey(n);
   renderTotals();
@@ -2287,7 +2296,7 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
   var found = t.closest('[data-found]'), rdel = t.closest('[data-rdel]');
   if (found) { reportAct(found.dataset.found, false); return; }
   if (rdel) { reportAct(rdel.dataset.rdel, true); return; }
-  if (mv) { moveItem(l, mv.dataset.lord === 'up' ? -1 : 1); return; }
+  if (mv) { e.stopPropagation(); if (!mv.disabled) moveItem(l, mv.dataset.lord === 'up' ? -1 : 1); return; }
   if (t.closest('[data-vf]')) { switchLineFinish(l, t.closest('[data-vf]').dataset.vf); return; }
   if (t.closest('[data-rmiss]')) { var rr = itemRow(l.name); reportMissing(l.name, rr ? rr[1] : (l.desc || '')); return; }
   if (t.closest('[data-lmenu]')) { lineMenu(l); return; }
@@ -2300,17 +2309,20 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
     delete saveQ['line:' + l.id]; delete lineHold[l.id];
     if (String(l.id).indexOf('tmpl-') === 0) { delete saveQ['add:' + l.id]; scheduleAutosave(); return; }
     autoSave('rm:' + l.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: l.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }).then(function () { rememberNoteVersion(n); }); }); }); }
+  else if (!t.closest('button,input,textarea,select,a,label,img,.stepper,.vsw,.schips,.ord,.missb') && t.closest('.lbody')) toggleLine(t.closest('.pline'), l);
 });
 // ---- reorder items inside a note: drag the handle or the arrows. The server keeps array order, so a new order is
 // saved by removing the lines and adding them back (same customerItem calls as before).
 var lineDrag = null, ordBase = {}, ordTimer = null, ordBusy = false;
 function noteOrderKey(n) { return (n && n.items || []).map(function (l) { return l.id; }).join('\n'); }
 function orderSig(items) { return (items || []).map(function (l) { return l.name + '\t' + (l.qty || 1) + '\t' + (l.note || ''); }).join('\n'); }
+var lineOpen = {};   // expanded item rows this session, by line id
 function ordHtml(i, n) {
   return '<div class="ord"><button type="button" class="ordb" data-lord="up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-    '<button type="button" class="ordh" data-drag="1" aria-label="Drag to reorder"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M4 3h2.2v2.2H4zm5.8 0H12v2.2H9.8zM4 6.9h2.2v2.2H4zm5.8 0H12v2.2H9.8zM4 10.8h2.2V13H4zm5.8 0H12V13H9.8z"/></svg></button>' +
     '<button type="button" class="ordb" data-lord="down" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button></div>';
 }
+function toggleLine(row, l) { var on = !lineOpen[l.id]; if (on) lineOpen[l.id] = 1; else delete lineOpen[l.id];
+  row.classList.toggle('open', on); var c = row.querySelector('.lcaret'); if (c) c.textContent = on ? '▴' : '▾'; }
 function renumberLines() {
   var rows = document.querySelectorAll('#cdItems .pline'), i, last = rows.length - 1;
   for (i = 0; i < rows.length; i++) {
@@ -2400,7 +2412,7 @@ function endLineDrag(e) {
   if (moved && n) queueOrderSave(n);
 }
 document.addEventListener('pointerdown', function (e) {
-  var h = e.target.closest && e.target.closest('[data-drag]');
+  var h = null;   // drag handle removed (20261015d); arrows only
   if (!h || !h.closest('#cdItems') || ordBusy || lineDrag) return;
   if (e.button != null && e.button !== 0) return;
   var row = h.closest('.pline'), n = curNote(); if (!row || !n) return;
