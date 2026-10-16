@@ -539,8 +539,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015i"></script>
-<script src="i18n.js?v=20261015i"></script>
+<script src="search.js?v=20261015j"></script>
+<script src="i18n.js?v=20261015j"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -590,7 +590,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015i';
+var PAGE_VER = '20261015j';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -3780,6 +3780,46 @@ $('photoZoomStage').addEventListener('touchend', function (e) {
   if (!e.touches.length) pzPan = null;
   if (photoScale <= 1) { photoScale = 1; photoTx = 0; photoTy = 0; pzApply(); }
 });
+// ---- live auto-refresh (20261015j): while a project is open, quietly re-fetch it every ~20s and when the app comes
+// back to the front, so saves from another device show up. Never touches a field being typed in, never runs while
+// anything local is unsaved / saving / uploading / dragging / recording; it just retries on the next tick.
+var AR_MS = 20000, arT = null, arBusy = false;
+function arStrip(c) { if (!c) return ''; var o = {}; Object.keys(c).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = c[k]; });
+  o.notes = (c.notes || []).filter(function (n) { return String(n.id).indexOf('tmp-') !== 0; }).map(function (n) {
+    var m = {}; Object.keys(n).forEach(function (k) { if (k.charAt(0) !== '_') m[k] = n[k]; }); return m; });
+  return JSON.stringify(o); }
+function arBlocked(id) {
+  if (!session || document.hidden || !custOpen || custOpen.id !== id || !custOpen.notes) return true;
+  if (!$('p-cust') || !$('p-cust').classList.contains('on') || !$('cuDetail')) return true;
+  var a = document.activeElement;
+  if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && $('cuDetail').contains(a)) return true;   // mid-typing
+  if (projPending(id) || saveFlushing || Object.keys(saveRun).length || phBusy || lineDrag || ordBusy || rec) return true;
+  if ((custOpen.notes || []).some(function (n) { return String(n.id).indexOf('tmp-') === 0; })) return true;  // note still being created
+  return false; }
+function autoRefresh() {
+  var c0 = custOpen; if (arBusy || !c0 || !c0.id || arBlocked(c0.id)) return;
+  var id = c0.id, before = arStrip(c0); arBusy = true;
+  api('customerGet', { id: id }).then(function (c) {
+    if (custOpen !== c0 || arBlocked(id)) return;                     // something changed while fetching: next tick
+    if (arStrip(c0) !== before) return;                               // local edits landed meanwhile
+    c = adoptContacts(c, c0);
+    if (arStrip(c) === before) return;                                // nothing new on the server
+    ['_saveCoolUntil'].forEach(function (k) { if (c0[k] != null) c[k] = c0[k]; });
+    var sy = window.scrollY;
+    (c.notes || []).forEach(function (n) { delete ordBase[n.id]; });
+    custOpen = c; pcSave(c);
+    if (noteOpenId && !curNote()) noteOpenId = null;                  // note deleted on the other device
+    renderCustDetail();                                               // noteOpenSet/noteOpenId/lineOpen/infoOpen are kept globally
+    window.scrollTo(0, sy);
+    (c.notes || []).forEach(function (n) { ordBase[n.id] = noteOrderKey(n); });   // server order is the new baseline (nothing local was pending)
+    if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = custLabel(c); saveCur(); } }
+  }).catch(function () {}).then(function () { arBusy = false; });
+}
+function arStart() { clearInterval(arT); arT = setInterval(autoRefresh, AR_MS); }
+arStart();
+document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(autoRefresh, 800); });
+window.addEventListener('focus', function () { setTimeout(autoRefresh, 800); });
+document.addEventListener('focusout', function (e) { if ($('cuDetail') && $('cuDetail').contains(e.target)) setTimeout(autoRefresh, 1500); });
 </script>
 </body>
 </html>
