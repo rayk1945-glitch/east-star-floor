@@ -534,8 +534,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015f"></script>
-<script src="i18n.js?v=20261015f"></script>
+<script src="search.js?v=20261015g"></script>
+<script src="i18n.js?v=20261015g"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -585,7 +585,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015f';
+var PAGE_VER = '20261015g';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -2373,7 +2373,7 @@ function persistOrder(n) {
   if (noteOrderKey(n) === ordBase[n.id]) return;
   var sig = orderSig(n.items);
   var snap = n.items.map(function (l) { clearTimeout(qtyT[l.id]); clearTimeout(lnoteT[l.id]); delete qtyT[l.id]; delete lnoteT[l.id]; delete saveQ['line:' + l.id]; delete lineHold[l.id];
-    return { name: l.name, desc: l.desc || '', qty: l.qty || 1, note: l.note || '', photo: l.photo || '' }; });
+    return { id: l.id, name: l.name, desc: l.desc || '', qty: l.qty || 1, note: l.note || '', photo: l.photo || '' }; });
   var waits = n.items.map(function (l) { return saveRun['line:' + l.id] || Promise.resolve(); });
   ordBusy = true;
   autoSave('ord:' + n.id, function () {
@@ -2381,19 +2381,27 @@ function persistOrder(n) {
       var fn = (fresh.notes || []).filter(function (x) { return x.id === n.id; })[0];
       if (!fn) throw new Error('That note is gone.');
       if ((fn.items || []).map(function (l) { return l.id; }).join('\n') === noteOrderKey(n)) { ordBase[n.id] = noteOrderKey(n); return; }
-      var chain = Promise.resolve(), last = null;
-      (fn.items || []).map(function (l) { return l.id; }).reverse().forEach(function (id) {
-        chain = chain.then(function () {
-          return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: id }).catch(function (er) {
-            if (/not found|gone/i.test(er.message || '') && !/^project not found/i.test(er.message || '')) return; throw er;
+      var last = null;
+      var oneCall = function () {
+        return api('customerItem', { id: c.id, noteId: n.id, op: 'reorder', order: snap.map(function (l) { return { id: l.id, qty: l.qty || 1, note: l.note || '', photo: l.photo || '' }; }) }).then(function (r) { last = r; });
+      };
+      var oldWay = function () {                               // fallback for an older server: remove all, re-add in order
+        var ch = Promise.resolve();
+        (fn.items || []).map(function (l) { return l.id; }).reverse().forEach(function (id) {
+          ch = ch.then(function () {
+            return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: id }).catch(function (er) {
+              if (/not found|gone/i.test(er.message || '') && !/^project not found/i.test(er.message || '')) return; throw er;
+            });
           });
         });
-      });
-      snap.forEach(function (l) {
-        chain = chain.then(function () {
-          return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' } }).then(function (r) { last = r; });
+        snap.forEach(function (l) {
+          ch = ch.then(function () {
+            return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' } }).then(function (r) { last = r; });
+          });
         });
-      });
+        return ch;
+      };
+      var chain = oneCall().catch(function (er) { if (/unknown item change/i.test(er.message || '')) return oldWay(); throw er; });
       return chain.then(function () {
         if (orderSig(n.items) !== sig) return;
         if (last && last.items) n.items = last.items;
