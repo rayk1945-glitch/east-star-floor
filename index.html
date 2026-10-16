@@ -633,7 +633,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016j';
+var PAGE_VER = '20261016k';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1084,8 +1084,8 @@ var newBusy = false;
 function createBlankProject() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
   return api('customerSave', { customer: { tax: myStore() } }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
 function newCustomer() { return createBlankProject().then(function (c) { setCur(c, c.notes[0]); return c; }); }
-/** "+ New" from Search / the bar: create, make it the current note, open it. */
-function newCustomerOpen() { newCustomer().then(function (c) { infoOpen = false; openCust(c.id, c, c.notes[0].id); scrollToNote(c.notes[0].id); toast('New ' + projLabel(c) + ' (adding here)'); }).catch(function () { renderCustBar(); }); }
+/** "+ New" from Search / the bar: create and make it the current note, without leaving the page. */
+function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function (c) { window.scrollTo(0, y); var l = custLabel(c); toast(window.I18N && I18N.lang() === 'zh' ? '已建立新項目 ' + l : 'New project ' + l + ' created'); }).catch(function () { renderCustBar(); }); }   // stay on the current tab + scroll; the Adding-to bar switches to the new project
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
@@ -1533,7 +1533,7 @@ function renderOverview() {
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
   $('cdBack').onclick = function () { saveBg().then(loadCustList); };
-  $('ndNew').onclick = function () { this.disabled = true; saveBg().then(newCustomerOpen); };
+  $('ndNew').onclick = function () { var b = this; b.disabled = true; saveBg().then(newCustomerOpen).then(function () { setTimeout(function () { b.disabled = false; }, 800); }); };
   $('cdInfoT').onclick = function () { saveBg().then(function () { if (custOpen !== c) return; infoOpen = !infoOpen; renderOverview(); }); };
   bindContact(c, ''); if ($('cdName2')) bindContact(c, '2');
   var city = $('cdCity'); city.addEventListener('input', function () { c.city = city.value; queueInfo(); });
