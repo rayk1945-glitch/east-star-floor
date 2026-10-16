@@ -534,8 +534,8 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div></div>
-<script src="search.js?v=20261015e"></script>
-<script src="i18n.js?v=20261015e"></script>
+<script src="search.js?v=20261015f"></script>
+<script src="i18n.js?v=20261015f"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -585,7 +585,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261015e';
+var PAGE_VER = '20261015f';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -659,13 +659,13 @@ function pcSave(c) { c = c || custOpen; if (!c || !c.notes) return; var o = {}; 
 function projPending(id) { return Object.keys(saveQ).some(function (k) { return k.indexOf(':' + id) > 0 || k.indexOf('note:') === 0 || k.indexOf('newnote:' + id) === 0; }) || noteDirty || !!batchT || (lineHold && Object.keys(lineHold).length) || (ordDirty && Object.keys(ordDirty).length) || (custOpen && custOpen.id === id && custOpen._infoDirty); }
 function wipeLocalData() { pcWipe(); localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkPageVersion(); checkIdleClose(); }
-  if (document.hidden && typeof isBatchDirty === 'function' && isBatchDirty()) flushBatch();
+  if (document.hidden && typeof isBatchDirty === 'function' && isBatchDirty()) saveBg();
   if (document.hidden || !session) return;
   if (priceState.prices && localData && !localData.noPrices && pricedCopyExpired()) priceWindowEnded();        // the phone slept through the end of price hours
   else if (Date.now() - dataChecked > 30 * 60000) checkData(); });   // new sync while the app stays open
 window.addEventListener('pagehide', function () {
   if (document.visibilityState === 'visible') return;
-  if (typeof isBatchDirty === 'function' && isBatchDirty()) flushBatch();
+  if (typeof isBatchDirty === 'function' && isBatchDirty()) saveBg();
 });
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
@@ -675,7 +675,7 @@ function signedOut() { clearIdleClose(); hSel = {}; if (typeof renderHSelBar ===
 function go(p, quiet) {
   if (p === 'reported' && !document.body.classList.contains('rmon')) p = 'search';
   if (session && session.role === 'warehouse' && p !== 'search' && p !== 'reported') p = 'search';     // warehouse: Search + reported inventory
-  if (p !== 'cust' && $('p-cust') && $('p-cust').classList.contains('on') && custOpen) flushBatch();   // leaving the project saves whatever is still dirty
+  if (p !== 'cust' && $('p-cust') && $('p-cust').classList.contains('on') && custOpen) saveBg();   // leaving the project saves whatever is still dirty
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   if (typeof renderHSelBar === 'function') renderHSelBar();
@@ -1435,9 +1435,9 @@ function renderOverview() {
       '<button type="button" class="btn sec" id="cdCloneProj" data-cloneproj="1">Clone project</button>' +
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
-  $('cdBack').onclick = function () { flushBatch().then(loadCustList); };
-  $('ndNew').onclick = function () { this.disabled = true; flushBatch().then(newCustomerOpen); };
-  $('cdInfoT').onclick = function () { flushBatch().then(function () { if (custOpen !== c) return; infoOpen = !infoOpen; renderOverview(); }); };
+  $('cdBack').onclick = function () { saveBg().then(loadCustList); };
+  $('ndNew').onclick = function () { this.disabled = true; saveBg().then(newCustomerOpen); };
+  $('cdInfoT').onclick = function () { saveBg().then(function () { if (custOpen !== c) return; infoOpen = !infoOpen; renderOverview(); }); };
   bindContact(c, ''); if ($('cdName2')) bindContact(c, '2');
   var city = $('cdCity'); city.addEventListener('input', function () { c.city = city.value; queueInfo(); });
   if ($('cdAdd2')) $('cdAdd2').onclick = function () { pullContacts(c); c._contact2 = true; if (!c.contacts[1]) c.contacts[1] = blankContact(); renderOverview(); };
@@ -1551,14 +1551,14 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   var nm = e.target.closest('[data-nmenu]'); if (nm) { noteMenu(nm.dataset.nmenu); return; }
   var chip = e.target.closest('[data-nchip]'); if (chip) { e.preventDefault(); applyNoteChip(chip); return; }
   var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]'); if (!b && !x) return;
-  var id = b ? b.dataset.nopen : null; flushBatch().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
+  var id = b ? b.dataset.nopen : null; saveBg().then(function () { keepTyped(); noteOpenId = id; renderNoteCards(); if (id) scrollToNote(id); }); });
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
 function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
-// ---- autosave: EVERY project write waits SAVE_AFTER (15s) after the LAST change, then one flush.
+// ---- autosave: EVERY project write waits SAVE_AFTER (60s) after the LAST change, then one flush.
 // UI updates instantly; saveQ holds the server work. Timer resets on every change. Immediate flush only for:
 // Save project, leave project tab, app hide/close, idle auto-close, Share/client/quote/bot, delete project.
 // Order on flush: create temp notes (newnote:) first, then everything else. Failed saves retry as before.
-var SAVE_AFTER = 15000, batchT = null, batchAt = 0, lineHold = {}, ordDirty = {}, saveFlushing = false;
+var SAVE_AFTER = 60000, batchT = null, batchAt = 0, lineHold = {}, ordDirty = {}, saveFlushing = false;
 var saveQ = {}, saveRun = {}, saveFail = null, saveOkT = null;
 function infoSnap(c) {
   var list = savedContacts(c);
@@ -1577,27 +1577,26 @@ function scheduleAutosave() {
   if (!isBatchDirty()) { clearTimeout(batchT); batchT = null; batchAt = 0; saveState(); return; }
   clearTimeout(batchT);
   batchAt = Date.now() + SAVE_AFTER;
-  batchT = setTimeout(function () { flushBatch(); }, SAVE_AFTER);
+  batchT = setTimeout(function () { saveBg(); }, SAVE_AFTER);
   var n = curNote();
   if ($('nSaved') && n && (noteDirty || Object.keys(lineHold).some(function (id) { return lineHold[id] === n.id; }))) $('nSaved').textContent = 'Unsaved changes…';
   saveState();
 }
-function flushHeldLines() {
-  var ids = Object.keys(lineHold);
-  return ids.reduce(function (p, id) {
-    return p.then(function () {
-      var nid = lineHold[id]; delete lineHold[id];
-      var n = noteById(nid) || curNote(); if (!n || !custOpen) return;
-      var l = (n.items || []).filter(function (x) { return x.id === id; })[0]; if (!l) return;
-      if (n === curNote()) return setLine(l, { qty: l.qty, note: l.note || '' });
-      var c = custOpen;
-      return autoSave('line:' + id, function () {
-        return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: l.qty, note: l.note || '' }).then(function (r) {
-          n.updated = r.note.updated; n.updated_by = r.note.updated_by; rememberNoteVersion(n);
-        });
+function flushHeldLines(c) {
+  // Snapshot synchronously so the save keeps working after the UI moves on (background save).
+  c = c || custOpen; if (!c) return Promise.resolve();
+  var ps = Object.keys(lineHold).map(function (id) {
+    var nid = lineHold[id]; delete lineHold[id];
+    var n = (c.notes || []).filter(function (x) { return x.id === nid; })[0]; if (!n) return Promise.resolve();
+    var l = (n.items || []).filter(function (x) { return x.id === id; })[0]; if (!l) return Promise.resolve();
+    return autoSave('line:' + id, function () {
+      var cur = (n.items || []).filter(function (x) { return x.id === id; })[0] || l;
+      return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) {
+        n.updated = r.note.updated; n.updated_by = r.note.updated_by; rememberNoteVersion(n);
       });
     });
-  }, Promise.resolve());
+  });
+  return Promise.all(ps);
 }
 function runPendingSaves() {
   function runPref(prefix) {
@@ -1614,27 +1613,36 @@ function runPendingSaves() {
 function flushBatch() {
   clearTimeout(batchT); batchT = null; batchAt = 0;
   clearTimeout(infoT); clearTimeout(noteT);
-  saveFlushing = true;
-  return Promise.all((typeof phPending !== 'undefined' ? phPending : []).slice()).then(function () {
-  return flushHeldLines(); }).then(function () { return Promise.all([flushInfo(), flushNote()]); }).then(function () {
-    // Create temp notes before anything that references them
-    return Object.keys(saveQ).filter(function (k) { return k.indexOf('newnote:') === 0; })
+  saveFlushing = true; flushGen++;
+  var c = custOpen, steps;
+  // Everything that reads the screen / open project is queued synchronously here, so callers can move
+  // the UI on right away (background save). No waiting on photo uploads: photos link to their note when
+  // their own upload finishes; api() waits on tmpNotes so a temp note is still created first.
+  try {
+    var pInfo = flushInfo(), pNote = flushNote();
+    var pLines = flushHeldLines(c);
+    var pNew = Object.keys(saveQ).filter(function (k) { return k.indexOf('newnote:') === 0; })
       .reduce(function (p, k) { return p.then(function () { return runSave(k); }); }, Promise.resolve());
-  }).then(function () {
-    // Order rewrites after line qty/note sets, while saveFlushing so autoSave runs now
-    var ops = Object.keys(ordDirty).map(function (nid) {
+    // Order rewrites (persistOrder snapshots qty/notes and waits on in-flight line saves itself)
+    var pOrd = Object.keys(ordDirty).map(function (nid) {
       delete ordDirty[nid];
-      var n = noteById(nid); return n ? persistOrder(n) : Promise.resolve();
+      var n = c && (c.notes || []).filter(function (x) { return x.id === nid; })[0]; return n ? persistOrder(n) : Promise.resolve();
     });
-    return Promise.all(ops);
-  }).then(function () {
+    steps = Promise.all([pInfo, pNote, pLines, pNew].concat(pOrd));
+  } catch (er) { steps = Promise.reject(er); }
+  var gen = flushGen;
+  return steps.then(function () {
     return runPendingSaves();
   }).then(function () {
-    saveFlushing = false;
+    if (gen === flushGen) saveFlushing = false;
     if (isBatchDirty()) scheduleAutosave(); else saveState();
-  }, function (er) { saveFlushing = false; saveState(); throw er; });
+  }, function (er) { if (gen === flushGen) saveFlushing = false; if (er && er.message && Object.keys(saveQ).length) saveFail = er.message; saveState(); throw er; });
 }
-/** Queue a server write. Runs now only while flushBatch/drainSaves is mid-flush; otherwise waits for the 15s batch. */
+/** Background save: start the flush and return at once so the UI never waits on server round-trips.
+ *  Failures show "Not saved, tap to retry" (saveQ keeps the work; retrySaves / 20s retry loop re-run it). */
+var flushGen = 0;
+function saveBg() { flushBatch().catch(function (er) { if (Object.keys(saveQ).length) saveFail = (er && er.message) || 'Save failed'; saveState(); }); return Promise.resolve(); }
+/** Queue a server write. Runs now only while flushBatch/drainSaves is mid-flush; otherwise waits for the 60s batch. */
 function autoSave(key, fn) {
   saveQ[key] = fn;
   if (saveFlushing) return runSave(key);
@@ -1668,7 +1676,7 @@ setInterval(function () { if (batchT && batchAt && !saveFlushing) saveState(); }
 window.addEventListener('online', retrySaves);
 setInterval(function () { if (saveFail && Object.keys(saveQ).length) retrySaves(); }, 20000);
 window.addEventListener('beforeunload', function (e) {
-  if (isBatchDirty() || Object.keys(saveQ).length) { flushBatch(); e.preventDefault(); e.returnValue = ''; }
+  if (isBatchDirty() || Object.keys(saveQ).length) { saveBg(); e.preventDefault(); e.returnValue = ''; }
 });
 // customer info
 var infoT = null;
@@ -1712,14 +1720,18 @@ function startSaveCool(c) {
  *  removals); shows "Saved" when the queue is empty, else "Not saved, tap to retry" (the queue keeps retrying as before).
  *  On success: brief "Saved ✓" then a disabled countdown (cool-down) before Save is tappable again. */
 function saveProject() { var c = custOpen, b = $('cdSaveAll'); if (!c || !b || b.dataset.cooling) return;
-  b.disabled = true; b.textContent = 'Saving…'; $('cdSaveMsg').textContent = '';
-  drainSaves().then(function (ok) {
-    if (custOpen !== c || !$('cdSaveAll')) return; if (ok) c._savedAt = Date.now(); b = $('cdSaveAll');
-    if (!ok) { b.disabled = false; b.textContent = 'Save project'; $('cdSaveMsg').innerHTML = '<span class="missing">Not saved, tap to retry</span>'; return; }
-    b.disabled = true; b.textContent = 'Saved ✓';
-    $('cdSaveMsg').innerHTML = 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes';
-    toast('Saved ' + projLabel(c));
-    startSaveCool(c); }); }
+  // Optimistic: unlock right away; the flush runs in the background. A failure flips to "Not saved, tap to retry".
+  $('cdSaveMsg').textContent = '';
+  var p = drainSaves();
+  c._savedAt = Date.now();
+  b.disabled = true; b.textContent = 'Saved ✓';
+  $('cdSaveMsg').innerHTML = 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes';
+  toast('Saved ' + projLabel(c));
+  startSaveCool(c);
+  p.then(function (ok) { return ok; }, function () { return false; }).then(function (ok) {
+    if (ok || custOpen !== c || !$('cdSaveAll')) return;
+    clearSaveCool(c); b = $('cdSaveAll'); delete b.dataset.cooling; b.disabled = false; b.textContent = 'Save project';
+    $('cdSaveMsg').innerHTML = '<span class="missing">Not saved, tap to retry</span>'; }); }
 function queueInfo() { clearTimeout(infoT); var c = custOpen; if (!c) return; rememberInfo(c); c._infoDirty = infoChanged(c);
   if ($('cdSaved')) $('cdSaved').textContent = c._infoDirty ? 'Unsaved changes…' : 'Saved'; scheduleAutosave(); }
 function flushInfo() { clearTimeout(infoT); var c = custOpen; if (!c || !$('cdName')) return Promise.resolve();
@@ -1760,7 +1772,7 @@ function setNoteTitle(n, title) {
 }
 function focusCustomTitle(n) {
   if (!n) return;
-  if (noteOpenId !== n.id) { flushBatch().then(function () { keepTyped(); noteOpenId = n.id; renderNoteCards(); scrollToNote(n.id); var el = $('nTitle'); if (el) { el.focus(); el.select(); } }); return; }
+  if (noteOpenId !== n.id) { saveBg().then(function () { keepTyped(); noteOpenId = n.id; renderNoteCards(); scrollToNote(n.id); var el = $('nTitle'); if (el) { el.focus(); el.select(); } }); return; }
   var el = $('nTitle'); if (el) { el.focus(); el.select(); }
 }
 function applyNoteChip(chip) {
@@ -3660,7 +3672,7 @@ function handleAppBack() {
   if ($('sheet') && $('sheet').classList.contains('on')) { closeSheet(); if (typeof scanWant !== 'undefined') scanWant = 0; return; }
   // Project detail → History project list (same as the ‹ button)
   if ($('p-cust') && $('p-cust').classList.contains('on') && custOpen && $('cuDetail') && $('cuDetail').innerHTML) {
-    flushBatch().then(loadCustList); return;
+    saveBg().then(loadCustList); return;
   }
   // Search results → search home
   if ($('p-search') && $('p-search').classList.contains('on') && $('q') && $('q').value.trim()) {
