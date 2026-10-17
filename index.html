@@ -262,6 +262,8 @@
   .crow2 b { font-size:15.5px; } .crow2 .s { display:block; font-size:12.5px; color:var(--muted); margin-top:1px; }
   .crow2 .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; margin-left:6px; }
   .crow2 .sh { font-size:11px; font-weight:700; background:var(--info-bg); color:var(--info-fg); border-radius:6px; padding:1px 6px; margin-left:6px; }
+  .qirow { display:flex; gap:8px; } .qirow > * { flex:1 1 0; min-width:0; } .qirow .newc + .newc { flex:0 0 auto; width:auto; padding:0 14px; }   /* 20261017g: "From a quote…" beside + New project, same row */
+  .empty .qilink { font-size:15px; padding:0 2px; }
   .newc { width:100%; min-height:44px; border:1px dashed var(--line-strong); background:#fafbfc; border-radius:12px; font:inherit; font-weight:700; color:#1f2937; cursor:pointer; margin:10px 0 4px; }
   .saved { font-size:12px; color:var(--muted); min-height:16px; margin-top:6px; }
   .pline { padding:12px 0; border-bottom:1px solid var(--line); }
@@ -651,9 +653,9 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017f"></script>
-<script src="i18n.js?v=20261017f"></script>
-<script src="photoq.js?v=20261017f"></script>
+<script src="sync.js?v=20261017g"></script>
+<script src="i18n.js?v=20261017g"></script>
+<script src="photoq.js?v=20261017g"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -711,7 +713,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017f';
+var PAGE_VER = '20261017g';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1304,8 +1306,8 @@ function openClientInfo(id) {
 function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCust.noteId === nid); }
 /** New customer in one tap: the server gives the next note number (#1012) and an empty "Note 1"; info is added later. */
 var newBusy = false;
-function createBlankProject() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
-  return api('customerSave', { customer: { tax: myStore() } }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
+function createBlankProject(info) { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;   // 20261017g: info = {name, phone, notes} from an imported quote
+  return api('customerSave', { customer: Object.assign({ tax: myStore() }, info || {}) }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
 function newCustomer() { return createBlankProject().then(function (c) { pcSave(c); setCur(c, c.notes[0]); dropStaleProject(c.id); return c; }); }
 /** 20261017e: a new project made from Search (bar / picker) while another project was left open behind the Project tab:
  *  close that stale view (its edits are already flushed when Search was opened) so the Project tab shows the new one. */
@@ -1314,19 +1316,19 @@ function dropStaleProject(id) { if (!custOpen || custOpen.id === id || $('p-cust
 function newProjToast(c) { var l = custLabel(c); toast(window.I18N && I18N.lang() === 'zh' ? '已新建项目 ' + l : 'New project ' + l + ' created'); }
 /** "+ New project" on the Project tab (project header, or the tab with nothing current): save the open project, create the
  *  next numbered project and open it right away at the top, Note 1 open + "adding here", its text box focused. */
-function newProjectOpen() {
-  keepTyped(); saveBg();
+function newProjectOpen(opts) {
+  keepTyped(); saveBg(); opts = opts || {};
   var sw = newBusy ? null : npSwapStart();   // 20261017f: the old page slides out on the tap; the new one slides in when the server gives its number
-  return createBlankProject().then(function (c) {
+  return createBlankProject(opts.info).then(function (c) {
     if (!c || !c.notes || !c.notes[0]) throw new Error('No note');
     return (sw ? sw.ready : Promise.resolve()).then(function () {
       npHold = false; infoOpen = false; pcSave(c); setCur(c, c.notes[0]);
       openCust(c.id, c, c.notes[0].id); window.scrollTo(0, 0);
-      var t = $('nText'); if (t) { try { t.focus({ preventScroll: true }); } catch (e) {} window.scrollTo(0, 0); }
-      npSwapIn(sw); newProjToast(c); return c; });
+      var ql = opts.lines && opts.lines.length, t = $('nText'); if (t && !ql) { try { t.focus({ preventScroll: true }); } catch (e) {} window.scrollTo(0, 0); }
+      npSwapIn(sw); if (ql) addToNote(opts.lines, true); else newProjToast(c); return c; });   // 20261017g: a quote import fills Note 1 (same add + autosave path)
   }).catch(function (er) { if (sw) npSwapUndo(sw); renderCustBar();
     if (!custOpen && $('p-cust').classList.contains('on')) {   // nothing to fall back to: don't leave the "Starting…" spinner up
-      $('cuDetail').innerHTML = '<div class="card"><div class="msg err">' + esc((er && er.message) || 'Not created') + '</div><button class="btn" id="cdRetryNew" style="margin-top:8px">+ New project</button></div>';
+      $('cuDetail').innerHTML = '<div class="card"><div class="msg err">' + esc((er && er.message) || 'Not created') + '</div><div class="qirow"><button class="btn" id="cdRetryNew" style="margin-top:8px">+ New project</button><button class="btn sec" data-qi="new" style="margin-top:8px">From a quote…</button></div></div>';
       $('cdRetryNew').onclick = function () { this.disabled = true; newProjectOpen(); }; } });
 }
 /** 20261017f page swap for + New project. Out: the open project slides left + fades (on the tap). If the server is slower than that,
@@ -1358,11 +1360,46 @@ function npSwapUndo(sw) { npHold = false; if (sw.out) { try { sw.out.cancel(); }
   if (sw.stand && custOpen && custOpen.notes) { renderCustDetail(); npSlideIn($('cuDetail')); } }
 /** "+ New" from Search / the bar: create and make it the current note, without leaving the page. */
 function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function (c) { window.scrollTo(0, y); newProjToast(c); }).catch(function () { renderCustBar(); }); }   // Search: stay on the tab + scroll; the Adding-to bar switches to the new project
+/** 20261017g quote import (PDF): "Add items from a quote…" (note ⋯ menu, empty note) and "From a quote…" (project picker, + New project fallback).
+ *  The file picker opens right on the tap (iOS needs the tap); quote-import.js (parser + review sheet) loads on first use and pdf.js
+ *  from the CDN only when a PDF is picked. to = {cid, noteId} target note, else the current note. Photos: "coming soon" for now. */
+var QI_VER = '20261017g', qiLoad = null;
+function loadQuoteImport() {
+  if (window.QIUI) return Promise.resolve(window.QIUI);
+  if (qiLoad) return qiLoad;
+  qiLoad = new Promise(function (res, rej) { var s = document.createElement('script'); s.src = 'quote-import.js?v=' + QI_VER; s.async = true;
+    s.onload = function () { window.QIUI ? res(window.QIUI) : rej(new Error('Could not load quote import.')); };
+    s.onerror = function () { qiLoad = null; rej(new Error('No connection. Check your internet and try again.')); };
+    document.head.appendChild(s); });
+  return qiLoad;
+}
+function quoteImport(to) {
+  loadQuoteImport().catch(function () {});
+  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,.pdf,image/*'; inp.id = 'qiFile';
+  inp.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
+  var old = $('qiFile'); if (old) old.remove();
+  inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return;
+    openSheet('<h3>Items from a quote</h3><div class="spinner"></div><div class="hint" style="text-align:center">Reading the quote…</div>');
+    loadQuoteImport().then(function (Q) { Q.run(f, to || null); }, function (er) { $('sheetBody').innerHTML = '<h3>Items from a quote</h3><div class="msg err">' + esc(er.message) + '</div>'; })
+      .then(function () { inp.remove(); }); };
+  document.body.appendChild(inp); inp.click();
+}
+document.addEventListener('click', function (e) { var b = e.target.closest('[data-qi]'); if (!b || b.disabled) return;
+  var v = b.getAttribute('data-qi'), to = null;
+  if (v.indexOf('note:') === 0 && custOpen) to = { cid: custOpen.id, noteId: v.slice(5) };
+  if (b.closest('#sheetBody') && b.id !== 'pkQuote') closeSheet();   // the ⋯ menu closes; the picker stays until a quote is picked
+  quoteImport(to); });
+/** Review sheet -> new project named from the quote: the + New project path (page swap, Note 1 open), then the lines go into Note 1. */
+function newProjectFromQuote(info, lines) {
+  closeSheet();
+  if (!$('p-cust').classList.contains('on')) { go('cust', true); if (!(custOpen && $('cdProj'))) $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; }
+  return newProjectOpen({ info: info, lines: lines });
+}
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
   openSheet('<h3>' + (then ? 'Add to which project?' : 'Adding to') + '</h3><div class="hint" style="margin:0 0 8px">Pick a project, then which of its notes items from Search go into.</div>' +
-    '<input id="pkQ" type="search" placeholder="Search name, phone or #number" autocomplete="off"><button class="newc" id="pkNew">+ New project</button>' +
+    '<input id="pkQ" type="search" placeholder="Search name, phone or #number" autocomplete="off"><div class="qirow"><button class="newc" id="pkNew">+ New project</button><button class="newc" id="pkQuote" data-qi="new">From a quote…</button></div>' +
     '<div class="sec-h" style="margin-top:8px"><h2 id="pkH">Recent</h2></div><div id="pkList"><div class="spinner"></div></div>');
   var t = null; $('pkQ').oninput = function () { clearTimeout(t); var q = this.value; t = setTimeout(function () { loadPick(q); }, 250); };
   $('pkNew').onclick = function () { var b = this; b.disabled = true; b.textContent = 'Creating…'; if (!then) { closeSheet(); newCustomerOpen(); return; }
@@ -1410,11 +1447,11 @@ document.addEventListener('change', function (e) {
   renderHSelBar();
 });
 /** Add to note: straight into the current note (asks for a customer + note first when none is picked). */
-function addToNote(lines, popped) {
+function addToNote(lines, popped, to) {   // to (20261017g quote import into a note from its ⋯ menu) = {id, name, noteId, noteTitle}; default = the current note
   lines = [].concat(lines); if (!lines.length) return;
-  if (!curCust) { openPicker(function () { addToNote(lines); }); return; }
+  if (!curCust && !to) { openPicker(function () { addToNote(lines); }); return; }
   if (!popped) popAdded(lines[0].name);   // "grow" pop right on the tap (Ray 2026-10-17: waiting for the save felt late)
-  var c = curCust, n = noteOf(c.id, c.noteId);
+  var c = to || curCust, n = noteOf(c.id, c.noteId);
   toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
   lines.forEach(function (l, i) {
     var tmp = 'tmpl-' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5);
@@ -2418,7 +2455,8 @@ function renderPicked() {
       (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isMoldRow(r) ? '<button class="link ltc" data-lmc="1">▦ Molding calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
       '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button></div>';
     return '<div class="pline hasord' + (open ? ' open' : '') + '" data-lid="' + esc(l.id) + '"><div class="lbody">' + head + det + '</div>' + (it.length > 1 ? ordHtml(i, it.length) : '') + '</div>';
-  }).join('') : '<div class="empty">No items yet. On Search, tap <b>Add to note</b>' + (isCurNote(custOpen.id, n.id) ? '' : ' (after “Add items here”)') + '.</div>');
+  }).join('') : (isCurNote(custOpen.id, n.id) ? '<div class="empty">No items yet. <button type="button" class="link qilink" data-qi="note:' + esc(n.id) + '">Add from a quote…</button></div>'   // 20261017g: "+ Add from Search" sits right above
+    : '<div class="empty">No items yet. On Search, tap <b>Add to note</b> (after “Add items here”).</div>'));
   if (ordBase[n.id] == null) ordBase[n.id] = noteOrderKey(n);
   renderTotals();
 }
@@ -3267,7 +3305,7 @@ function moveLine(l, op, to) { var c = custOpen, n = curNote(), t;
 }
 function noteMenu(id) { var c = custOpen, n = (c.notes || []).filter(function (x) { return x.id === id; })[0]; if (!n) return;
   openSheet('<h3>' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
-    '<button class="btn" id="ncClone">Clone note</button><button class="btn" id="ncNew" type="button">Clone to new project</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><button class="btn sec" id="ncHist" type="button" style="margin-top:8px">Version history</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
+    '<button class="btn sec" id="ncQuote" data-qi="note:' + esc(n.id) + '" type="button" style="margin-bottom:8px">Add items from a quote…</button><button class="btn" id="ncClone">Clone note</button><button class="btn" id="ncNew" type="button">Clone to new project</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><button class="btn sec" id="ncHist" type="button" style="margin-top:8px">Version history</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
   $('ncClone').onclick = function () { this.disabled = true; this.textContent = 'Cloning…';
     cloneNote(c, n, c.id).then(closeSheet, function (er) { msg($('ncMsg'), er.message); $('ncClone').disabled = false; $('ncClone').textContent = 'Clone note'; }); };
   $('ncNew').onclick = function () { var b = this; if (b.disabled) return; b.disabled = true; b.textContent = 'Cloning…';

@@ -11,6 +11,18 @@
 
   // ---------------------------------------------------------------- strings table: whole texts (trimmed)
   var EX = {
+    // 20261017g quote import (PDF)
+    'Items from a quote': '从报价导入商品', 'Reading the quote…': '正在读取报价…', 'Add items from a quote…': '从报价添加商品…', 'From a quote…': '从报价导入…', 'Add from a quote…': '从报价添加…',
+    'No items yet.': '还没有商品。', 'Photo import is coming soon': '照片导入即将推出',
+    'For now, pick a PDF quote: a NetSuite estimate or an East Star quote PDF. Reading photos and scans is the next update.': '目前请选择 PDF 报价：NetSuite 估价单或 East Star 报价 PDF。读取照片和扫描件将在下次更新推出。',
+    'This PDF is a scan (it has no text in it). Reading scans and photos is the next update. For now, use the PDF from NetSuite or from our quote app.': '这个 PDF 是扫描件（里面没有文字）。读取扫描件和照片将在下次更新推出。目前请使用 NetSuite 或我们报价工具生成的 PDF。',
+    'Pick another file': '选择其他文件', 'This PDF is too big (over 25 MB).': '这个 PDF 太大（超过 25 MB）。', 'The item list is still loading. Try again in a moment.': '商品列表还在载入，请稍后再试。',
+    'No item lines found in this PDF. It needs an Item / Qty table, like a NetSuite estimate or an East Star quote.': '这个 PDF 里没有找到商品行。需要有商品 / 数量表格，例如 NetSuite 估价单或 East Star 报价。',
+    'Could not read this PDF.': '无法读取这个 PDF。', 'No connection. Check your internet and try again.': '没有网络连接，请检查网络后再试。', 'This browser cannot read PDFs. Update it and try again.': '这个浏览器无法读取 PDF，请更新后再试。',
+    'Could not load quote import.': '无法载入报价导入。', 'Items from quote': '报价中的商品', 'Prices are today’s list prices. Check the qty, then add.': '价格按今天的标价计算。请检查数量后再添加。',
+    'Close match: tap the right one': '相近结果：请点选正确的商品', 'Not in the item list:': '不在商品清单中：', 'Search the item list': '搜索商品列表',
+    'Search…': '搜索…', 'Change…': '更换…', 'not found': '未找到', 'Qty not on the quote: please check': '报价上没有数量：请检查', 'Add to a note…': '添加到笔记…', 'Add to': '添加到',
+    'New project': '新项目', 'Add this line': '添加这一行', 'Less': '减少', 'More': '增加', 'Qty': '数量', 'door': '门板', 'box': '柜体',
     'Make a new link? The link your client already has stops working right away. Send them the new one.': '生成新链接？客户手上的旧链接会立即失效，请把新链接发给客户。',
     'OK': '确定', 'Make new link': '生成新链接', 'Stop link': '停用链接', 'Send again': '再次发送', 'Mark found': '标记已找到', 'Pause': '暂停', 'Change role': '更改角色', 'Make full admin': '设为完全管理员',
     // header / nav / sign in
@@ -171,6 +183,8 @@
 
   // ---------------------------------------------------------------- phrases / patterns inside longer texts (applied in order)
   var PH = [
+    [/^(\d+) matched$/, '$1 个已匹配'], [/^(\d+) to check$/, '$1 个待核对'], [/^(\d+) not found$/, '$1 个未找到'],
+    [/^(\d+) of (\d+) lines checked · (\d+) items? to add$/, '已勾选 $1/$2 行 · 将添加 $3 件商品'],
     [/^Send plan to /, '图纸发给 '], [/^Send to /, '发送给 '], [/^Sent to /, '已发送给 '], [/\. Request /g, '。请求 '], [/^Request /, '请求 '],
     [/^Reading (\d+) of (\d+)/, '正在读取第 $1 张，共 $2 张'], [/^Your East Star project #(\d+)/, '你的 East Star 项目 #$1'], [/^Your East Star project #/, '你的 East Star 项目 #'],
     [/ items\. The quote comes back to East Star Max\./, ' 件商品。报价会回复给劍鋒高級建材 Max。'], [/^Saved as /, '已保存为 '], [/ but the bot did not answer \(/, '，但机器人没有回应（'],
