@@ -46,6 +46,14 @@
   @keyframes r { to { transform:rotate(360deg); } }
   #zoom { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:none; align-items:center; justify-content:center; z-index:9; }
   #zoom.on { display:flex; } #zoom img { max-width:96vw; max-height:92vh; }
+  .dl { font-size:12.5px; line-height:1.35; margin-top:1px; } .dl a { color:var(--accent); text-decoration:none; font-weight:600; } .dl .sep { color:var(--muted); padding:0 4px; }
+  .ph[src] { cursor:zoom-in; }
+  #zoom .zx { position:absolute; top:calc(10px + env(safe-area-inset-top)); right:10px; width:40px; height:40px; border-radius:50%; border:0; background:#fff; color:#111; font-size:24px; line-height:40px; padding:0; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.4); z-index:2; }
+  #zoomDocs { position:absolute; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom)); display:flex; gap:8px; justify-content:center; flex-wrap:wrap; z-index:2; }
+  #zoomDocs a { background:#fff; color:#111; border-radius:999px; padding:9px 13px; font-size:14px; font-weight:700; text-decoration:none; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .docsec { margin:18px 12px 0; padding:14px 16px; background:#fff; border:1px solid var(--line); border-radius:14px; }
+  .docsec h3 { margin:0 0 8px; font-size:15px; } .drow { padding:7px 0; border-top:1px solid var(--line); font-size:13.5px; } .drow:first-of-type { border-top:0; }
+  .drow .dn { font-weight:600; word-break:break-word; } .drow .dd { color:var(--muted); word-break:break-word; } .drow a { color:var(--accent); font-weight:600; text-decoration:none; margin-right:14px; }
 
   /* ---- East Star brand (eaststarusa.com): blue #0078bd / hover #005d9a, navy #15334b, red accent #c92330,
      light #f6f8fa, lines #d9e4ec, muted #526776, Montserrat, pill buttons. ---- */
@@ -87,12 +95,12 @@
     <div class="web">Mon – Sat 8:30 AM – 5:30 PM · <a href="https://eaststarusa.com" rel="noopener">eaststarusa.com</a></div>
   </footer>
 </div>
-<div id="zoom"><img alt=""></div>
+<div id="zoom"><button type="button" class="zx" aria-label="Close">×</button><img alt=""><div id="zoomDocs"></div></div>
 <script>
 // The sharer's language rides along (&l=zh) the first time; after that the client's own toggle is remembered.
 try { if (/[?&]l=zh\b/.test(location.search) && !localStorage.getItem('esLang')) localStorage.setItem('esLang', 'zh'); } catch (e) {}
 </script>
-<script src="i18n.js?v=20261014s"></script>
+<script src="i18n.js?v=20261016r"></script>
 <script>
 // Read-only client view of one project (client.html?c=TOKEN). No sign-in, no item data download, no prices:
 // the server answers token requests with a whitelist copy (titles, text, items, qty, item notes, photos) only.
@@ -119,17 +127,37 @@ function render(p) {
   $('main').innerHTML = notes.map(function (n) {
     return '<section class="note"><h2 class="notr">' + esc(n.title) + '</h2>' + (n.text ? '<p class="ntext notr">' + esc(n.text) + '</p>' : '') +
       ((n.items || []).length ? '<div class="items">' + n.items.map(function (l) {
-        return '<div class="item">' + (l.photo ? '<img class="ph" loading="lazy" src="' + esc(l.photo) + '" alt="" onerror="this.className=\'ph none\';this.removeAttribute(\'src\')">' : '<div class="ph none"></div>') +
-          '<div class="it notr"><div class="nm">' + esc(l.name) + '</div>' + (l.desc ? '<div class="ds">' + esc(l.desc) + '</div>' : '') + (String(l.note || '').replace(/\s*⟦[^⟧]*⟧\s*$/, '') ? '<div class="in">' + esc(String(l.note).replace(/\s*⟦[^⟧]*⟧\s*$/, '')) + '</div>' : '') + '</div>' +
+        return '<div class="item" data-n="' + esc(l.name) + '">' + (l.photo ? '<img class="ph" loading="lazy" src="' + esc(l.photo) + '" alt="" onerror="this.className=\'ph none\';this.removeAttribute(\'src\')">' : '<div class="ph none"></div>') +
+          '<div class="it notr"><div class="nm">' + esc(l.name) + '</div>' + (l.desc ? '<div class="ds">' + esc(l.desc) + '</div>' : '') + '<div class="dslot" data-n="' + esc(l.name) + '"></div>' + (String(l.note || '').replace(/\s*⟦[^⟧]*⟧\s*$/, '') ? '<div class="in">' + esc(String(l.note).replace(/\s*⟦[^⟧]*⟧\s*$/, '')) + '</div>' : '') + '</div>' +
           '<div class="qty">× ' + esc(l.qty) + '</div></div>'; }).join('') + '</div>' : '') +
       ((n.photos || []).length ? '<div class="photos">' + n.photos.map(function (f) { return '<span class="ld" data-f="' + esc(f) + '"></span>'; }).join('') + '</div>' : '') + '</section>';
   }).join('');
+  addDocs(notes);
   // note photos: one at a time (each is a separate small request)
   var q = [].slice.call(document.querySelectorAll('.photos .ld'));
   (function next() { var el = q.shift(); if (!el) return;
     call('clientFile', { fileId: el.dataset.f }).then(function (r) { var im = document.createElement('img'); im.src = r.data; im.alt = 'photo'; el.replaceWith(im); }, function () { el.remove(); }).then(next); })();
 }
-document.addEventListener('click', function (e) { var im = e.target.closest('.photos img'); if (im) { $('zoom').querySelector('img').src = im.src; $('zoom').classList.add('on'); } else if (e.target.closest('#zoom')) $('zoom').classList.remove('on'); });
+// ---- spec sheet / install guide links (20261016r): docs.json is the public {code: [spec_url, install_url]} map from the item bundle (no prices).
+var DOCS = null;
+function docLinks(d, sep) { var a = []; if (d[0]) a.push('<a href="' + esc(d[0]) + '" target="_blank" rel="noopener">' + esc(T('Spec sheet')) + '</a>');
+  if (d[1]) a.push('<a href="' + esc(d[1]) + '" target="_blank" rel="noopener">' + esc(T('Install guide')) + '</a>'); return a.join(sep || ''); }
+function addDocs(notes) {
+  (DOCS ? Promise.resolve(DOCS) : fetch('docs.json?v=20261016r').then(function (r) { return r.json(); })).then(function (m) { DOCS = m || {};
+    [].forEach.call(document.querySelectorAll('.dslot'), function (sp) { var d = DOCS[sp.dataset.n]; if (d) { sp.className = 'dl'; sp.innerHTML = docLinks(d, '<span class="sep">·</span>'); } else sp.remove(); });
+    var seen = {}, rows = [];
+    notes.forEach(function (n) { (n.items || []).forEach(function (l) { var d = DOCS[l.name]; if (!d || seen[l.name]) return; seen[l.name] = 1;
+      rows.push('<div class="drow"><div class="dn notr">' + esc(l.name) + '</div>' + (l.desc ? '<div class="dd notr">' + esc(l.desc) + '</div>' : '') + '<div>' + docLinks(d) + '</div></div>'); }); });
+    var old = $('docSec'); if (old) old.remove();
+    if (rows.length) $('main').insertAdjacentHTML('beforeend', '<section class="docsec" id="docSec"><h3>' + esc(T('Spec sheets & install guides')) + '</h3>' + rows.join('') + '</section>');
+  }).catch(function () {});
+}
+document.addEventListener('click', function (e) { var z = $('zoom'), zd = $('zoomDocs');
+  if (e.target.closest('#zoomDocs a')) return;   // let the PDF open
+  var im = e.target.closest('.photos img, img.ph[src]');
+  if (im) { z.querySelector('img').src = im.src; var it = im.closest('.item'), d = it && DOCS && DOCS[it.dataset.n];
+    zd.innerHTML = d ? docLinks(d) : ''; zd.style.display = d ? '' : 'none'; z.classList.add('on'); }
+  else if (e.target.closest('#zoom')) z.classList.remove('on'); });
 if (!/^[a-f0-9]{48,64}$/i.test(TOKEN)) fail('This link is not complete. Ask East Star Max for the link again.');
 else call('clientView').then(render).catch(function (er) { fail(er.message); });
 </script>
