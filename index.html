@@ -655,7 +655,7 @@
 <script src="search.js?v=20261015o"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017i"></script>
-<script src="i18n.js?v=20261017i"></script>
+<script src="i18n.js?v=20261017j"></script>
 <script src="photoq.js?v=20261017i"></script>
 <script>
 'use strict';
@@ -714,7 +714,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017i';
+var PAGE_VER = '20261017j';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -3349,7 +3349,7 @@ function moveLine(l, op, to) { var c = custOpen, n = curNote(), t;
 }
 function noteMenu(id) { var c = custOpen, n = (c.notes || []).filter(function (x) { return x.id === id; })[0]; if (!n) return;
   openSheet('<h3>' + esc(n.title) + '</h3><div class="hint" style="margin:0 0 8px">' + (n.items || []).length + ' items · ' + (n.photos || []).length + ' photos</div>' +
-    '<button class="btn sec" id="ncQuote" data-qi="note:' + esc(n.id) + '" type="button" style="margin-bottom:8px">Add items from a quote…</button><button class="btn" id="ncClone">Clone note</button><button class="btn" id="ncNew" type="button">Clone to new project</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button><button class="btn sec" id="ncHist" type="button" style="margin-top:8px">Version history</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
+    '<button class="btn sec" id="ncQuote" data-qi="note:' + esc(n.id) + '" type="button" style="margin-bottom:8px">Add items from a quote…</button><button class="btn" id="ncClone">Clone note</button><button class="btn" id="ncNew" type="button">Clone to new project</button><button class="btn sec" id="ncOther" style="margin-top:8px">Clone to another project…</button>' + (mgOthers(c, n).length ? '<button class="btn sec" id="ncMerge" type="button" style="margin-top:8px">Merge into another note…</button>' : '') + '<button class="btn sec" id="ncHist" type="button" style="margin-top:8px">Version history</button><div id="ncMsg" class="msg hidden"></div><div id="ncList"></div>');
   $('ncClone').onclick = function () { this.disabled = true; this.textContent = 'Cloning…';
     cloneNote(c, n, c.id).then(closeSheet, function (er) { msg($('ncMsg'), er.message); $('ncClone').disabled = false; $('ncClone').textContent = 'Clone note'; }); };
   $('ncNew').onclick = function () { var b = this; if (b.disabled) return; b.disabled = true; b.textContent = 'Cloning…';
@@ -3359,8 +3359,147 @@ function noteMenu(id) { var c = custOpen, n = (c.notes || []).filter(function (x
     api('customerList', { filter: {} }).then(function (l) { l = (Array.isArray(l) ? l : []).filter(function (x) { return x.id !== c.id; }); if (!$('ncList')) return;
       $('ncList').innerHTML = '<div class="mvh">Clone “' + esc(n.title) + '” into…</div>' + (l.length ? l.map(function (x) { return '<button class="crow2" data-clto="' + esc(x.id) + '"><b>' + esc(projLabel(x)) + '</b><span class="s">' + (x.noteList || []).length + ' notes</span></button>'; }).join('') : '<div class="empty">No other projects.</div>'); })
       .catch(function (er) { msg($('ncMsg'), er.message); if ($('ncList')) $('ncList').innerHTML = ''; }); };
-  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-clto]'); if (!b) return; b.disabled = true; b.querySelector('b').textContent += ' · cloning…';
+  if ($('ncMerge')) $('ncMerge').onclick = function () { var os = mgOthers(c, n); if (os.length === 1) { mergeAsk(c, n, os[0]); return; }   // 20261017j
+    $('ncList').innerHTML = '<div class="mvh">Merge “' + esc(n.title) + '” into…</div>' + os.map(function (x) { var k = (x.items || []).length;
+      return '<button class="crow2" data-mgto="' + esc(x.id) + '"><b class="notr">' + esc(x.title) + '</b><span class="s">' + k + ' item' + (k === 1 ? '' : 's') + '</span></button>'; }).join(''); };
+  $('sheetBody').onclick = function (e) { var m = e.target.closest('[data-mgto]'); if (m) { var t = (c.notes || []).filter(function (x) { return x.id === m.dataset.mgto; })[0]; if (t) mergeAsk(c, n, t); return; }
+    var b = e.target.closest('[data-clto]'); if (!b) return; b.disabled = true; b.querySelector('b').textContent += ' · cloning…';
     cloneNote(c, n, b.dataset.clto).then(closeSheet, function (er) { msg($('ncMsg'), er.message); b.disabled = false; }); }; }
+// ---------------------------------------------------------------- 20261017j: merge a note into another note of the same project
+/* Uses only the live server's own actions, through the outbox (opIds, one projBatch, cross-device sync like any edit):
+ *  - every item goes over with customerItem 'move' (one server write per line: off the source AND into the target together, so a
+ *    failed save never loses or doubles a line; same item already there = qty added). Same item with a different line note: the
+ *    target line keeps one combined note (the app keeps one line per item in a note); different unit price / discount = stop first.
+ *  - photos: customerFileMove; note text: appended to the target with a "— from Note 2 —" separator.
+ *  - the source note is deleted only after a fresh server copy shows it empty and the target holds its text. Anything that
+ *    fails stops the merge with both notes intact (try again = continues). Voice notes belong to the project, not a note: unchanged.
+ *  - Undo: the toast's Undo, or "Undo merge" at the top of the target note's Version history (kept on this phone 7 days). */
+var mergeBusy = false, MG_KEEP = 7 * 86400000;
+function mgOthers(c, n) { return (c && c.notes || []).filter(function (x) { return x.id !== n.id && String(x.id).indexOf('tmp-') !== 0; }); }
+function mgKey(cid) { return 'esMerge:' + (session && session.account || '') + ':' + cid; }
+function mgLoad(cid) { try { var a = JSON.parse(localStorage.getItem(mgKey(cid)) || '[]'); return (Array.isArray(a) ? a : []).filter(function (u) { return u && Date.now() - u.at < MG_KEEP; }); } catch (e) { return []; } }
+function mgSave(cid, a) { try { if (a.length) localStorage.setItem(mgKey(cid), JSON.stringify(a.slice(-5))); else localStorage.removeItem(mgKey(cid)); } catch (e) {} }
+function mergeAsk(c, n, t) {
+  askOk('Merge ' + n.title + ' into ' + t.title + '? ' + n.title + ' will be removed.', { ok: 'Merge' }).then(function (yes) { if (yes) { closeSheet(); mergeNotes(c, n.id, t.id); } });
+}
+function mgSep(title) { return '— from ' + title + ' —'; }
+function mgNoteJoin(a, b) { a = String(a || '').trim(); b = String(b || '').trim(); if (!b || a === b || a.indexOf(b) >= 0) return a; if (!a) return b; return a + '; ' + b; }
+/** Refresh the open project from a server copy (after a merge / undo) and repaint it. */
+function mgAdopt(c0, p) {
+  var c = adoptContacts(p, c0); ['_saveCoolUntil'].forEach(function (k) { if (c0 && c0[k] != null) c[k] = c0[k]; });
+  if (custOpen && custOpen.id === c.id) { custOpen = c; if (noteOpenId && !curNote()) noteOpenId = null; (c.notes || []).forEach(function (n) { delete ordBase[n.id]; ordBase[n.id] = noteOrderKey(n); }); }
+  pcSave(c);
+  if (curCust && curCust.id === c.id) { var cn = noteOf(c.id, curCust.noteId); if (cn) { curCust.count = cn.items.length; curCust.noteTitle = cn.title; curCust.name = custLabel(c); saveCur(); } }
+  if (custOpen === c && $('p-cust').classList.contains('on')) { var y = window.scrollY; renderCustDetail(); window.scrollTo(0, y); }
+  return c;
+}
+function mgFail(c, er, what) { mergeBusy = false; var m = (er && er.message ? er.message + ' ' : '') + what, show = function () { if ($('cdMsg')) msg($('cdMsg'), m); };
+  show(); toastMsg(er && er.message || what);
+  serverApi('customerGet', { id: c.id }).then(function (p) { mgAdopt(c, p); show(); }, function () {}); }
+function mergeNotes(c, srcId, dstId) {
+  if (mergeBusy) return Promise.resolve(false); mergeBusy = true;
+  var src0 = noteOf(c.id, srcId);
+  if (src0 && (src0.photos || []).some(function (f) { return String(f).indexOf('phtmp-') === 0; })) { mergeBusy = false; toast('Photos are still uploading. Try again in a moment.'); return Promise.resolve(false); }
+  toast('Merging…');
+  return drainSaves().then(function (ok) {
+    if (!ok) throw new Error('Not saved yet. Check the connection and try again.');
+    return serverApi('customerGet', { id: c.id });
+  }).then(function (p) {
+    var s = (p.notes || []).filter(function (x) { return x.id === srcId; })[0], t = (p.notes || []).filter(function (x) { return x.id === dstId; })[0];
+    if (!s || !t) throw new Error('That note is gone. Go back and reopen the project.');
+    var ti = t.items || [], si = s.items || [], byName = {}; ti.forEach(function (l) { byName[l.name] = l; });
+    var added = si.filter(function (l) { return !byName[l.name]; }).length, clash = si.filter(function (l) { var x = byName[l.name]; return x && JSON.stringify(lmeta(x)) !== JSON.stringify(lmeta(l)); });
+    if (clash.length) throw new Error(clash[0].name + ' has a different price or discount in the two notes. Make them match first.');
+    if (ti.length + added > 80) throw new Error(t.title + ' would have more than 80 items.');
+    var ph = (t.photos || []).concat((s.photos || []).filter(function (f) { return (t.photos || []).indexOf(f) < 0; }));
+    if (ph.length > 20) throw new Error(t.title + ' would have more than 20 photos.');
+    var sx = String(s.text || '').trim(), tx = String(t.text || ''), newText = sx ? (tx.trim() ? tx.replace(/\s+$/, '') + '\n\n' : '') + mgSep(s.title) + '\n' + sx : tx;
+    if (newText.length > 3000) throw new Error('The two note texts together are too long (over 3000 characters).');
+    // undo record (before anything changes); the target's current version goes into its Version history too
+    var u = { at: Date.now(), cid: c.id, src: JSON.parse(JSON.stringify({ id: s.id, title: s.title, text: s.text || '', items: si, photos: s.photos || [] })),
+      dst: JSON.parse(JSON.stringify({ id: t.id, title: t.title, text: t.text || '', items: ti })), text: newText, wasCur: !!(curCust && curCust.id === c.id && curCust.noteId === srcId) };
+    var all = mgLoad(c.id); all.push(u); mgSave(c.id, all);
+    try { var tl = noteOf(c.id, t.id); if (tl) rememberNoteVersion(tl, true); } catch (e) {}
+    // 1) photos (not batched): one move each; a photo already in the target counts as done
+    return (s.photos || []).reduce(function (pr, f) { return pr.then(function () {
+      if ((t.photos || []).indexOf(f) >= 0) return api('customerFileRemove', { id: c.id, fileId: f, noteId: s.id }).catch(function () {});
+      return api('customerFileMove', { id: c.id, fileId: f, noteId: s.id, toNoteId: t.id }).catch(function (er) { if (!/not found/i.test(er.message || '')) throw er; }); }); }, Promise.resolve())
+    .then(function () {
+      // 2) items + text: all queued at once -> one projBatch, run in this order under one server lock
+      var ops = [];
+      si.forEach(function (l) { var x = byName[l.name];
+        if (x && String(x.note || '') !== String(l.note || '') && noteText(l.note).trim()) {
+          var joined = withMeta(mgNoteJoin(noteText(x.note), noteText(l.note)), lmeta(x));
+          ops.push(api('customerItem', { id: c.id, noteId: t.id, op: 'set', lineId: x.id, qty: x.qty, note: joined }));
+          ops.push(api('customerItem', { id: c.id, noteId: s.id, op: 'set', lineId: l.id, qty: l.qty, note: '' }));
+        }
+        ops.push(api('customerItem', { id: c.id, noteId: s.id, op: 'move', lineId: l.id, toNoteId: t.id }).catch(function (er) { if (!/line is gone/i.test(er.message || '')) throw er; }));
+      });
+      if (sx) ops.push(api('noteSave', { id: c.id, noteId: t.id, title: t.title, text: newText }));
+      return Promise.all(ops);
+    }).then(function () { return serverApi('customerGet', { id: c.id }); })
+    .then(function (p2) {
+      // 3) remove the source only when the server copy shows it emptied into the target
+      var s2 = (p2.notes || []).filter(function (x) { return x.id === srcId; })[0], t2 = (p2.notes || []).filter(function (x) { return x.id === dstId; })[0];
+      if (!t2) throw new Error('That note is gone. Go back and reopen the project.');
+      if (s2 && ((s2.items || []).length || (s2.photos || []).length || (sx && String(t2.text || '').indexOf(sx) < 0))) throw new Error('Not everything moved yet.');
+      return (s2 ? api('noteDelete', { id: c.id, noteId: srcId }).catch(function (er) { if (!/not found|gone/i.test(er.message || '')) throw er; }) : Promise.resolve())
+        .then(function () { return serverApi('customerGet', { id: c.id }); });
+    }).then(function (p3) {
+      mergeBusy = false;
+      var t3 = (p3.notes || []).filter(function (x) { return x.id === dstId; })[0];
+      if (noteOpenId === srcId) noteOpenId = dstId;
+      var cc = mgAdopt(c, p3);
+      if (curCust && curCust.id === c.id && curCust.noteId === srcId && t3) setCur(cc, t3);   // Adding-to follows (and is sent to the other devices)
+      mgCtx(c.id, srcId, cc, t3);
+      toastAct('Merged ' + u.src.title + ' into ' + u.dst.title, 'Undo', function () { mergeUndo(c.id, u.at); }, 10000);
+      return true;
+    });
+  }).catch(function (er) { mgFail(c, er, 'Nothing was lost: both notes are kept as they are on the server. Try again.'); return false; });
+}
+/** Another device whose "Adding to" was the merged note: the shared working context moves to the target (resume.js follows it). */
+function mgCtx(cid, srcId, c, t) {
+  if (!t || !window.ESRES) return;
+  serverApi('userCtx', {}).then(function (r) { var x = r && r.ctx; if (!x || x.p !== cid || x.n !== srcId) return;
+    return serverApi('userCtx', { set: { p: cid, n: t.id, pl: projLabel(c).slice(0, 80), nl: String(t.title || '').slice(0, 80), d: ESRES._dev() } }); }).catch(function () {});
+}
+/** Undo a merge: the removed note comes back (new id, same title, text, items, photos); the target gets its old qty / notes / text. */
+function mergeUndo(cid, at) {
+  var all = mgLoad(cid), u = all.filter(function (x) { return x.at === at; })[0], c = custOpen && custOpen.id === cid ? custOpen : null;
+  if (!u || mergeBusy) return Promise.resolve(false); mergeBusy = true; toast('Undoing…');
+  return drainSaves().then(function () { return serverApi('customerGet', { id: cid }); }).then(function (p) {
+    var t = (p.notes || []).filter(function (x) { return x.id === u.dst.id; })[0]; if (!t) throw new Error('That note is gone. Go back and reopen the project.');
+    return api('noteSave', { id: cid, title: u.src.title, text: u.src.text }).then(function (r) {
+      var nid = r.note.id, before = {}, ops = []; (u.dst.items || []).forEach(function (l) { before[l.name] = l; });
+      var now = {}; (t.items || []).forEach(function (l) { now[l.name] = l; });
+      u.src.items.forEach(function (l) { var x = now[l.name], b = before[l.name]; if (!x) return;
+        if (!b) ops.push(api('customerItem', { id: cid, noteId: t.id, op: 'move', lineId: x.id, toNoteId: nid }));
+        else { ops.push(api('customerItem', { id: cid, noteId: t.id, op: 'set', lineId: x.id, qty: Math.max(1, x.qty - l.qty), note: b.note || '' }));
+          ops.push(api('customerItem', { id: cid, noteId: nid, op: 'add', line: { name: l.name, desc: l.desc || '', qty: l.qty, photo: l.photo || '', note: l.note || '' } })); } });
+      if (String(t.text || '') === u.text) ops.push(api('noteSave', { id: cid, noteId: t.id, title: t.title, text: u.dst.text }));
+      return Promise.all(ops).then(function () {
+        return u.src.photos.reduce(function (pr, f) { return pr.then(function () { if ((t.photos || []).indexOf(f) < 0) return;
+          return api('customerFileMove', { id: cid, fileId: f, noteId: t.id, toNoteId: nid }).catch(function () {}); }); }, Promise.resolve());
+      }).then(function () { return serverApi('customerGet', { id: cid }); }).then(function (p2) {
+        mergeBusy = false; mgSave(cid, mgLoad(cid).filter(function (x) { return x.at !== at; }));
+        var cc = c ? mgAdopt(c, p2) : p2, n2 = (p2.notes || []).filter(function (x) { return x.id === nid; })[0];
+        if (!c) pcSave(p2);
+        if (u.wasCur && n2 && curCust && curCust.id === cid && curCust.noteId === u.dst.id) setCur(cc, n2);
+        toast('Merge undone: ' + u.src.title + ' is back'); return true;
+      });
+    });
+  }).catch(function (er) { mergeBusy = false; toast(er.message || 'Could not undo'); return false; });
+}
+/** Toast with one action button (Undo). Same spot as toast(); stays a bit longer. */
+function toastAct(t, label, fn, ms) {
+  var d = document.createElement('div'); d.className = 'tact';
+  d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 6px 6px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:92%;display:flex;align-items:center;gap:10px;white-space:nowrap';
+  var s = document.createElement('span'); s.textContent = t; s.style.cssText = 'overflow:hidden;text-overflow:ellipsis';
+  var b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.style.cssText = 'border:0;background:#fff;color:#111827;font:inherit;font-weight:700;border-radius:999px;padding:4px 12px;cursor:pointer';
+  var gone = false, close = function () { if (gone) return; gone = true; slideOut(d, 'translateX(-50%)'); };
+  b.onclick = function () { close(); fn(); };
+  d.appendChild(s); d.appendChild(b); document.body.appendChild(d); slideIn(d, 'translateX(-50%)'); setTimeout(close, ms || 8000);
+}
 /** Copy the notes passed (and their photos when the server returns none), then drop the empty starter note. */
 function cloneNotesInto(srcId, notes, toId, blankId) {
   var rest = (notes || []).slice(), out = [], src = { id: srcId };
@@ -3693,13 +3832,17 @@ function versionPreview(h, i) {
 }
 function openNoteHistory(c, n) {
   var list = loadHist(n.id); histOpen = { c: c, n: n, list: list };
-  var head = '<h3>Version history</h3><div class="hint notr" style="margin:0 0 8px">' + esc(n.title) + '</div>';
-  if (!list.length) { openSheet(head + '<div class="empty">No saved versions yet. A version is kept on this phone each time the note saves.</div>'); return; }
+  var mg = mgLoad(c.id).filter(function (u) { return u.dst.id === n.id; }).reverse();   // 20261017j: merges into this note can be undone here
+  var head = '<h3>Version history</h3><div class="hint notr" style="margin:0 0 8px">' + esc(n.title) + '</div>' + mg.map(function (u) {
+    return '<button class="crow2" data-mgundo="' + u.at + '"><b>Undo merge of <span class="notr">' + esc(u.src.title) + '</span></b><span class="s notr">' + esc(histWhen(u.at)) + '</span></button>'; }).join('');
+  if (!list.length) { openSheet(head + '<div class="empty">No saved versions yet. A version is kept on this phone each time the note saves.</div>');
+    $('sheetBody').onclick = function (e) { var m = e.target.closest('[data-mgundo]'); if (m) { closeSheet(); mergeUndo(c.id, +m.dataset.mgundo); } }; return; }
   openSheet(head + '<div class="hint" style="margin:0 0 8px">Kept on this phone, last 20 saves.</div>' + list.map(function (s, i) {
     var cnt = (s.items || []).length, ph = (s.photos || []).length;
     return '<button class="crow2" data-hv="' + i + '"><b class="notr">' + esc(histWhen(s.at)) + '</b><span class="s">' + cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + '</span></button>';
   }).join(''));
-  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-hv]'); if (!b || !histOpen) return; versionPreview(histOpen, +b.dataset.hv); };
+  $('sheetBody').onclick = function (e) { var m = e.target.closest('[data-mgundo]'); if (m) { closeSheet(); mergeUndo(c.id, +m.dataset.mgundo); return; }
+    var b = e.target.closest('[data-hv]'); if (!b || !histOpen) return; versionPreview(histOpen, +b.dataset.hv); };
 }
 function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
@@ -4582,7 +4725,7 @@ function pzReset() { photoScale = 1; photoTx = 0; photoTy = 0; pzPinch = null; p
 function pzDist(a, b) { var dx = a.clientX - b.clientX, dy = a.clientY - b.clientY; return Math.sqrt(dx * dx + dy * dy); }
 // ---- spec sheet / install guide links (bundle.docs from doc-links.csv: {code: [spec_url, install_url]}) under the zoomed photo (20261016d)
 function docsOf(name) { var m = localData && localData.docs; return (name && m && m[name]) || null; }
-function thumbName(im) { var c = im.closest('[data-name]'); if (c) return c.getAttribute('data-name');
+function thumbName(im) { var c = im.closest('[data-name]'); if (c) { var v = c.getAttribute('data-name'); try { v = decodeURIComponent(v); } catch (e) {} return v; }
   var l = im.closest('.lhead'); var b = l && l.querySelector('.lnm'); return b ? b.textContent : ''; }
 function renderZoomDocs(name) { var box = $('photoZoomDocs'); if (!box) return; var d = docsOf(name), h = '';
   if (d && /^https:\/\//.test(d[0] || '')) h += '<a href="' + esc(d[0]) + '" target="_blank" rel="noopener">Spec sheet</a>';
