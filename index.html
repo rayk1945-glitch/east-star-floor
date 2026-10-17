@@ -220,7 +220,7 @@
   .nchip.on { background:var(--accent); color:#fff; border-color:var(--accent); }
   .ntitle:focus { box-shadow:none; border-bottom-color:#475569; }
   .nph { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; align-items:flex-start; } .nph img, .nph .ld { width:72px; height:72px; border-radius:10px; object-fit:cover; background:#eef0f3; cursor:pointer; display:block; }
-  .nphi { width:72px; } .scanbtn { appearance:none; -webkit-appearance:none; display:block; width:100%; margin-top:3px; border:1px solid var(--line-strong); background:#fff; color:var(--text); border-radius:8px; padding:3px 2px; font:inherit; font-size:10px; font-weight:700; line-height:1.15; min-height:32px; cursor:pointer; }
+  .nphi { width:72px; } .nphi.pend img { opacity:.55; } .scanbtn { appearance:none; -webkit-appearance:none; display:block; width:100%; margin-top:3px; border:1px solid var(--line-strong); background:#fff; color:var(--text); border-radius:8px; padding:3px 2px; font:inherit; font-size:10px; font-weight:700; line-height:1.15; min-height:32px; cursor:pointer; }
   .scanrow { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); cursor:pointer; }
   .scanrow input { width:22px; height:22px; margin-top:2px; flex:none; } .scanrow b { display:block; font-size:15px; word-break:break-word; } .scanrow span span { display:block; font-size:12.5px; color:var(--muted); }
   .scanqs { display:flex; flex-wrap:wrap; gap:6px; } .scanq { min-height:36px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
@@ -632,8 +632,9 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017c"></script>
-<script src="i18n.js?v=20261017c"></script>
+<script src="sync.js?v=20261017d"></script>
+<script src="i18n.js?v=20261017d"></script>
+<script src="photoq.js?v=20261017d"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -691,7 +692,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017c';
+var PAGE_VER = '20261017d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -775,7 +776,7 @@ window.addEventListener('pagehide', function () {
 });
 
 function warmUp() { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: '{"action":"ping"}' }).catch(function () {}); }   // wakes Apps Script while the PIN is typed
-function signedOut() { clearIdleClose(); hSel = {}; if (typeof renderHSelBar === 'function') renderHSelBar(); var nr = $('navReported'); if (nr) nr.classList.add('hidden'); document.body.classList.remove('rmon'); rmList = []; wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
+function signedOut() { clearIdleClose(); hSel = {}; if (typeof renderHSelBar === 'function') renderHSelBar(); var nr = $('navReported'); if (nr) nr.classList.add('hidden'); document.body.classList.remove('rmon'); rmList = []; wipeLocalData(); clearTimeout(priceTimer); localStorage.removeItem(PEXP_KEY); session = null; curCust = null; custOpen = null; pqMem = {}; pqLoaded = false; localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem('esRedLastQ'); show('signin'); pkSigninShow(); }
 
 // ---------------- navigation
 function go(p, quiet) {
@@ -805,7 +806,7 @@ function enterApp() {
   show('app'); setHeader(session); initAppBack(); touchIdle();
   if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
-  checkData(); initOutbox();
+  checkData(); initOutbox(); setTimeout(pqKick, 0);
   sizeChrome(); setTimeout(a2hsShow, 1500);
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
@@ -1701,7 +1702,7 @@ function openShare(c) {
         .catch(function (er) { msg($('shMsg'), er.message); b.disabled = false; }); };
   }).catch(function (er) { if ($('shList')) $('shList').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
-function renderCustDetail() { renderOverview(); }
+function renderCustDetail() { pqAdopt(custOpen); renderOverview(); }
 /** The small line under the note header: "+ Add contact info" until something is filled in, then "Contact: phone · email · city". */
 function infoLinkText(c) {
   var list = projectContacts(c), has = list.some(contactHas) || String(c.city || '').trim() || c.tax === 'Fremont', bits = [];
@@ -2025,7 +2026,7 @@ function totalsHtmlRO(n) { var it = n.items || []; if (!it.length || !priceState
 function photosHtmlRO(n) { var ps = n.photos || []; if (!ps.length) return '<span class="hint" style="margin:0">No photos yet.</span>';
   return ps.map(function (f) { return fileCache[f] ? '<span class="nphi"><img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo"></span>' : '<span class="nphi"><span class="ld" data-rofid="' + esc(f) + '"></span></span>'; }).join(''); }
 function loadRoPhotos() { var c = custOpen; if (!c) return;
-  document.querySelectorAll('#cdNotes .nphro .ld[data-rofid]').forEach(function (s) { var f = s.dataset.rofid;
+  document.querySelectorAll('#cdNotes .nphro .ld[data-rofid]').forEach(function (s) { var f = s.dataset.rofid; if (String(f).indexOf('phtmp-') === 0) return;
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); }); }
 function noteRoHtml(n, isCur, pill) { var cnt = (n.items || []).length;
   return '<div class="card ngroup open nro' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
@@ -2475,9 +2476,9 @@ function renderNotePhotos() { var n = curNote(), el = $('nPhotos'); if (!el || !
   $('nPhH').textContent = 'Photos' + (ps.length ? ' (' + ps.length + ')' : '');
   el.innerHTML = ps.length ? ps.map(function (f) {
     var pic = fileCache[f] ? '<img src="' + fileCache[f] + '" data-fid="' + esc(f) + '" alt="photo">' : '<span class="ld" data-fid="' + esc(f) + '"></span>';
-    return '<span class="nphi">' + pic + '<button type="button" class="scanbtn" data-scan="' + esc(f) + '">Scan for model #</button></span>';
+    return '<span class="nphi' + (String(f).indexOf('phtmp-') === 0 ? ' pend' : '') + '">' + pic + '<button type="button" class="scanbtn" data-scan="' + esc(f) + '">Scan for model #</button></span>';
   }).join('') : '<span class="hint" style="margin:0">No photos yet.</span>';
-  var c = custOpen; el.querySelectorAll('.ld[data-fid]').forEach(function (s) { var f = s.dataset.fid;
+  var c = custOpen; el.querySelectorAll('.ld[data-fid]').forEach(function (s) { var f = s.dataset.fid; if (String(f).indexOf('phtmp-') === 0) return;
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); });
   $('nPhotos').querySelectorAll('img[data-fid]').forEach(function () {}); }
 document.addEventListener('click', function (e) { var img = e.target.closest('#nPhotos img[data-fid]'); if (!img) return; var n = curNote(), c = custOpen, f = img.dataset.fid;
@@ -2486,7 +2487,7 @@ document.addEventListener('click', function (e) { var img = e.target.closest('#n
     movePhoto(f, b.dataset.phmv).then(closeSheet, function (er) { msg($('phMsg'), er.message); $('sheetBody').querySelectorAll('.mvbtn').forEach(function (x) { x.disabled = false; }); }); };
   $('phDel').onclick = function () { this.disabled = true;
     n.photos = (n.photos || []).filter(function (x) { return x !== f; }); closeSheet(); renderNotePhotos(); toast('Photo removed');
-    if (String(f).indexOf('phtmp-') === 0) { delete saveQ['phadd:' + f]; scheduleAutosave(); return; }
+    if (String(f).indexOf('phtmp-') === 0) { pqCancel(f); return; }
     autoSave('phrm:' + f, function () {
       return api('customerFileRemove', { id: c.id, fileId: f, noteId: n.id }).catch(function (er) {
         if (/not found|gone/i.test(er.message || '')) return; throw er;
@@ -2514,20 +2515,8 @@ function uploadNotePhotos(files) { var c = custOpen, n = curNote(); if (!c || !n
       fileCache[tmp] = d.data; if (typeof keepPhotoBlob === 'function') keepPhotoBlob(tmp, d.data);
       n.photos = (n.photos || []).concat([tmp]);
       queued.push(tmp);
-      autoSave('phadd:' + tmp, function () {
-        return api('customerFileAdd', { id: c.id, noteId: n.id, kind: 'photo', file: d }).then(function (r) {
-          if (r && r.fileId) { fileCache[r.fileId] = d.data; if (typeof keepPhotoBlob === 'function') keepPhotoBlob(r.fileId, d.data); }
-          var pending = (n.photos || []).filter(function (x) { return String(x).indexOf('phtmp-') === 0 && x !== tmp; });
-          if (r && r.photos) n.photos = r.photos.concat(pending);
-          else n.photos = (n.photos || []).map(function (x) { return x === tmp ? r.fileId : x; });
-          if (r && r.note) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }
-          if (noteOpenId === n.id) renderNotePhotos();
-          if (r && r.fileId) scanNotePhotos([r.fileId], c.id, n.id);
-          rememberNoteVersion(n);
-          return r;
-        });
-      });
-      ok++;
+      // 20261017d: stored on the phone first (photo upload queue), then sent; survives backing out of the app / reloads
+      return pqAdd(c, n, tmp, d).then(function () { pqQueue(tmp); ok++; });
     }, function (er) { fail++; n._phErr = er.message; });
     phPending.push(p);
     p.then(function () { phPending = phPending.filter(function (x) { return x !== p; }); }, function () { phPending = phPending.filter(function (x) { return x !== p; }); });
@@ -2551,8 +2540,111 @@ document.addEventListener('paste', function (e) { if (!custOpen || !noteOpenId |
   if (typing && cd.getData && cd.getData('text/plain')) return;
   e.preventDefault(); fs = fs.map(function (f, i) { return f.name && f.name !== 'image.png' ? f : new File([f], 'pasted-' + Date.now() + '-' + i + '.' + ((f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: f.type }); });
   uploadNotePhotos(fs); });
+/** Photo upload queue (photoq.js + sw.js, 20261017d). A new note photo is stored on the phone (IndexedDB) before it is sent,
+ *  shows in the note as pending (faded) until the server has it, and is retried on app open, return to the app (visible /
+ *  pageshow) and when back online. Android Chrome: Background Sync in sw.js keeps sending while the app is closed or in the
+ *  background; leaving the app also hands the queue to sw.js. One send at a time per photo (queue lease), never twice. */
+var pqMem = {}, pqLoaded = false, PQ_OWNER = 'page-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pqReg = null;
+function pqOn() { return !!(window.PQ && PQ.ok && window.indexedDB); }
+function pqApiUrl() { return /^https?:/i.test(API_URL) ? API_URL : location.origin + API_URL; }
+function pqSyncReg() { if (!pqReg) return; try { if (pqReg.sync && pqReg.sync.register) pqReg.sync.register('photoq').catch(function () {}); } catch (e) {} }
+function pqHandoff() { if (!pqReg || !pqReg.active || !Object.keys(pqMem).some(function (u) { return pqMem[u].state !== 'done'; })) return;
+  pqSyncReg(); try { pqReg.active.postMessage({ type: 'photoq-drain' }); } catch (e) {} }
+function pqAdd(c, n, uid, d) {
+  var e = { uid: uid, custId: c.id, noteId: n.id, user: session && session.name, token: session && session.token, api: pqApiUrl(), data: d.data, mime: d.mimeType || 'image/jpeg',
+    before: (n.photos || []).filter(function (f) { return String(f).indexOf('phtmp-') !== 0; }), at: Date.now(), state: 'pending', tries: 0 };
+  pqMem[uid] = e;
+  if (!pqOn()) return Promise.resolve();
+  return PQ.put(e).catch(function () {});
+}
+function pqNote(c, id) { return c && (c.notes || []).filter(function (x) { return x.id === id; })[0]; }
+/** The server has the photo (e.fileId, attached to e.noteId): put the real id in the note, honour a remove / move done while it was pending. */
+function pqApply(e, live) {
+  var fid = e.fileId, r = e.result || {}, c = custOpen && custOpen.id === e.custId ? custOpen : null;
+  if (e.data) { fileCache[fid] = e.data; keepPhotoBlob(fid, e.data); }
+  delete pqMem[e.uid]; if (pqOn()) PQ.ack(e.uid).catch(function () {});
+  var cid = e.custId;
+  if (e.cancel) { autoSave('phrm:' + fid, function () { return api('customerFileRemove', { id: cid, fileId: fid, noteId: e.noteId }).catch(function (er) { if (/not found|gone/i.test(er.message || '')) return; throw er; }); }); }
+  else if (e.moveTo && e.moveTo !== e.noteId) { var from = e.noteId, to = e.moveTo;
+    autoSave('phmv:' + fid, function () { return api('customerFileMove', { id: cid, fileId: fid, noteId: from, toNoteId: to }).then(function (x) {
+      var cc = custOpen && custOpen.id === cid ? custOpen : null; if (!cc) return;
+      var a = pqNote(cc, from), b = pqNote(cc, x.toNoteId); if (a) a.photos = x.photos; if (b) b.photos = x.toPhotos; renderNotePhotos(); renderNoteCards(); }); }); }
+  if (!c) return;
+  var home = pqNote(c, e.noteId), dest = e.cancel ? null : pqNote(c, e.moveTo || e.noteId);
+  (c.notes || []).forEach(function (x) { if ((x.photos || []).indexOf(e.uid) >= 0) x.photos = x.photos.map(function (p) { return p === e.uid ? (x === dest ? fid : null) : p; }).filter(Boolean); });
+  if (live && home && home === dest && r.photos) { var pend = (home.photos || []).filter(function (p) { return String(p).indexOf('phtmp-') === 0; }); home.photos = r.photos.concat(pend); }
+  if (dest && (dest.photos || []).indexOf(fid) < 0) dest.photos = (dest.photos || []).concat([fid]);
+  if (home && r.note) { home.updated = r.note.updated; home.updated_by = r.note.updated_by; }
+  if (home) rememberNoteVersion(home);
+  if (noteOpenId) renderNotePhotos();
+}
+function pqFailed(e) { delete pqMem[e.uid]; if (pqOn()) PQ.del(e.uid).catch(function () {});
+  var c = custOpen; if (c) (c.notes || []).forEach(function (x) { if ((x.photos || []).indexOf(e.uid) >= 0) x.photos = x.photos.filter(function (p) { return p !== e.uid; }); });
+  if (!e.cancel) toastMsg('A photo could not be saved: ' + (e.err || 'unknown error')); if (noteOpenId) renderNotePhotos(); }
+/** The save job for one queued photo (runs in the normal save queue, so "Saving…" / "Not saved, tap to retry" show as before). */
+function pqJob(uid) {
+  var e0 = pqMem[uid]; if (!e0) return Promise.resolve();
+  var tn = String(e0.noteId).indexOf('tmp-') === 0 && tmpNotes[e0.noteId];
+  var ready = tn ? tn.then(function (id) { e0.noteId = id; return pqOn() ? PQ.update(uid, function (x) { x.noteId = id; return x; }) : null; }) : Promise.resolve();
+  if (!pqOn()) return ready.then(function () { var c = custOpen && custOpen.id === e0.custId ? custOpen : { id: e0.custId };   // no IndexedDB: send straight away (old behaviour)
+    return api('customerFileAdd', { id: e0.custId, noteId: e0.noteId, kind: 'photo', file: { data: e0.data, mimeType: e0.mime } }).then(function (r) {
+      e0.fileId = r.fileId; e0.result = r; e0.state = 'done'; pqApply(e0, true); return r; }); });
+  return ready.then(function () { return PQ.wait(uid, PQ_OWNER); }).catch(function (er) { pqSyncReg(); throw er; }).then(function (e) {   // failed try: Background Sync sends it when the connection is back
+    if (e.gone || !pqMem[uid]) { delete pqMem[uid]; return; }
+    if (e.state === 'done') { var m = pqMem[uid]; if (m) { e.cancel = e.cancel || m.cancel; e.moveTo = e.moveTo || m.moveTo; } pqApply(e, true); return e.result; }
+    if (e.state === 'failed') pqFailed(e);
+  });
+}
+function pqQueue(uid) { if (saveQ['phadd:' + uid] || saveRun['phadd:' + uid]) return; autoSave('phadd:' + uid, function () { return pqJob(uid); }); }
+/** Remove a photo that is still pending: drop it from the queue, or (already on its way) remove it once the server has it. */
+function pqCancel(uid) { delete saveQ['phadd:' + uid]; var m = pqMem[uid]; if (m) m.cancel = true; scheduleAutosave();
+  if (!pqOn()) { delete pqMem[uid]; return; }
+  PQ.update(uid, function (x) { x.cancel = true; return x; }).then(function (x) {
+    if (x && x.state === 'pending' && !x.sent) { delete pqMem[uid]; return PQ.del(uid); }
+    if (x && x.state === 'done') { var cc = Object.assign({}, x, { cancel: true }); pqApply(cc, false); }
+    else if (x) pqQueue(uid); }).catch(function () {}); }
+/** Move a pending photo to another note: retarget it while unsent, else move it on the server once it is there. */
+function pqMove(uid, toNote) { var m = pqMem[uid]; if (!m) return;
+  if (!pqOn()) { m.noteId = toNote.id; return; }
+  PQ.update(uid, function (x) { if (x.state === 'pending' && !x.sent) { x.noteId = toNote.id; x.before = (toNote.photos || []).filter(function (f) { return String(f).indexOf('phtmp-') !== 0; }); x.moveTo = null; } else x.moveTo = toNote.id; return x; })
+    .then(function (x) { if (!x) return; m.noteId = x.noteId; m.moveTo = x.moveTo; if (x.state === 'done') pqApply(x, false); }).catch(function () {}); }
+/** Show this project's queued photos in their notes (after a reload / server refresh) and finish ones the service worker sent. */
+function pqAdopt(c) { if (!c || !c.notes || !pqLoaded) return;
+  c.notes.forEach(function (n) { if (n.photos && n.photos.some(function (p) { return String(p).indexOf('phtmp-') === 0 && !pqMem[p]; })) n.photos = n.photos.filter(function (p) { return String(p).indexOf('phtmp-') !== 0 || pqMem[p]; }); });
+  Object.keys(pqMem).forEach(function (uid) { var e = pqMem[uid]; if (e.custId !== c.id) return;
+    if (e.state === 'done' && e.fileId) { setTimeout(function () { if (pqMem[uid]) pqApply(e, false); }, 0); return; }
+    if (e.cancel) return;
+    var n = pqNote(c, e.moveTo || e.noteId); if (!n) return;
+    if (e.data && !fileCache[uid]) fileCache[uid] = e.data;
+    if ((n.photos || []).indexOf(uid) < 0) n.photos = (n.photos || []).concat([uid]); });
+}
+/** Re-read the queue (the service worker may have sent some), then send what is left. On app open, visible, pageshow, online. */
+var pqLoadP = null;
+function pqLoad() { if (!pqOn() || !session) return Promise.resolve(); if (pqLoadP) return pqLoadP;
+  pqLoadP = PQ.prune().catch(function () {}).then(function () { return PQ.retoken(session.name, session.token); }).then(function () { return PQ.all(); }).then(function (list) {
+    var mine = {}; list.forEach(function (e) { if (e.state === 'acked' || (e.user && e.user !== session.name)) return; mine[e.uid] = 1;
+      var m = pqMem[e.uid]; if (m && m.cancel && !e.cancel) e.cancel = true; pqMem[e.uid] = e; if (e.data && !fileCache[e.uid]) fileCache[e.uid] = e.data; });
+    Object.keys(pqMem).forEach(function (u) { if (!mine[u] && !saveRun['phadd:' + u] && !saveQ['phadd:' + u] && Date.now() - (pqMem[u].at || 0) > 15000) delete pqMem[u]; });
+    pqLoaded = true;
+    Object.keys(pqMem).forEach(function (uid) { var e = pqMem[uid];
+      if (String(e.noteId).indexOf('tmp-') === 0 && !tmpNotes[e.noteId]) { e.err = 'its note was never saved'; pqFailed(e); return; }
+      if (e.state === 'failed') { pqFailed(e); return; }
+      if (e.state === 'done') { if (!custOpen || custOpen.id !== e.custId) { if (e.data) keepPhotoBlob(e.fileId, e.data); delete pqMem[uid]; PQ.ack(uid).catch(function () {}); } return; }
+      pqQueue(uid); });
+    if (custOpen && custOpen.notes) { pqAdopt(custOpen); if ($('cdNotes')) { keepTyped(); renderNoteCards(); } if (noteOpenId) renderNotePhotos(); }
+  }).catch(function () {}).then(function () { pqLoadP = null; });
+  return pqLoadP; }
+function pqKick() { if (session) pqLoad(); }
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (r) { pqReg = r; return navigator.serviceWorker.ready; }).then(function (r) { pqReg = r; }).catch(function () {});
+  navigator.serviceWorker.addEventListener('message', function (ev) { if (ev.data && ev.data.type === 'photoq') pqKick(); });
+}
+document.addEventListener('visibilitychange', function () { if (document.hidden) pqHandoff(); else pqKick(); });
+window.addEventListener('pageshow', function (ev) { if (ev.persisted) pqKick(); });
+window.addEventListener('online', pqKick);
+window.addEventListener('pagehide', function () { if (!pqOn() || !Object.keys(pqMem).length) return; PQ.keepaliveSmall(PQ_OWNER + '-hide'); pqHandoff(); });
 /** On-device model-number scan (Tesseract.js, loaded from a CDN only when a photo is scanned). No API key.
- *  New photos (camera, upload, paste, drop) scan after they save; each thumbnail also has Scan for model #. */
+ *  Runs only when Scan for model # under a photo is tapped (20261017d: new photos no longer scan on their own). */
 var scanSeq = 0, scanWant = 0, scanJob = null, ocrWorker = null, ocrLoad = null, ocrChain = Promise.resolve(), ocrOnProg = null;
 var SCAN_NORM_ = null, SCAN_NORM_VER_ = null;
 $('sheetX').addEventListener('click', function () { scanWant = 0; });
@@ -2788,21 +2880,7 @@ function movePhoto(f, toId) { var c = custOpen, n = curNote();
     // still queued for add — retarget the pending upload
     n.photos = (n.photos || []).filter(function (x) { return x !== f; });
     t.photos = (t.photos || []).concat([f]);
-    var fn = saveQ['phadd:' + f];
-    if (fn) {
-      autoSave('phadd:' + f, function () {
-        // re-read held shrink data by re-calling original would be hard — instead FileAdd to dest noteId
-        return api('customerFileAdd', { id: c.id, noteId: t.id, kind: 'photo', file: { data: fileCache[f], mimeType: ((String(fileCache[f] || '').match(/^data:([^;]+)/) || [])[1] || 'image/jpeg') } }).then(function (r) {
-          if (r && r.fileId) { fileCache[r.fileId] = fileCache[f]; }
-          var pending = (t.photos || []).filter(function (x) { return String(x).indexOf('phtmp-') === 0 && x !== f; });
-          if (r && r.photos) t.photos = r.photos.concat(pending);
-          else t.photos = (t.photos || []).map(function (x) { return x === f ? r.fileId : x; });
-          if (r && r.note) { t.updated = r.note.updated; t.updated_by = r.note.updated_by; }
-          if (custOpen === c) { renderNotePhotos(); renderNoteCards(); }
-          return r;
-        });
-      });
-    }
+    pqMove(f, t);   // 20261017d: the queued upload goes to the new note (or is moved there once sent)
     renderNotePhotos(); renderNoteCards(); toast('Photo moved to ' + t.title);
     return Promise.resolve();
   }
