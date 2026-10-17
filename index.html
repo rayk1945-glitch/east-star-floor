@@ -474,6 +474,36 @@
   .cfm .cfmbtns { display:flex; gap:10px; } .cfm .cfmbtns .btn { flex:1; margin:0; }
   .cfm .cfmbtns .btn.sec2 { background:#fff; color:#111; border:1px solid var(--line-strong); }
   .cfm .cfmbtns .btn.danger { background:#b42318; border-color:#b42318; color:#fff; }
+
+  /* ---- 20261017b motion (Ray: "Everywhere things open and close"): transform/opacity, ~180-250ms ease-out. Height expand/collapse
+     runs in JS (animSet / animFrom / animOut: measured height, WAAPI). No layout change, nothing animates while typing/searching. ---- */
+  :root { --ae:cubic-bezier(.2,.8,.2,1); --ad:.22s; --adc:.18s; --adt:.16s; --adp:.3s; --adl:.35s; }
+  @media (prefers-reduced-motion: reduce) { :root { --ad:0s; --adc:0s; --adt:0s; --adp:0s; --adl:0s; } }
+  .sheet-bg { display:block; opacity:0; visibility:hidden; pointer-events:none; transition:opacity var(--adc) var(--ae), visibility 0s linear var(--adc); }
+  .sheet-bg.on { opacity:1; visibility:visible; pointer-events:auto; transition:opacity var(--ad) var(--ae), visibility 0s; }
+  .sheet { opacity:0; pointer-events:none; transition:transform var(--adc) var(--ae), opacity var(--adc) var(--ae), visibility 0s linear var(--adc); }
+  .sheet.on { opacity:1; pointer-events:auto; transition:transform var(--ad) var(--ae), opacity var(--ad) var(--ae), visibility 0s; }
+  .sheet.cfm { transform:translateY(8px) scale(.95); transform-origin:50% 100%; } .sheet.cfm.on { transform:none; }
+  @keyframes aFade { from { opacity:0; } }
+  @keyframes aZoom { from { opacity:0; transform:scale(.94); } }
+  @keyframes aUp { from { opacity:0; transform:translateY(12px); } }
+  @keyframes aDrop { from { opacity:0; transform:translateY(-6px); } }
+  @keyframes aUpX { from { opacity:0; transform:translate(-50%, 12px); } to { opacity:1; transform:translateX(-50%); } }
+  #photoZoom.on { animation:aFade var(--ad) var(--ae); } #photoZoom.on .stage { animation:aZoom var(--ad) var(--ae); }
+  #photoZoom.pzout { opacity:0; transition:opacity var(--adc) var(--ae); } #photoZoom.pzout .stage { transform:scale(.95); transition:transform var(--adc) var(--ae); }
+  .page.on { animation:aFade var(--adt) var(--ae); }
+  .savest:not(.hidden), .hselbar:not(.hidden) { animation:aUpX var(--ad) var(--ae); }
+  #a2hs { animation:aUp var(--ad) var(--ae); }
+  .msg:not(.hidden), .pbar:not(.hidden), .revbar:not(.hidden) { animation:aDrop var(--ad) var(--ae); }
+  /* "grow" success pop (Ray 2026-10-17): the WHOLE item box (search card, note line, Accessories row) lifts as an overlay, 1 -> 1.05 -> 1,
+     springy ~350ms, above its neighbours (z-index + shadow), no layout change, no green halo; a faint light tint only. Same pop on a moved note line. */
+  @keyframes aBump { 0% { transform:scale(1); } 45% { transform:scale(1.35); } 100% { transform:scale(1); } }
+  @keyframes aLift { 0% { transform:scale(1); box-shadow:0 0 0 rgba(15,23,42,0); filter:brightness(1); }
+    40% { transform:scale(1.05); box-shadow:0 14px 30px rgba(15,23,42,.22), 0 3px 8px rgba(15,23,42,.12); filter:brightness(1.035); }
+    100% { transform:scale(1); box-shadow:0 0 0 rgba(15,23,42,0); filter:brightness(1); } }
+  .addok { position:relative; z-index:6; animation:aLift var(--adl) cubic-bezier(.34,1.56,.64,1); transform-origin:50% 50%; }
+  .pline.addok, .accrow.addok { background:#fff; border-radius:10px; }
+  .badge.bump { animation:aBump var(--adp) cubic-bezier(.34,1.56,.64,1); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -600,8 +630,8 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017a"></script>
-<script src="i18n.js?v=20261017a"></script>
+<script src="sync.js?v=20261017b"></script>
+<script src="i18n.js?v=20261017b"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -659,7 +689,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017a';
+var PAGE_VER = '20261017b';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -830,7 +860,7 @@ function pkMaybeOffer() { var p = pkSaved(); if (!session || (p && p.key === ses
       .then(function (c) { return serverApi('passkeyRegister', { id: bufB64u(c.rawId), clientDataJSON: bufB64u(c.response.clientDataJSON), attestationObject: bufB64u(c.response.attestationObject), device: pkDevice() }); })
       .then(function (r) { localStorage.setItem(PK_KEY, JSON.stringify({ id: r.id, name: session.name, key: session.name })); closeSheet(); toastMsg('Fingerprint / Face ID is on for this phone.'); })
       .catch(function (er) { msg($('pkMsg'), pkErr(er)); b.disabled = false; }); }; }); }
-function toastMsg(t) { var d = document.createElement('div'); d.className = 'msg ok'; d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:99'; d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+function toastMsg(t) { var d = document.createElement('div'); d.className = 'msg ok'; d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:99'; d.textContent = t; document.body.appendChild(d); slideIn(d, ''); setTimeout(function () { slideOut(d, ''); }, 3500); }
 // ---------------- Change my password (every login, admin included): current + new twice; the server checks the current one
 $('pwBtn').onclick = function () {
   openSheet('<h3>Change my password</h3><p class="hint">At least 6 characters. Letters, numbers, spaces and symbols are all OK.</p>' +
@@ -844,6 +874,56 @@ $('pwBtn').onclick = function () {
 $('pcBtn').onclick = function () { api('changePin', { oldPin: $('pcOld').value, pin: $('pcNew').value, pin2: $('pcNew2').value }).then(function () { session.mustChangePin = false; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); ['pcOld', 'pcNew', 'pcNew2'].forEach(function (i) { $(i).value = ''; }); pkOffer = true; enterApp(); }).catch(function (er) { msg($('pcMsg'), er.message); }); };
 
 // ---------------- sheet
+// ---- 20261017b motion helpers. Everything is WAAPI on transform/opacity/height, never blocks input, and is skipped for prefers-reduced-motion.
+var MOTION_RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null, MOTION_E = 'cubic-bezier(.2,.8,.2,1)';
+function motionOff() { return !!(MOTION_RM && MOTION_RM.matches) || !Element.prototype.animate; }
+function hAnim(box, h0, h1, done) {   // height h0 -> h1 (fill kept until done() ran, so there is no one-frame jump)
+  var kf = [{ height: h0 + 'px' }, { height: h1 + 'px' }];
+  if (h0 < 1) { kf[0].opacity = 0; kf[1].opacity = 1; } else if (h1 < 1) { kf[0].opacity = 1; kf[1].opacity = 0; }
+  var ov = box.style.overflow; box.style.overflow = 'hidden';
+  var a = box._anim = box.animate(kf, { duration: h1 < h0 ? 180 : 220, easing: MOTION_E, fill: 'forwards' });
+  a.onfinish = function () { if (box._anim === a) box._anim = null; if (done) done(); box.style.overflow = ov; a.cancel(); };
+  a.oncancel = function () { box.style.overflow = ov; };
+  return a;
+}
+/** Expand/collapse in place: set(on) applies the state, box is the element whose height changes. A collapse keeps the open state on screen
+ *  until the box has shrunk. A tap mid-animation reverses from where it is. */
+function animSet(box, set, on) {
+  if (!box || motionOff() || !box.isConnected) { if (box && box._anim) { box._anim.cancel(); box._anim = null; } set(on); if (box) box._want = on; return; }
+  var h0 = box.getBoundingClientRect().height;
+  if (box._anim) { var old = box._anim; box._anim = null; old.cancel(); }
+  box._want = on; set(on);
+  var h1 = box.getBoundingClientRect().height;
+  if (Math.abs(h1 - h0) < 1) return;
+  if (h1 < h0) { set(!on); hAnim(box, h0, h1, function () { set(on); }); } else hAnim(box, h0, h1);
+}
+/** After a re-render: grow/shrink the new element from the height its old copy had. */
+function animFrom(box, h0) { if (!box || motionOff()) return; var h1 = box.getBoundingClientRect().height; if (Math.abs(h1 - h0) >= 1) hAnim(box, h0, h1); }
+/** Collapse an element, then run done() (which hides or re-renders it). */
+function animOut(box, done) { if (!box || motionOff() || !box.offsetHeight) { done(); return; } hAnim(box, box.getBoundingClientRect().height, 0, done); }
+function descTap(el) { var cur = el._anim ? el._want : el.classList.contains('open'); animSet(el, function (o) { el.classList.toggle('open', o); }, !cur); }
+function slideIn(d, x) { if (!motionOff()) d.animate([{ opacity: 0, transform: x + ' translateY(12px)' }, { opacity: 1, transform: x + ' translateY(0)' }], { duration: 200, easing: MOTION_E }); }
+function slideOut(d, x) { if (motionOff() || !d.isConnected) { d.remove(); return; }
+  d.animate([{ opacity: 1, transform: x + ' translateY(0)' }, { opacity: 0, transform: x + ' translateY(12px)' }], { duration: 180, easing: MOTION_E, fill: 'forwards' }).onfinish = function () { d.remove(); }; }
+function popOk(el, cls) { if (!el || motionOff()) return; cls = cls || 'addok'; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  clearTimeout(el._popT); el._popT = setTimeout(function () { el.classList.remove(cls); }, 420); }
+/** "grow" success pop for an add that saved: the item's card (search) / accessory row, and the Project tab badge. */
+function popAdded(name) {
+  var enc = encodeURIComponent(name).replace(/'/g, '%27');
+  document.querySelectorAll('.card.item[data-name], .accrow[data-name]').forEach(function (el) { var v = el.getAttribute('data-name');
+    if (v === name || (v === enc && el.classList.contains('card'))) popOk(el); });
+  var bd = $('custBadge'); if (bd && !bd.classList.contains('hidden')) popOk(bd, 'bump');
+}
+/** Reorder FLIP: rows slide from where they were to their new place (works from mid-slide, so quick repeated taps chain), then the moved row pops. */
+function lineRects() { var o = {}; document.querySelectorAll('#cdItems .pline[data-lid]').forEach(function (r) { o[r.dataset.lid] = r.getBoundingClientRect().top; }); return o; }
+function flipLines(before, movedId) {
+  if (motionOff()) return;
+  document.querySelectorAll('#cdItems .pline[data-lid]').forEach(function (r) {
+    var t0 = before[r.dataset.lid]; if (t0 == null) return; var dy = t0 - r.getBoundingClientRect().top;
+    if (Math.abs(dy) >= 1) r.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }], { duration: 220, easing: MOTION_E });
+    if (r.dataset.lid === movedId) { clearTimeout(flipLines.t); flipLines.t = setTimeout(function () { var x = document.querySelector('#cdItems .pline[data-lid="' + movedId.replace(/"/g, '') + '"]'); popOk(x); }, Math.abs(dy) >= 1 ? 230 : 0); }
+  });
+}
 function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
 /** In-app confirm (replaces window.confirm). askOk(text, { danger: true, ok: 'Delete' }) -> Promise<boolean>. Text is translated like confirm() was. */
 var cfmDone = null;
@@ -863,6 +943,10 @@ $('cfmNo').onclick = function () { if (cfmDone) cfmDone(false); };
 $('cfmBg').onclick = function () { if (cfmDone) cfmDone(false); };
 document.addEventListener('keydown', function (e) { if (!cfmDone) return; if (e.key === 'Escape') cfmDone(false); else if (e.key === 'Enter') { e.preventDefault(); cfmDone(true); } }, true);
 function closeSheet() { if (window.lineFlush) { var f = lineFlush; lineFlush = null; f(); } $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); }
+document.addEventListener('click', function (e) {   // every <details>: expand/collapse in height
+  var sm = e.target.closest && e.target.closest('summary'), d = sm && sm.parentElement; if (!d || d.tagName !== 'DETAILS' || d.firstElementChild !== sm || motionOff()) return;
+  e.preventDefault(); var cur = d._anim ? d._want : d.open; animSet(d, function (o) { d.open = o; }, !cur);
+});
 $('sheetX').onclick = closeSheet; $('sheetBg').onclick = closeSheet;
 
 // ---------------- item cards (search)
@@ -907,7 +991,7 @@ function card(it) {
     '<div class="stat ' + (it.onHand == null ? '' : (oh + it.incomingTotal) > 0 ? 'good' : 'bad') + '"><b>' + (it.onHand == null ? '—' : qty(oh + it.incomingTotal)) + '</b><span>After</span></div>' +
     chip('SF', it.sf) + chip('FRE', it.fre) + '</div>' +
     missBadges(it.name) + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
-    '<div class="desc notr" onclick="this.classList.toggle(\'open\')">' + esc(it.desc) + '</div>' +
+    '<div class="desc notr" onclick="descTap(this)">' + esc(it.desc) + '</div>' +
     '<div class="actions sact">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))">Molding calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
     (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))">Accessories <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
@@ -1217,6 +1301,7 @@ function addToNote(lines) {
   if (!curCust) { openPicker(function () { addToNote(lines); }); return; }
   var c = curCust, n = noteOf(c.id, c.noteId);
   toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
+  var popName = lines[0].name;
   lines.forEach(function (l, i) {
     var tmp = 'tmpl-' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5);
     var line = { id: tmp, name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' };
@@ -1225,6 +1310,7 @@ function addToNote(lines) {
     autoSave('add:' + tmp, function () {
       return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: { name: line.name, desc: line.desc, qty: line.qty, photo: line.photo, note: line.note } }).then(function (r) {
         if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
+        if (i === 0) popAdded(popName);   // "grow" pop once the add has saved
         var nn = noteOf(c.id, c.noteId) || n;
         if (!nn) return;
         if (r.items) {
@@ -1675,7 +1761,9 @@ function renderOverview() {
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
   $('cdBack').onclick = function () { saveBg().then(loadCustList); };
   $('ndNew').onclick = function () { var b = this; b.disabled = true; saveBg().then(newCustomerOpen).then(function () { setTimeout(function () { b.disabled = false; }, 800); }); };
-  $('cdInfoT').onclick = function () { saveBg().then(function () { if (custOpen !== c) return; infoOpen = !infoOpen; renderOverview(); }); };
+  $('cdInfoT').onclick = function () { saveBg().then(function () { if (custOpen !== c) return; var was = infoOpen;
+    var flip = function () { if (custOpen !== c) return; infoOpen = !was; renderOverview(); if (!was) animFrom($('cdInfo'), 0); };
+    if (was) animOut($('cdInfo'), flip); else flip(); }); };
   bindContact(c, ''); if ($('cdName2')) bindContact(c, '2');
   var city = $('cdCity'); city.addEventListener('input', function () { c.city = city.value; queueInfo(); });
   if ($('cdAdd2')) $('cdAdd2').onclick = function () { pullContacts(c); c._contact2 = true; if (!c.contacts[1]) c.contacts[1] = blankContact(); renderOverview(); };
@@ -1689,7 +1777,7 @@ function renderOverview() {
   [].forEach.call(document.querySelectorAll('[data-cloneproj]'), function (b) { b.onclick = function () { cloneProject(c, b); }; });
   $('cdQuote').onclick = quoteCust; $('cdQuoteAll').onclick = quoteProject;
   $('cdRec').onclick = toggleRec;
-  $('cdVoiceT').onclick = function () { voiceOpen = !voiceOpen; renderVoice(); };
+  $('cdVoiceT').onclick = function () { if (voiceOpen) animOut($('cdVoice'), function () { voiceOpen = false; renderVoice(); }); else { voiceOpen = true; renderVoice(); animFrom($('cdVoice'), 0); } };
   if ($('cdDel')) $('cdDel').onclick = function () { askOk('Delete ' + projLabel(c) + ' with all its notes, photos and voice notes?', { danger: true }).then(function (yes) { if (!yes) return;
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); }); };
   renderNoteCards(); renderVoice();
@@ -1898,14 +1986,16 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   var ro = e.target.closest('[data-nro]'), ph = e.target.closest('.nphro img[data-fid]');
   if (ph) { openPhotoZoom(ph.src); return; }
   if (ro && e.target.closest('img.cthumb')) return;   // item thumb in a read-only note: full-screen only (global handler), don't switch edit
-  if (x && x.dataset.nclose === 'ro') { delete noteOpenSet[x.dataset.nid]; keepTyped(); renderNoteCards(); return; }
+  if (x && x.dataset.nclose === 'ro') { delete noteOpenSet[x.dataset.nid]; keepTyped(); var hs0 = noteHeights(); renderNoteCards(); flipNotes(hs0); return; }
   if (!b && !x && ro) b = { dataset: { nopen: ro.dataset.nro } };   // tap a read-only expanded note: make it the edit note
   if (!b && !x) return;
   var id = b ? b.dataset.nopen : null, was = noteOpenId;
   if (x) { if (was) delete noteOpenSet[was]; id = null;   // collapse the edit note: hand edit to another still-open note
     var rest = (custOpen.notes || []).filter(function (q) { return noteOpenSet[q.id]; }); if (rest.length) id = rest[0].id; }
   else noteOpenSet[id] = 1;   // open this one; others stay expanded (read-only)
-  saveBg().then(function () { keepTyped(); flushNote(); noteOpenId = id; renderNoteCards(); if (id && !x) scrollToNote(id); }); });
+  saveBg().then(function () { keepTyped(); flushNote(); noteOpenId = id; var hs = noteHeights(); renderNoteCards(); flipNotes(hs); if (id && !x) scrollToNote(id); }); });
+function noteHeights() { var o = {}; document.querySelectorAll('#cdNotes [data-ng]').forEach(function (g) { o[g.dataset.ng] = g.getBoundingClientRect().height; }); return o; }
+function flipNotes(hs) { document.querySelectorAll('#cdNotes [data-ng]').forEach(function (g) { if (hs[g.dataset.ng] != null) animFrom(g, hs[g.dataset.ng]); }); }
 /** Stage A: read-only expanded note (no editor ids). Tap the body to make it the edit note. */
 function lupHtml(l) { var pr = linePrice(l); return pr != null ? '<small class="lup">$' + Math.round(pr).toLocaleString('en-US') + '</small>' : ''; }
 function itemsHtmlRO(n) { var it = n.items || [];
@@ -2061,7 +2151,8 @@ function saveState() { paintSyncLabel(); var el = $('saveSt'), pend = Object.key
   }
   else if (hold) { el.className = 'savest saving'; el.textContent = 'Unsaved changes…'; }
   else if (!pend) { saveFail = null;
-    if (!el.classList.contains('hidden') && el.textContent.indexOf('Unsaved') !== 0) { el.className = 'savest ok'; el.textContent = 'Saved'; saveOkT = setTimeout(function () { el.className = 'savest hidden'; }, 1200); }
+    if (!el.classList.contains('hidden') && el.textContent.indexOf('Unsaved') !== 0) { el.className = 'savest ok'; el.textContent = 'Saved'; saveOkT = setTimeout(function () { if (motionOff() || el.className !== 'savest ok') { el.className = 'savest hidden'; return; }
+      el.animate([{ opacity: 1, transform: 'translateX(-50%)' }, { opacity: 0, transform: 'translate(-50%, 12px)' }], { duration: 180, easing: MOTION_E }).onfinish = function () { if (el.className === 'savest ok') el.className = 'savest hidden'; }; }, 1200); }
     else el.className = 'savest hidden'; }
   if ($('cdSaved')) $('cdSaved').textContent = (custOpen && custOpen._infoDirty) ? 'Unsaved changes…' : (saveQ['info:' + (custOpen && custOpen.id)] ? (saveFail ? 'Not saved yet' : 'Saving…') : 'Saved');
 }
@@ -2258,6 +2349,7 @@ function switchNoteFinish(label) {
   if (!changed.length && !missed.length) return;
   varMiss = missed.length ? { noteId: n.id, html: missHtml(label, missed) } : null;
   renderPicked(); syncCount();
+  if (varMiss && !motionOff()) { var vm = document.querySelector('#cdItems .vmiss') || document.querySelector('.vmiss'); if (vm) vm.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: MOTION_E }); }
   if (!changed.length) { toast('Could not switch ' + missed.length + ' item' + (missed.length === 1 ? '' : 's')); return; }
   toast('Switched ' + nd + ' item' + (nd === 1 ? '' : 's') + (jm ? ' + frame' : ''));
   saveNoteVariants(n, changed);
@@ -2743,9 +2835,9 @@ function ordHtml(i, n) {
 }
 function toggleLine(row, l) { var on = !lineOpen[l.id];
   if (on) { var cn = curNote(); ((cn && cn.items) || []).forEach(function (x) { delete lineOpen[x.id]; });   // accordion: one row open at a time, within this note only
-    document.querySelectorAll('#cdItems .pline.open').forEach(function (o) { if (o !== row) { o.classList.remove('open'); var oc = o.querySelector('.lcaret'); if (oc) oc.textContent = '▾'; } });
+    document.querySelectorAll('#cdItems .pline.open').forEach(function (o) { if (o !== row) { animSet(o.querySelector('.ldet'), function (v) { o.classList.toggle('open', v); }, false); var oc = o.querySelector('.lcaret'); if (oc) oc.textContent = '▾'; } });
     lineOpen[l.id] = 1; } else delete lineOpen[l.id];
-  row.classList.toggle('open', on); var c = row.querySelector('.lcaret'); if (c) c.textContent = on ? '▴' : '▾'; }
+  animSet(row.querySelector('.ldet'), function (v) { row.classList.toggle('open', v); }, on); var c = row.querySelector('.lcaret'); if (c) c.textContent = on ? '▴' : '▾'; }
 function renumberLines() {
   var rows = document.querySelectorAll('#cdItems .pline'), i, last = rows.length - 1;
   for (i = 0; i < rows.length; i++) {
@@ -2768,7 +2860,7 @@ function moveItem(l, dir) {
   var items = n.items || [], i = items.indexOf(l); if (i < 0) return;
   var j = i + dir; if (j < 0 || j >= items.length) return;
   items.splice(j, 0, items.splice(i, 1)[0]);
-  renderPicked(); queueOrderSave(n);
+  var rects = lineRects(); renderPicked(); flipLines(rects, String(l.id)); queueOrderSave(n);
 }
 function queueOrderSave(n) { if (!n) return; clearTimeout(ordTimer); ordDirty[n.id] = 1; scheduleAutosave(); }
 function persistOrder(n) {
@@ -3842,7 +3934,7 @@ if ($('rpMode')) $('rpMode').addEventListener('click', function (e) { var b = e.
 if ($('rpRefresh')) $('rpRefresh').onclick = function () { var b = this; b.disabled = true; rmProbe().then(function () { b.disabled = false; renderReportedPage(); }, function () { b.disabled = false; }); };
 if ($('rpExport')) $('rpExport').onclick = exportReports;
 document.addEventListener('click', function (e) { var b = e.target.closest('#p-reported [data-found], #p-reported [data-rdel]'); if (!b) return; reportAct(b.dataset.found || b.dataset.rdel, !!b.dataset.rdel); });
-function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600); }
+function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:60;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(d); slideIn(d, 'translateX(-50%)'); setTimeout(function () { slideOut(d, 'translateX(-50%)'); }, 1600); }
 
 // ---------------- tile calculator (tile math only: area, waste %, pieces / boxes, coverage, tile cost). Opens from a tile
 // card on Search (adds a line to the current note) or from a tile LINE inside a note (sets that line's qty + sq ft note).
@@ -4200,11 +4292,15 @@ function shareDocs(name, d) {
 }
 function openPhotoZoom(src, name) {
   var el = $('photoZoom'), img = $('photoZoomImg'); if (!el || !src) return;
+  if (el._closing) { clearTimeout(el._closing); el._closing = 0; el.classList.remove('pzout', 'on'); void el.offsetWidth; }
   pzReset(); img.src = src; renderZoomDocs(name); el.classList.add('on'); document.body.classList.add('pzopen');
   var x = $('photoZoomX'); if (x) x.focus();
 }
-function closePhotoZoom() {
+function closePhotoZoom(now) {
   var el = $('photoZoom'); if (!el || !el.classList.contains('on')) return;
+  if (now !== true && !motionOff()) { if (el._closing) return;   // fade + scale out first, then really close
+    el.classList.add('pzout'); el._closing = setTimeout(function () { el._closing = 0; el.classList.remove('pzout'); closePhotoZoom(true); }, 180); return; }
+  if (el._closing) { clearTimeout(el._closing); el._closing = 0; el.classList.remove('pzout'); }
   el.classList.remove('on'); document.body.classList.remove('pzopen');
   var img = $('photoZoomImg'); if (img) { img.removeAttribute('src'); img.style.transform = ''; }
   pzReset();
