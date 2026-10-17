@@ -632,9 +632,9 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017d"></script>
-<script src="i18n.js?v=20261017d"></script>
-<script src="photoq.js?v=20261017d"></script>
+<script src="sync.js?v=20261017e"></script>
+<script src="i18n.js?v=20261017e"></script>
+<script src="photoq.js?v=20261017e"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -692,7 +692,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017d';
+var PAGE_VER = '20261017e';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -791,7 +791,7 @@ function go(p, quiet) {
   if (p === 'cust') {                                   // the Note tab: the open note, else the current ("adding here") note, else a NEW numbered note
     if (custOpen && $('cuDetail').innerHTML) { if (noteOpenId) scrollToNote(noteOpenId); }
     else if (curCust) openCust(curCust.id, null, curCust.noteId);
-    else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; newCustomerOpen(); } }
+    else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; newProjectOpen(); } }
   if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
   if (p === 'history') loadHistory();
   if (p === 'reported') renderReportedPage();
@@ -1250,9 +1250,29 @@ function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCus
 var newBusy = false;
 function createBlankProject() { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;
   return api('customerSave', { customer: { tax: myStore() } }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
-function newCustomer() { return createBlankProject().then(function (c) { setCur(c, c.notes[0]); return c; }); }
+function newCustomer() { return createBlankProject().then(function (c) { pcSave(c); setCur(c, c.notes[0]); dropStaleProject(c.id); return c; }); }
+/** 20261017e: a new project made from Search (bar / picker) while another project was left open behind the Project tab:
+ *  close that stale view (its edits are already flushed when Search was opened) so the Project tab shows the new one. */
+function dropStaleProject(id) { if (!custOpen || custOpen.id === id || $('p-cust').classList.contains('on')) return;
+  saveBg(); if (typeof syncLeave === 'function') syncLeave(); custOpen = null; noteOpenId = null; $('cuDetail').innerHTML = ''; }
+function newProjToast(c) { var l = custLabel(c); toast(window.I18N && I18N.lang() === 'zh' ? '已新建项目 ' + l : 'New project ' + l + ' created'); }
+/** "+ New project" on the Project tab (project header, or the tab with nothing current): save the open project, create the
+ *  next numbered project and open it right away at the top, Note 1 open + "adding here", its text box focused. */
+function newProjectOpen() {
+  keepTyped(); saveBg();
+  return createBlankProject().then(function (c) {
+    if (!c || !c.notes || !c.notes[0]) throw new Error('No note');
+    infoOpen = false; pcSave(c); setCur(c, c.notes[0]);
+    openCust(c.id, c, c.notes[0].id); window.scrollTo(0, 0);
+    var t = $('nText'); if (t) { try { t.focus({ preventScroll: true }); } catch (e) {} window.scrollTo(0, 0); }
+    newProjToast(c); return c;
+  }).catch(function (er) { renderCustBar();
+    if (!custOpen && $('p-cust').classList.contains('on')) {   // nothing to fall back to: don't leave the "Starting…" spinner up
+      $('cuDetail').innerHTML = '<div class="card"><div class="msg err">' + esc((er && er.message) || 'Not created') + '</div><button class="btn" id="cdRetryNew" style="margin-top:8px">+ New project</button></div>';
+      $('cdRetryNew').onclick = function () { this.disabled = true; newProjectOpen(); }; } });
+}
 /** "+ New" from Search / the bar: create and make it the current note, without leaving the page. */
-function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function (c) { window.scrollTo(0, y); var l = custLabel(c); toast(window.I18N && I18N.lang() === 'zh' ? '已建立新項目 ' + l : 'New project ' + l + ' created'); }).catch(function () { renderCustBar(); }); }   // stay on the current tab + scroll; the Adding-to bar switches to the new project
+function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function (c) { window.scrollTo(0, y); newProjToast(c); }).catch(function () { renderCustBar(); }); }   // Search: stay on the tab + scroll; the Adding-to bar switches to the new project
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
 function openPicker(then) {
   pickThen = then || null;
@@ -1574,6 +1594,9 @@ $('hSelDel').onclick = function () {
 };
 // ---- one customer: slim info line (collapsed; a brand-new customer opens expanded), note cards, voice notes
 function openCust(id, pre, noteId) {
+  // 20261017e: switching from one open project to another: save the old one, then clear its screen + typed-note flag so the
+  // next render (keepTyped) can't copy the old note's text box into the new project's note.
+  if (custOpen && custOpen.id !== id) { keepTyped(); saveBg(); if (typeof syncLeave === 'function') syncLeave(); $('cuDetail').innerHTML = ''; noteDirty = false; }
   if (!$('p-cust').classList.contains('on')) go('cust', true);
   var d = $('cuDetail'); window.scrollTo(0, 0);
   if (!pre || !pre.notes) infoOpen = false;
@@ -1773,7 +1796,7 @@ function renderOverview() {
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
   $('cdBack').onclick = function () { saveBg().then(loadCustList); };
-  $('ndNew').onclick = function () { var b = this; b.disabled = true; saveBg().then(newCustomerOpen).then(function () { setTimeout(function () { b.disabled = false; }, 800); }); };
+  $('ndNew').onclick = function () { var b = this; b.disabled = true; newProjectOpen().then(function () { setTimeout(function () { if (b.isConnected) b.disabled = false; }, 800); }); };
   $('cdInfoT').onclick = function () { saveBg().then(function () { if (custOpen !== c) return; var was = infoOpen;
     var flip = function () { if (custOpen !== c) return; infoOpen = !was; renderOverview(); if (!was) animFrom($('cdInfo'), 0); };
     if (was) animOut($('cdInfo'), flip); else flip(); }); };
