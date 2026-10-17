@@ -654,8 +654,9 @@
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
 <script src="sync.js?v=20261017h"></script>
-<script src="i18n.js?v=20261017h"></script>
-<script src="photoq.js?v=20261017h"></script>
+<script src="resume.js?v=20261017i"></script>
+<script src="i18n.js?v=20261017i"></script>
+<script src="photoq.js?v=20261017i"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -713,7 +714,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017h';
+var PAGE_VER = '20261017i';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -810,7 +811,7 @@ function go(p, quiet) {
   window.scrollTo(0, 0);
   if (quiet) return;
   if (p === 'cust') {                                   // the Note tab: the open note, else the current ("adding here") note, else a NEW numbered note
-    if (custOpen && $('cuDetail').innerHTML) { if (noteOpenId) scrollToNote(noteOpenId); }
+    if (custOpen && $('cuDetail').innerHTML) { if (noteOpenId) scrollToNote(noteOpenId); if (typeof syncSchedule === 'function') { SYNC.act = Date.now(); syncSchedule(300); } }   // sync-fix: re-entering the tab restarts the poll
     else if (curCust) openCust(curCust.id, null, curCust.noteId);
     else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; newProjectOpen(); } }
   if (p === 'search') cbPopPending();
@@ -830,6 +831,7 @@ function enterApp() {
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
   checkData(); initOutbox(); setTimeout(pqKick, 0);
   sizeChrome(); setTimeout(a2hsShow, 1500);
+  if (window.ESRES && ESRES.start()) return;                                   // resume.js: same tab / project / note / scroll / search as last time
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
 function setHeader(m) {
@@ -1221,6 +1223,7 @@ function saveCur() { if (curCust) localStorage.setItem(curKey(), JSON.stringify(
  *  changes, the note row when the target note changes (picker, + Add note, "Add items from Search here"). */
 var cbLast = null;
 function renderCustBar() {
+  if (window.ESRES) ESRES.curSet(curCust);                                       // resume.js: tell this login's other devices (only real changes)
   var b = $('custBar'); b.classList.toggle('none', !curCust);
   var cli = '<button class="cbcli" id="cbCli" title="Client info" aria-label="Client info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></button>';
   var nw = '<button class="cbnew" id="cbNew" title="New project with the next number">+ New project</button>';
@@ -1365,7 +1368,7 @@ function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function
  *  from the CDN only when a PDF is picked. to = {cid, noteId} target note, else the current note.
  *  20261017h: photos / screenshots (several = one quote) and scanned PDFs are read by the server (quoteRead, Drive OCR); an older
  *  server without quoteRead still gets the "coming soon" message. */
-var QI_VER = '20261017h', qiLoad = null;
+var QI_VER = '20261017i', qiLoad = null;
 function loadQuoteImport() {
   if (window.QIUI) return Promise.resolve(window.QIUI);
   if (qiLoad) return qiLoad;
@@ -1384,8 +1387,32 @@ function quoteImport(to) {
     openSheet('<h3>Items from a quote</h3><div class="spinner"></div><div class="hint" style="text-align:center">Reading the quote…</div>');
     loadQuoteImport().then(function (Q) { Q.run(fs, to || null); }, function (er) { $('sheetBody').innerHTML = '<h3>Items from a quote</h3><div class="msg err">' + esc(er.message) + '</div>'; })
       .then(function () { inp.remove(); }); };
+  // 20261017i: picker closed without a file (Chrome, Edge, Firefox, Safari 16.4+ fire "cancel"): offer paste instead, unless the
+  // project picker is still showing (it takes Ctrl+V itself)
+  inp.addEventListener('cancel', function () { inp.remove(); if ($('pkQuote') && $('sheet').classList.contains('on')) return;
+    loadQuoteImport().then(function (Q) { if (Q.pasteSheet) Q.pasteSheet(to || null); }, function () {}); });
   document.body.appendChild(inp); inp.click();
 }
+/** 20261017i: paste a copied image / screenshot into quote import (Ctrl+V on a PC, long-press Paste on the paste box).
+ *  Works while a quote-import screen, the project picker ("From a quote…") or the note ⋯ menu ("Add items from a quote…") is open.
+ *  Runs before the note-photo paste below, so a quote image never lands in the note's photos by mistake. */
+function qiPasteTo() {
+  if (!$('sheet').classList.contains('on')) return undefined;
+  var b = $('sheetBody'); if (!b) return undefined;
+  if (b.querySelector('.qish')) { var st = window.QIUI && QIUI.state && QIUI.state(); return { to: st && st.to || null }; }
+  if ($('pkQuote')) return { to: null };
+  var nq = $('ncQuote'); if (nq && custOpen) return { to: { cid: custOpen.id, noteId: nq.getAttribute('data-qi').slice(5) }, menu: true };
+  return undefined;
+}
+document.addEventListener('paste', function (e) {
+  var w = qiPasteTo(); if (!w) return; var cd = e.clipboardData; if (!cd) return;
+  var fs = [].slice.call(cd.files || []).filter(function (f) { return /^image\//.test(f.type); });
+  if (!fs.length && cd.items) [].forEach.call(cd.items, function (it) { if (it.kind === 'file' && /^image\//.test(it.type)) { var f = it.getAsFile(); if (f) fs.push(f); } });
+  if (!fs.length) { if (e.target && e.target.id === 'qiPz') e.preventDefault(); return; }   // text pasted into the paste box: ignored
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (!$('qiList')) openSheet('<div class="qish"><h3>Items from a quote</h3><div class="spinner"></div><div class="hint" style="text-align:center">Reading the quote…</div></div>');
+  loadQuoteImport().then(function (Q) { return Q.paste(fs, w.to); }, function (er) { $('sheetBody').innerHTML = '<h3>Items from a quote</h3><div class="msg err">' + esc(er.message) + '</div>'; });
+}, true);
 document.addEventListener('click', function (e) { var b = e.target.closest('[data-qi]'); if (!b || b.disabled) return;
   var v = b.getAttribute('data-qi'), to = null;
   if (v.indexOf('note:') === 0 && custOpen) to = { cid: custOpen.id, noteId: v.slice(5) };
@@ -1947,16 +1974,17 @@ function renderOverview() {
 // Remote changes merge per note / per line (sync.js) and never overwrite what is being typed or still waiting to save.
 var OB = null, SYNC = { t: null, busy: false, act: Date.now(), remote: Date.now(), viewers: [], off: false, gen: 0, force: false, deferred: false, leftId: null };
 function obKey() { return 'esOutbox:' + (session && session.name || ''); }
+var OB_SEND_MS = 35000;   // server lock wait is 20 s; a slow but real answer is still taken, a lost one is resent
 function initOutbox() {
   if (!window.ESYNC || !session) return;
   if (OB && OB._key === obKey()) { OB.kick(); return; }
   OB = new ESYNC.Outbox({
-    send: function (ops) {
-      return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'projBatch', ops: ops, token: session && session.token }), redirect: 'follow' })
+    send: function (ops) {   // sync-fix (20261017i): a save that never answers (PC slept / Wi-Fi changed mid-request) used to block every later save
+      return syncTimed(fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'projBatch', ops: ops, token: session && session.token }), redirect: 'follow' })
         .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { var e1 = new Error('Unexpected server reply (HTTP ' + r.status + ').'); if (r.status >= 500 || r.status === 429) e1.network = true; throw e1; }
           if (!j.ok) { var er = new Error(noteWords(j.error || 'Something went wrong.')); if (j.error === 'Unknown action.') er.unknownAction = true; if (j.auth) er.auth = true; throw er; }
           (j.data.results || []).forEach(function (x) { if (x && !x.ok && x.error) x.error = noteWords(x.error); }); return j.data; }); },
-          function () { var er = new Error('No connection to the server.'); er.network = true; throw er; });
+          function () { var er = new Error('No connection to the server.'); er.network = true; throw er; }), OB_SEND_MS);   // timeout = a network error: resent later, same opIds (the server skips ops it already ran)
     },
     sendOne: function (action, data) { return serverApi(action, data); },
     load: function () { try { return JSON.parse(localStorage.getItem(obKey()) || '[]'); } catch (e) { return []; } },
@@ -1969,7 +1997,7 @@ function initOutbox() {
   OB._key = obKey();
   if (OB.pending()) { OB.kick(); toast('Sending changes saved on this phone…'); }
 }
-function syncOn() { return !!(session && OB && custOpen && custOpen.id && custOpen.notes && !SYNC.off && !document.hidden && $('p-cust').classList.contains('on')); }
+function syncOn() { return !!(session && OB && custOpen && custOpen.id && custOpen.notes && !SYNC.off && SYNC.offId !== custOpen.id && !document.hidden && $('p-cust').classList.contains('on')); }
 function syncSchedule(ms) {
   clearTimeout(SYNC.t); SYNC.t = null; if (!syncOn()) return;
   if (ms == null) ms = ESYNC.pollDelay(Date.now() - Math.max(SYNC.act, SYNC.remote));
@@ -1982,22 +2010,36 @@ function syncQuiet() {
 }
 function syncPoll() {
   SYNC.t = null; if (!syncOn()) return;
-  if (SYNC.busy) { syncSchedule(); return; }
-  var c = custOpen, gen = SYNC.gen, force = SYNC.force; SYNC.busy = true; SYNC.force = false; SYNC.leftId = c.id;
-  serverApi('projPoll', { id: c.id, rev: force ? 0 : (c.rev || 0) }).then(function (r) {
-    SYNC.busy = false; if (custOpen !== c) return;
+  if (SYNC.busy && Date.now() - (SYNC.busyAt || 0) < 25000) { syncSchedule(); return; }   // sync-fix: a poll stuck > 25 s is abandoned
+  var c = custOpen, gen = SYNC.gen, force = SYNC.force, my = (SYNC.seq = (SYNC.seq || 0) + 1); SYNC.busy = true; SYNC.busyAt = Date.now(); SYNC.force = false; SYNC.leftId = c.id;
+  syncTimed(serverApi('projPoll', { id: c.id, rev: force ? 0 : (c.rev || 0) }), 20000).then(function (r) {
+    if (my !== SYNC.seq) return; SYNC.busy = false; SYNC.okAt = Date.now(); if (custOpen !== c) return;
     setViewers(r.viewers || []);
     if (!r.project) return;
     if (gen !== SYNC.gen || !syncQuiet()) { SYNC.force = true; return; }      // our own save landed meanwhile / is waiting: look again next tick
     applyRemote(c, adoptContacts(r.project, c));
-  }, function (er) { SYNC.busy = false;
+  }, function (er) { if (my !== SYNC.seq) return; SYNC.busy = false;
     if (er && er.network) setViewers([]);                                    // offline: don't show a stale "is viewing"
-    if (/Unknown action/.test(er.message || '')) SYNC.off = true;            // server not updated yet: no live sync, auto-save still works
-    else if (/not found/i.test(er.message || '')) SYNC.off = true;
-  }).then(function () { syncSchedule(); });
+    if (/Unknown action/.test(er.message || '')) { SYNC.off = true; SYNC.offAt = Date.now(); }   // server not updated yet: no live sync, auto-save still works
+    else if (/not found/i.test(er.message || '')) SYNC.offId = c.id;          // sync-fix: only THIS project (was: live sync off for every project until reload)
+  }).then(function () { if (my === SYNC.seq) syncSchedule(); });
 }
 function syncLeave() { var id = SYNC.leftId; SYNC.leftId = null; clearTimeout(SYNC.t); SYNC.t = null; setViewers([]);
   if (id && session && OB && !SYNC.off) serverApi('projPoll', { id: id, leave: 1 }).catch(function () {}); }
+/** sync-fix: a request that never answers (PC slept / Wi-Fi changed mid-request) used to leave SYNC.busy on forever = no more polls. */
+function syncTimed(p, ms) { return new Promise(function (res, rej) { var t = setTimeout(function () { var er = new Error('No answer from the server.'); er.network = true; er.timeout = true; rej(er); }, ms);
+  p.then(function (v) { clearTimeout(t); res(v); }, function (e) { clearTimeout(t); rej(e); }); }); }
+/** Back to the app (resume.js: visible, focus, pageshow, online, wake from sleep). awayMs = how long it was gone / frozen. */
+function syncReturn(why, awayMs) {
+  if (!session) return;
+  if (OB) OB.kick();
+  if (SYNC.busy && Date.now() - (SYNC.busyAt || 0) > 25000) { SYNC.busy = false; SYNC.seq = (SYNC.seq || 0) + 1; }
+  if (SYNC.off && Date.now() - (SYNC.offAt || 0) > 600000) SYNC.off = false;      // the server may have been updated meanwhile
+  if (awayMs > 60000) SYNC.offId = null;                                         // a project that was "not found" gets one more try
+  if (awayMs > 600000) SYNC.force = true;                                        // long gone: one full copy, not just the rev check
+  SYNC.act = Date.now(); syncSchedule(250);
+  if (why !== 'visible') { checkPageVersion(); if (Date.now() - dataChecked > 30 * 60000) checkData(); }   // 'visible' already does these
+}
 function setViewers(v) { var was = SYNC.viewers.join('|'); SYNC.viewers = v || []; if (was !== SYNC.viewers.join('|')) paintWho(); }
 function paintWho() { var el = $('cdWho'); if (!el) return; var v = SYNC.viewers || [];
   el.innerHTML = v.length ? '<i></i><span class="notr">' + esc(v.length > 2 ? v[0] + ', ' + v[1] + ' +' + (v.length - 2) : v.join(', ')) + '</span> <span>' + (v.length > 1 ? 'are viewing' : 'is viewing') + '</span>' : ''; }
@@ -3704,7 +3746,11 @@ function drainSaves() {
 }
 /* Idle auto-close: after 30 min with no taps/typing/scroll, if the open project has any content,
  * save (when dirty) and start a blank new project so the next customer is not added to the old one. */
-var IDLE_MS = 30 * 60 * 1000, idleAt = Date.now(), idleT = null, idleBusy = false;
+var IDLE_MS = 30 * 60 * 1000, idleAt = Date.now(), idleT = null, idleBusy = false, idleAway = 0, idleBeat = Date.now(), idleBlankId = '';
+/* 20261017i: resume wins over the idle auto-close. The 30-min "Saved and started a new project" only happens when the app stayed
+ * in front and untouched; time spent hidden, minimised, asleep or closed counts as "away" and the user comes back to the same note. */
+document.addEventListener('visibilitychange', function () { if (document.hidden) idleAway = Date.now(); });
+setInterval(function () { var n = Date.now(); if (n - idleBeat > 60000) idleAway = n; idleBeat = n; }, 15000);   // clock jump = the PC slept
 function clearIdleClose() { clearTimeout(idleT); idleT = null; idleBusy = false; }
 function touchIdle() {
   idleAt = Date.now();
@@ -3736,6 +3782,9 @@ function projHasContent(c) {
 function checkIdleClose() {
   clearTimeout(idleT); idleT = null;
   if (idleBusy || !session) return;
+  if (window.ESRES && ESRES.idleHold()) { idleT = setTimeout(checkIdleClose, 3000); return; }   // resume.js: following another device first
+  if (document.hidden || Date.now() - idleBeat > 60000) idleAway = Date.now();
+  if (idleAway >= idleAt) { touchIdle(); return; }                              // was away (hidden / asleep) since the last touch: keep the note
   var waited = Date.now() - idleAt;
   if (waited < IDLE_MS) { idleT = setTimeout(checkIdleClose, IDLE_MS - waited); return; }
   var c = custOpen;
@@ -3749,6 +3798,7 @@ function checkIdleClose() {
     return createBlankProject().then(function (neu) {
       if (!neu || !neu.notes || !neu.notes[0]) throw new Error('No note');
       infoOpen = false;
+      idleBlankId = neu.id;                                                     // resume.js: not sent to the other devices / not the resume spot until used
       setCur(neu, neu.notes[0]);
       openCust(neu.id, neu, neu.notes[0].id);
       toast('Saved and started a new project');
@@ -4660,7 +4710,7 @@ $('photoZoomStage').addEventListener('touchend', function (e) {
 // ---- live auto-refresh (20261016a): while a project is open, quietly re-fetch it every ~20s and when the app comes
 // back to the front, so saves from another device show up. Never touches a field being typed in, never runs while
 // anything local is unsaved / saving / uploading / dragging / recording; it just retries on the next tick.
-var AR_MS = 20000, arT = null, arBusy = false;
+var AR_MS = 20000, arT = null, arBusy = false, arAt = 0;
 function arStrip(c) { if (!c) return ''; var o = {}; Object.keys(c).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = c[k]; });
   o.notes = (c.notes || []).filter(function (n) { return String(n.id).indexOf('tmp-') !== 0; }).map(function (n) {
     var m = {}; Object.keys(n).forEach(function (k) { if (k.charAt(0) !== '_') m[k] = n[k]; }); return m; });
@@ -4674,9 +4724,10 @@ function arBlocked(id) {
   if ((custOpen.notes || []).some(function (n) { return String(n.id).indexOf('tmp-') === 0; })) return true;  // note still being created
   return false; }
 function autoRefresh() {
-  var c0 = custOpen; if (arBusy || !c0 || !c0.id || arBlocked(c0.id)) return;
-  var id = c0.id, before = arStrip(c0); arBusy = true;
-  api('customerGet', { id: id }).then(function (c) {
+  var c0 = custOpen; if ((arBusy && Date.now() - arAt < 30000) || !c0 || !c0.id || arBlocked(c0.id)) return;
+  var id = c0.id, before = arStrip(c0), my = ++arSeq; arBusy = true; arAt = Date.now();
+  syncTimed(api('customerGet', { id: id }), 20000).then(function (c) {   // sync-fix (20261017i): one hung fetch used to leave arBusy on forever
+    if (my !== arSeq) return;
     if (custOpen !== c0 || arBlocked(id)) return;                     // something changed while fetching: next tick
     if (arStrip(c0) !== before) return;                               // local edits landed meanwhile
     c = adoptContacts(c, c0);
@@ -4690,8 +4741,9 @@ function autoRefresh() {
     window.scrollTo(0, sy);
     (c.notes || []).forEach(function (n) { ordBase[n.id] = noteOrderKey(n); });   // server order is the new baseline (nothing local was pending)
     if (curCust && curCust.id === c.id) { var n = noteOf(c.id, curCust.noteId); if (!n) setCur(null); else if (curCust.count !== n.items.length || curCust.noteTitle !== n.title) { curCust.count = n.items.length; curCust.noteTitle = n.title; curCust.name = custLabel(c); saveCur(); } }
-  }).catch(function () {}).then(function () { arBusy = false; });
+  }).catch(function () {}).then(function () { if (my === arSeq) arBusy = false; });
 }
+var arSeq = 0;
 function arStart() { clearInterval(arT); arT = setInterval(autoRefresh, AR_MS); }
 arStart();
 document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(autoRefresh, 800); });

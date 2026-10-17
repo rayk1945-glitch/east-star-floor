@@ -32,6 +32,12 @@
     'No item lines found. Make sure the item codes and the Qty column are in the photo, sharp and straight, then try again.': '没有找到商品行。请确认照片里有商品编号和数量栏，并且清晰、端正，然后再试。',
     'Read by Google from the photo: check each line against it.': '由 Google 从照片读取：请对照照片检查每一行。', 'Read by Google from the photo: check each line against it. Only the first 3 pages were read.': '由 Google 从照片读取：请对照照片检查每一行。只读取了前 3 页。',
     'Show photo': '显示照片', 'Scan': '扫描件',
+    // 20261017i paste a copied image / screenshot into quote import
+    'Discontinued: not offered. Search for a replacement.': '已停产：不提供。请搜索替代商品。',
+    'Paste image': '粘贴图片', '+ Paste a page': '+ 粘贴一页', 'Pick a file': '选择文件', 'Paste image here': '在这里粘贴图片',
+    'Paste a copied image or screenshot here: Ctrl+V, or long-press and Paste': '在这里粘贴复制的图片或截图：按 Ctrl+V，或长按后选“粘贴”',
+    'Copy the quote image first, then tap Paste image. On a computer you can also press Ctrl+V.': '请先复制报价图片，再点“粘贴图片”。在电脑上也可以按 Ctrl+V。',
+    'No image is copied right now. Copy the quote image first, then tap Paste image. On a computer you can also press Ctrl+V.': '现在没有复制的图片。请先复制报价图片，再点“粘贴图片”。在电脑上也可以按 Ctrl+V。',
     'That file is too big to read (over 1 MB).': '文件太大，无法读取（超过 1 MB）。', 'Google is busy reading photos right now.': 'Google 现在正忙着读取照片。',
     'This file type cannot be read (use a JPG, PNG or PDF).': '无法读取这种文件类型（请使用 JPG、PNG 或 PDF）。',
     'Make a new link? The link your client already has stops working right away. Send them the new one.': '生成新链接？客户手上的旧链接会立即失效，请把新链接发给客户。',

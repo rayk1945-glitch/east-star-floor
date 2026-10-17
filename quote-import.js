@@ -21,13 +21,38 @@
   var BRAND_RE = /^([A-Za-z]{2,12})[\s-]+(.+)$/;
   var TOTAL_RE = /^(sub ?total|total|discount|tax|less\b|after discount|sf tax|notes?|s&h|amount due|freight)/i;
 
+  // 20261017i: hidden / discontinued items (same lists as the bundle build: /workspace/bot-app/hidden-codes.json = exact codes,
+  // hidden-prefixes.json = style prefixes ending in "-", case-insensitive at the start). The bundle already leaves them out; this
+  // is the second lock so a quote can never match, suggest or add one (e.g. an older cached item list). Keep in sync with those files.
+  var HIDDEN_CODES = ["AS TUB 2390202.020", "AS TUB 2391202.020", "AS TUB 2460002.020", "AS TUB 2461002.020", "AS TUB 2544102.020", "AS TUB 2544202.020", "AS TUB 2545102.020", "AS TUB 2545202.020", "AS TUB 2946102.020", "AS TUB 2946202.020", "AS TUB 2973102.020", "AS TUB 2973202.020", "TOTO SW3346#01"];
+  var HIDDEN_PREFIXES = ["DF-#16-", "DF-#18-", "DF-#60-", "DF-#2889-", "BOX-#16-", "BOX-#18-", "BOX-#60-", "BOX-#2889-", "CB-LM12-", "CB-LK04-", "CB-LG99-"];
+  var HIDDEN_EXTRA = ['TOTO SW3346#', 'SW3346#'];   // Ray: TOTO S2 SW3346 in every color (hidden-codes.json has #01, the only one we stocked)
+  function isHidden(code) { var c = String(code || '').trim().toUpperCase(); if (!c) return false;
+    if (HIDDEN_CODES.indexOf(c) >= 0) return true;
+    for (var i = 0; i < HIDDEN_PREFIXES.length; i++) if (c.indexOf(HIDDEN_PREFIXES[i]) === 0) return true;
+    for (i = 0; i < HIDDEN_EXTRA.length; i++) if (c.indexOf(HIDDEN_EXTRA[i]) === 0) return true;
+    return false; }
+  function lineHidden(code) { var c = String(code || '').trim().toUpperCase().replace(/^TOTO TOTO /, 'TOTO ');
+    return isHidden(c) || isHidden(c.split(' ')[0]) || HIDDEN_CODES.some(function (h) { return c.indexOf(h + ' ') === 0; }) || /(^|\s)SW3346#/.test(c); }
+  /** Last pass on every parsed quote: no hidden item as a pick or a candidate; a line whose own code is hidden is "not offered". */
+  function dropHidden(res) {
+    (res && res.lines || []).forEach(function (l) {
+      var hp = (l.picks || []).some(function (p) { return isHidden(p.name); });
+      l.picks = (l.picks || []).filter(function (p) { return !isHidden(p.name); });
+      l.cands = (l.cands || []).filter(function (c) { return !isHidden(c); });
+      if (hp && !l.picks.length && l.status === 'ok') l.status = 'none';
+      if (lineHidden(l.code)) { l.discontinued = true; if (l.status === 'ok' && !l.picks.length) l.status = 'none'; if (l.status === 'none') l.how = 'discontinued: not offered'; if (l.status === 'check' && !l.cands.length) { l.status = 'none'; l.how = 'discontinued: not offered'; } }
+      if (l.status === 'check' && !l.cands.length) { l.status = 'none'; if (!l.discontinued) l.how = 'not in item list'; }
+    });
+    return res;
+  }
   var IDX = null, IDX_VER = null;
   function buildIndex(bundle) {
     var ver = (bundle.version || '') + '#' + (bundle.items || []).length;
     if (IDX && IDX_VER === ver) return IDX;
     var items = bundle.items || [], exact = {}, nm = {}, suf = {}, tokIx = {}, live = [];
     items.forEach(function (r, i) {
-      if (/discontinu/i.test(r[1] || '')) return;            // excluded (page rule)
+      if (/discontinu/i.test(r[1] || '') || isHidden(r[0])) return;   // excluded (page rule) / hidden list
       live.push(i); var name = String(r[0]); exact[name] = i; exact[name.replace(/\s+/g, ' ').toUpperCase()] = i;
       var k = norm(name); if (k) (nm[k] = nm[k] || []).push(i);
       var m = BRAND_RE.exec(name), rest = m ? m[2] : '', k2 = norm(rest);
@@ -277,7 +302,8 @@
     }
     return { kind: H.kind, customer: H.customer, quoteNo: H.quoteNo, style: style, lines: lines, source: 'ocr text' };
   }
-  var API = { norm: norm, buildIndex: buildIndex, matchCode: matchCode, closeMatch: closeMatch, parseRows: parseRows, parseText: parseText, headerInfo: headerInfo, styleOf: styleOf };
+  var API = { norm: norm, buildIndex: buildIndex, matchCode: matchCode, closeMatch: closeMatch, headerInfo: headerInfo, styleOf: styleOf, isHidden: isHidden,
+    parseRows: function (rows, b) { return dropHidden(parseRows(rows, b)); }, parseText: function (t, b) { return dropHidden(parseText(t, b)); } };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.QuoteImport = API;
 })(this);
 
@@ -339,6 +365,8 @@
     '.qicd button.on{border-color:#14532d;background:#e8f5ed}.qisb{margin-top:6px;border:1px dashed #b42318;color:#b42318;background:#fff;border-radius:10px;padding:6px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}' +
     '.qisq{margin-top:6px;width:100%;box-sizing:border-box}.qiqt{display:flex;align-items:center;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden;height:34px;background:#fff}' +
     '.qiqt button{width:30px;height:34px;border:0;background:#eef0f3;font-size:17px;cursor:pointer;color:var(--text)}.qiqt input{width:40px;text-align:center;border:0;font:inherit;font-weight:700;padding:0;height:34px;border-radius:0;background:#fff}' +
+    '.qipz{margin-top:8px;border:1.5px dashed #b8c0cc;border-radius:10px;padding:10px 12px;color:var(--muted);font-size:14px;text-align:center;outline:0;-webkit-user-select:text;user-select:text;cursor:text}.qipz:focus{border-color:#1f2a37}' +
+    '.qipp{font-size:13px;margin-left:10px}' +
     '.qiqt.warn{border-color:#d97706;box-shadow:0 0 0 2px #fde7c2}.qiqt.warn input{background:#fff7e8}' +
     '.qift{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom));margin:0 -16px -16px;background:#fff;border-top:1px solid var(--line);padding:8px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 14px rgba(16,24,40,.08)}' +
     '.qift .qicnt{font-size:12.5px;color:var(--muted);margin-bottom:6px}.qibt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.qibt .btn{margin:0;min-height:50px;min-width:0;width:100%;line-height:1.15;padding:4px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.qibt .btn .qbt{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
@@ -355,8 +383,8 @@
 
   function sheetMsg(title, text, err) {
     openSheet('<div class="qish"><h3>' + esc(title) + '</h3><div class="msg ' + (err ? 'err' : 'ok') + '" style="margin-top:8px">' + esc(text) + '</div>' +
-      '<button class="btn sec" id="qiAgain" type="button" style="margin-top:10px">Pick another file</button></div>');
-    var to = S && S.to; document.getElementById('qiAgain').onclick = function () { root.quoteImport(to); };
+      '<div class="qirow" style="margin-top:10px"><button class="btn sec" id="qiAgain" type="button">Pick another file</button><button class="btn sec" type="button" data-qpaste="1">Paste image</button></div></div>');
+    var to = S && S.to; document.getElementById('qiAgain').onclick = function () { root.quoteImport(to); }; bindPaste(to);
   }
   function soon(to) { S = { to: to };
     sheetMsg('Photo import is coming soon', 'For now, pick a PDF quote: a NetSuite estimate or an East Star quote PDF. Reading photos and scans is the next update.', false); }
@@ -442,9 +470,11 @@
     var pdf = !!src.pdf, title = 'Items from a quote';
     openSheet(readingHtml(title));
     var avail = quoteReadAvail();                                    // asked while the photo is being made small
-    var prep = src.copies ? Promise.resolve(src.copies) : (pdf ? pdfCopies(src.pdf) : src.files.reduce(function (pr, f, i) { return pr.then(function (acc) {
+    var have = src.copies && !pdf ? src.copies.slice(0) : null;      // 20261017i: pasted pages are added to the same quote; pages already made are kept
+    var prep = pdf ? (src.copies ? Promise.resolve(src.copies) : pdfCopies(src.pdf)) : (have && have.length >= src.files.length) ? Promise.resolve(have) : src.files.reduce(function (pr, f, i) { return pr.then(function (acc) {
+      if (acc[i]) return acc;
       if (src.files.length > 1) rdText(T('Getting photo ' + (i + 1) + ' of ' + src.files.length + ' ready…', '正在准备第 ' + (i + 1) + ' / ' + src.files.length + ' 张照片…'));
-      return imgCopy(f).then(function (c) { acc.push(c); return acc; }); }); }, Promise.resolve([])));
+      return imgCopy(f).then(function (c) { acc[i] = c; return acc; }); }); }, Promise.resolve(have || []));
     return Promise.all([avail, prep]).then(function (r) {
       var ok = r[0], copies = r[1]; src.copies = copies;
       if (!reading(run)) return;
@@ -460,7 +490,7 @@
         var res = QP.parseText(texts.join('\n\f\n'), data);              // \f = page break: a Total on one photo does not end the next one
         if (!res.lines.length) { sheetMsg(title, 'No item lines found. Make sure the item codes and the Qty column are in the photo, sharp and straight, then try again.', true); return; }
         res.source = pdf ? 'scan' : 'photo';
-        review(res, to, fname, { src: pdf ? 'Scan' : (copies.length > 1 ? T(copies.length + ' photos', copies.length + ' 张照片') : 'Photo'), photos: copies.map(function (c) { return c.data; }), more: !!copies.more });
+        review(res, to, fname, { src: pdf ? 'Scan' : (copies.length > 1 ? T(copies.length + ' photos', copies.length + ' 张照片') : 'Photo'), photos: copies.map(function (c) { return c.data; }), more: !!copies.more, srcObj: pdf ? null : src });
       });
     }).catch(function (er) {
       if (er && er.quiet) return;
@@ -468,9 +498,9 @@
       var m = (er && er.message) || 'Could not read the quote.';
       openSheet('<div class="qish"><h3>' + esc(title) + '</h3><div class="msg err" style="margin-top:8px">' + esc(m) + '</div>' +
         ((er && er.busy) ? '<div class="hint" style="margin-top:6px">Google limits how many photos can be read in a row. Wait a minute, then try again.</div>' : '') +
-        (er && er.prep ? '' : '<button class="btn" id="qiRetry" type="button" style="margin-top:10px">Try again</button>') + '<button class="btn sec" id="qiAgain" type="button" style="margin-top:8px">Pick another file</button></div>');
+        (er && er.prep ? '' : '<button class="btn" id="qiRetry" type="button" style="margin-top:10px">Try again</button>') + '<div class="qirow" style="margin-top:8px"><button class="btn sec" id="qiAgain" type="button">Pick another file</button><button class="btn sec" type="button" data-qpaste="1">Paste image</button></div></div>');
       var rb = document.getElementById('qiRetry'); if (rb) rb.onclick = function () { runOcr(src, to, fname); };
-      document.getElementById('qiAgain').onclick = function () { root.quoteImport(to); };
+      document.getElementById('qiAgain').onclick = function () { root.quoteImport(to); }; bindPaste(to);
     });
   }
 
@@ -496,7 +526,7 @@
   }
   function review(res, to, fname, ex) {
     ex = ex || {};
-    S = { res: res, to: to, file: fname, src: ex.src || 'PDF', photos: ex.photos || null, more: !!ex.more, rows: res.lines.map(function (l) {
+    S = { res: res, to: to, file: fname, src: ex.src || 'PDF', photos: ex.photos || null, more: !!ex.more, srcObj: ex.srcObj || null, rows: res.lines.map(function (l) {
       var per = l.status === 'ok' ? l.picks.map(function (p) { return { name: p.name, k: Math.max(1, Math.round(p.qty / (l.qty || 1))) }; }) : [];
       return { on: l.status === 'ok' && per.length > 0, qty: Math.max(1, Math.min(99999, l.qty || 1)), per: per, pick: null, srch: false, sq: '' }; }) };
     paint();
@@ -520,7 +550,7 @@
     if (l.status === 'ok') body = partsHtml(l, st);
     else if (l.status === 'check') body = '<div class="qiw">Close match: tap the right one</div><div class="qicd">' + l.cands.slice(0, 3).map(function (c) {
         return '<button type="button" class="' + (st.pick === c ? 'on' : '') + '" data-qpick="' + i + '" data-qn="' + esc(c) + '"><b class="notr">' + (st.pick === c ? '✓ ' : '') + esc(c) + '</b> <span class="qd notr" style="color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(descOf(c).slice(0, 80)) + '</span></button>'; }).join('') + '</div>';
-    else body = (st.pick ? partsHtml(l, st) : '<div class="qiw">Not in the item list' + (l.desc ? ': <span class="notr">' + esc(l.desc.slice(0, 50)) + '</span>' : '') + '</div>') +
+    else body = (st.pick ? partsHtml(l, st) : l.discontinued ? '<div class="qiw">Discontinued: not offered. Search for a replacement.</div>' : '<div class="qiw">Not in the item list' + (l.desc ? ': <span class="notr">' + esc(l.desc.slice(0, 50)) + '</span>' : '') + '</div>') +
       (st.srch ? '<input class="qisq" type="search" data-qsq="' + i + '" value="' + esc(st.sq) + '" placeholder="Search the item list" autocomplete="off"><div class="qicd" id="qiRes' + i + '"></div>'
         : '<button type="button" class="qisb" data-qsrch="' + i + '">' + (st.pick ? 'Change…' : 'Search…') + '</button>');
     var chip = l.status === 'check' ? ' <span class="qic chk">check</span>' : l.status === 'none' ? ' <span class="qic no">not found</span>' : '';
@@ -546,9 +576,9 @@
       (r.style ? '<span class="qic src">Style <span class="notr">' + esc(r.style) + '</span></span>' : '') + '</div>' +
       '<div class="hint" style="margin:2px 0 6px">Prices are today’s list prices. Check the qty, then add.</div>' +
       (S.photos ? '<div class="hint" style="margin:0 0 6px">Read by Google from the photo: check each line against it.' + (S.more ? ' Only the first 3 pages were read.' : '') + '</div>' +
-        '<details class="qiph"><summary>Show photo</summary>' + S.photos.map(function (d) { return '<img alt="" src="' + d + '">'; }).join('') + '</details>' : '') +
+        '<details class="qiph"><summary>Show photo' + (S.srcObj && S.srcObj.files && S.srcObj.files.length < OCR_MAX_FILES ? ' <button type="button" class="link qipp" data-qpaste="1">+ Paste a page</button>' : '') + '</summary>' + S.photos.map(function (d) { return '<img alt="" src="' + d + '">'; }).join('') + '</details>' : '') +
       '<div class="qil" id="qiList">' + r.lines.map(rowHtml).join('') + '</div><div class="qift" id="qiFt">' + footHtml() + '</div></div>');
-    bind();
+    bind(); bindPaste(S.to);
   }
   function repaintRow(i) { var el = document.querySelector('[data-qrow="' + i + '"]'); if (!el) return paint();
     var d = document.createElement('div'); d.innerHTML = rowHtml(S.res.lines[i], i); el.parentNode.replaceChild(d.firstChild, el); foot(); }
@@ -557,7 +587,7 @@
   function search(i) {
     var st = S.rows[i], box = document.getElementById('qiRes' + i); if (!box) return;
     var q = String(st.sq || '').trim(), out = [];
-    try { out = q.length >= 2 ? searchBundle_(localData, q, 6).items.filter(function (x) { return x.price !== null || x.desc.indexOf('incoming only') < 0; }) : []; } catch (e) { out = []; }
+    try { out = q.length >= 2 ? searchBundle_(localData, q, 8).items.filter(function (x) { return (x.price !== null || x.desc.indexOf('incoming only') < 0) && !QP.isHidden(x.name); }) : []; } catch (e) { out = []; }
     box.innerHTML = out.length ? out.slice(0, 6).map(function (x) { return '<button type="button" data-qsp="' + i + '" data-qn="' + esc(x.name) + '"><b class="notr">' + esc(x.name) + '</b> <span class="notr" style="color:var(--muted)">' + esc(String(x.desc || '').slice(0, 50)) + '</span></button>'; }).join('')
       : (q.length >= 2 ? '<div class="qiw">Nothing found</div>' : '');
   }
@@ -585,7 +615,7 @@
   function lines() {
     var by = {}, order = [];
     S.res.lines.forEach(function (l, i) { var st = S.rows[i]; if (!st.on || !st.per.length) return;
-      st.per.forEach(function (p) { var q = p.k * st.qty, note = l.note && !/^BOX-/i.test(p.name) ? l.note : '';
+      st.per.forEach(function (p) { if (QP.isHidden(p.name)) return; var q = p.k * st.qty, note = l.note && !/^BOX-/i.test(p.name) ? l.note : '';
         if (l.status !== 'ok') note = '';
         var e = by[p.name]; if (!e) { e = by[p.name] = { name: p.name, qty: 0, notes: [] }; order.push(e); }
         e.qty += q; if (note) e.notes.push([note, q]); }); });
@@ -603,6 +633,46 @@
       var c = S.res.customer || {}, info = { name: c.name || '', phone: c.phone || '', notes: 'From quote ' + (S.res.quoteNo || S.file || '') };
       S = null; newProjectFromQuote(info, L); };
   }
-  root.QIUI = { run: run, review: review, lines: function () { return S ? lines() : []; }, state: function () { return S; }, loadPdfjs: loadPdfjs, pdfRows: pdfRows,
+  // ------------------------------------------------------------------ 20261017i: paste a copied image / screenshot (Ctrl+V, long-press Paste, "Paste image")
+  var PASTE_MSG = 'Copy the quote image first, then tap Paste image. On a computer you can also press Ctrl+V.';
+  function pastedFiles(list) { var t = Date.now(); return [].slice.call(list || []).filter(isImgFile).map(function (f, i) {
+    return f.name && !/^image\.(png|jpe?g|gif|webp)$/i.test(f.name) ? f : new File([f], 'pasted-quote-' + t + '-' + (i + 1) + '.' + ((String(f.type).split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: f.type || 'image/png' }); }); }
+  /** Images pasted while a quote-import screen is open (index.html paste listener, the "Paste image" button). to = target note or null.
+   *  On the review of a photo quote they are added as more pages of the SAME quote (up to 5); otherwise they start a new photo import. */
+  function paste(list, to) {
+    css(); var fs = pastedFiles(list); if (!fs.length) return Promise.resolve(false);
+    var cur = S, src = cur && cur.srcObj && cur.srcObj.files && !cur.srcObj.pdf ? cur.srcObj : null;
+    if (src && cur.res && document.getElementById('qiList')) {
+      var room = OCR_MAX_FILES - src.files.length;
+      if (room <= 0) { if (root.toast) root.toast(T('Up to 5 photos per quote', '每份报价最多 5 张照片')); return Promise.resolve(false); }
+      src.files = src.files.concat(fs.slice(0, room)); src.texts = src.texts || [];
+      return runOcr(src, cur.to, cur.file).then(function () { return true; });
+    }
+    if (!to && cur && cur.to) to = cur.to;
+    return run(fs.slice(0, OCR_MAX_FILES), to || null).then(function () { return true; });
+  }
+  /** "Paste image" button: the async clipboard (Chrome / Edge ask once; iPhone shows its own "Paste" bubble). */
+  function pasteBtn(to) {
+    var cb = navigator.clipboard;
+    if (!cb || !cb.read) { pasteHelp(to); return Promise.resolve(false); }
+    return cb.read().then(function (items) {
+      var ps = [];
+      items.forEach(function (it) { var ty = (it.types || []).filter(function (x) { return /^image\//.test(x); })[0]; if (ty) ps.push(it.getType(ty).then(function (b) { return new File([b], 'image.' + (ty.split('/')[1] || 'png'), { type: ty }); })); });
+      return Promise.all(ps);
+    }).then(function (files) { if (!files.length) { pasteHelp(to, 'No image is copied right now.'); return false; } return paste(files, to); },
+      function () { pasteHelp(to); return false; });
+  }
+  /** Paste screen (also index.html when the file picker was closed without a file): a long-press target + the two ways in, one row. */
+  function pasteSheet(to, note) {
+    css(); S = { to: to || null };
+    openSheet('<div class="qish"><h3>Items from a quote</h3>' + (note ? '<div class="msg err" style="margin-top:8px">' + esc(note) + '</div>' : '') +
+      '<div class="qipz" id="qiPz" contenteditable="true" inputmode="none" aria-label="Paste image here">Paste a copied image or screenshot here: Ctrl+V, or long-press and Paste</div>' +
+      '<div class="qirow" style="margin-top:8px"><button class="btn sec" id="qiAgain" type="button">Pick a file</button><button class="btn sec" type="button" data-qpaste="1">Paste image</button></div></div>');
+    document.getElementById('qiAgain').onclick = function () { root.quoteImport(to || null); }; bindPaste(to);
+    var pz = document.getElementById('qiPz'); pz.oninput = function () { pz.textContent = 'Paste a copied image or screenshot here: Ctrl+V, or long-press and Paste'; };   // typed / pasted text is not kept
+  }
+  function pasteHelp(to, why) { pasteSheet(to, why ? why + ' ' + PASTE_MSG : PASTE_MSG); }
+  function bindPaste(to) { [].forEach.call(document.querySelectorAll('#sheetBody [data-qpaste]'), function (b) { b.onclick = function (e) { e.preventDefault(); e.stopPropagation(); pasteBtn(to); }; }); }
+  root.QIUI = { run: run, review: review, paste: paste, pasteBtn: pasteBtn, pasteSheet: pasteSheet, lines: function () { return S ? lines() : []; }, state: function () { return S; }, loadPdfjs: loadPdfjs, pdfRows: pdfRows,
     ocrJpeg: ocrJpeg, quoteReadAvail: quoteReadAvail, _qr: QR };
 })(this);
