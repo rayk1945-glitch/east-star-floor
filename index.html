@@ -600,8 +600,8 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261016v"></script>
-<script src="i18n.js?v=20261016v"></script>
+<script src="sync.js?v=20261017a"></script>
+<script src="i18n.js?v=20261017a"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -659,7 +659,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016v';
+var PAGE_VER = '20261017a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -912,7 +912,8 @@ function card(it) {
     (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))">Accessories <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
     (it.price != null || !priceState.prices ? '<span class="aqty"><button type="button" aria-label="Less" onclick="aqStep(this,-1)">−</button><input type="number" inputmode="numeric" min="1" max="99999" value="1" aria-label="Qty" onfocus="this.select()"><button type="button" aria-label="More" onclick="aqStep(this,1)">+</button></span>' +
-    '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'), this)">Add to note</button>' : '') + '</div></div>';
+    (packOf(it.name) ? '<button class="primary" style="white-space:nowrap" onclick="addPack(decodeURIComponent(\'' + nm + '\'), this)">Add door pack</button>' :
+    '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'), this)">Add to note</button>') : '') + '</div></div>';
 }
 
 // ---------------- search
@@ -1250,19 +1251,94 @@ function addItem(name, btn) { var it = shown[name], qi = btn && btn.previousElem
   addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' }); }   // accessories open only from the Accessories button (Ray 2026-10-16)
 // ---- sink -> compatible accessories (bundle.related from accessories.csv: {sink: [[accessory, note, kind], ...]}), Blanco + Franke
 function relOf(name) { var m = localData && localData.related; return (m && m[name]) || []; }
-var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, washlet: 14, autoflush: 15 };
+var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, washlet: 14, autoflush: 15, jamb: 16, hinge: 17, lever: 18, stop: 19, pack: 21 };
 function accKind(k) { return Object.prototype.hasOwnProperty.call(ACC_KIND, k) ? ACC_KIND[k] : 20; }
+var ACC_LABEL = { jamb: 'Frame', hinge: 'Hinge', lever: 'Lever', stop: 'Door stop', pack: 'Door pack' };   // small chip next to the code (same line, no extra height)
+// ---- door pack (Ray 2026-10-17): one tap adds an ISD door + its frame (3 jambs) + hinge sets.
+// bundle.packs = {door: [[item, qtyPerDoor | "hinge"], ...]} from door-packs.csv. No packs key (older bundle) = plain "Add to note".
+// Hinges follow Ray's rule per note: 1 door = 2 sets, N doors = ceil(1.5 N) sets; each tap adds only the top-up.
+function packOf(name) { var m = localData && localData.packs; return (m && m[name]) || null; }
+function hingeSets(doors) { return doors <= 0 ? 0 : doors === 1 ? 2 : Math.ceil(doors * 1.5); }
+function packDoorsIn(items) { return (items || []).reduce(function (s, x) { return s + (packOf(x.name) ? (Number(x.qty) || 0) : 0); }, 0); }
+var packTally = {};   // "project|note" -> {p: Promise(pack doors in the note), t: ms}; taps chain on it so quick double taps count right
+function packBefore(c) {
+  var k = c.id + '|' + c.noteId, n = noteOf(c.id, c.noteId), e = packTally[k];
+  if (n && n.items) return (e ? e.p : Promise.resolve()).then(function () { return packDoorsIn(n.items); });   // loaded note: its items already mirror earlier taps
+  if (!e || Date.now() - e.t > 120000) e = packTally[k] = { t: Date.now(), p: api('customerGet', { id: c.id }).then(function (r) {
+    var nn = ((r && r.notes) || []).filter(function (x) { return x.id === c.noteId; })[0]; return packDoorsIn(nn && nn.items); }, function () { return 0; }) };
+  return e.p;
+}
+function packLines(name, q, before) {
+  var it = itemFromRow(itemRow(name)), lines = [{ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' }];
+  (packOf(name) || []).forEach(function (p) { var r = itemRow(p[0]); if (!r) return; var a = itemFromRow(r),
+    n = p[1] === 'hinge' ? hingeSets(before + q) - hingeSets(before) : (Number(p[1]) || 1) * q;
+    if (n > 0) lines.push({ name: a.name, desc: a.desc.slice(0, 110), qty: n, photo: a.photo || '' }); });
+  return lines;
+}
+function addPack(name, btn, qty) { var qi = btn && btn.previousElementSibling && btn.previousElementSibling.querySelector('input');
+  var q = qty || (qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1); if (qi) qi.value = 1;
+  if (!curCust) { openPicker(function () { addPack(name, null, q); }); return; }
+  var c = curCust, k = c.id + '|' + c.noteId;
+  var p = packBefore(c).then(function (before) { addToNote(packLines(name, q, before)); return before + q; });
+  if (!(noteOf(c.id, c.noteId) || {}).items) packTally[k] = { t: (packTally[k] || {}).t || Date.now(), p: p };
+}
+var PACK_PARTS_ = null;
+function packPart(name) { var m = localData && localData.packs; if (!m) return false;
+  if (!PACK_PARTS_ || PACK_PARTS_.v !== localData.version) { var o = {}; for (var d in m) m[d].forEach(function (x) { o[x[0]] = 1; }); PACK_PARTS_ = { v: localData.version, s: o }; }
+  return !!PACK_PARTS_.s[name]; }
+/** Note size/hand switch on a pack door (80L/80R/84L/84R): move that door's jambs to the new hand/height. swaps = [{from, to, qty}] (door names
+ *  before/after, door qty). Pack slots line up by position (hinge-side, lock-side, top, hinges); a slot moves only when its code changes, and never
+ *  more than the note has, so 2 LH doors sharing jamb lines with one switched to RH end as LH x1 + RH x1. Hinges never move (door count is the same).
+ *  changed = lines the variant save will 'set' (a whole line that moves is renamed in place and joins it). Returns how many jambs moved. */
+function packSwap(c, n, swaps, changed) {
+  var moved = 0, find = function (nm) { return (n.items || []).filter(function (x) { return x.name === nm; })[0]; };
+  var hold = function (l) { if (changed.indexOf(l) < 0) lineHold[l.id] = n.id; };
+  swaps.forEach(function (sw) {
+    var po = packOf(sw.from), pn = packOf(sw.to); if (!po || !pn) return;
+    po.forEach(function (p, i) {
+      var q = pn[i]; if (!q || p[1] === 'hinge' || q[1] === 'hinge' || p[0] === q[0] || !itemRow(q[0])) return;
+      var from = find(p[0]); if (!from) return;
+      var k = Math.min((Number(p[1]) || 1) * sw.qty, Number(from.qty) || 0); if (k <= 0) return;
+      var to = find(q[0]); moved += k;
+      if (k >= Number(from.qty) && !to) { applyVariantToLine(from, q[0]); if (changed.indexOf(from) < 0) changed.push(from); return; }   // whole line: rename in place
+      if (to) { to.qty = Math.min(99999, (Number(to.qty) || 0) + k); hold(to); }
+      else { var r = itemFromRow(itemRow(q[0])), tmp = 'tmpl-' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5);
+        var line = { id: tmp, name: r.name, desc: r.desc.slice(0, 110), qty: k, photo: r.photo || '', note: '' }, ix = n.items.indexOf(from);
+        n.items.splice(ix + 1, 0, line);
+        autoSave('add:' + tmp, function () {
+          return api('customerItem', { id: c.id, noteId: n.id, op: 'add', line: { name: line.name, desc: line.desc, qty: line.qty, photo: line.photo, note: '' } }).then(function (rr) {
+            if (rr && rr.items) { var got = rr.items.filter(function (x) { return x.name === line.name; }).pop(), j = n.items.indexOf(line); if (got && j >= 0) n.items[j] = got; }
+            if (rr && rr.note) { n.updated = rr.note.updated; n.updated_by = rr.note.updated_by; }
+            if (noteOpenId === n.id && $('cdItems')) renderPicked();
+          });
+        }); }
+      if (k >= Number(from.qty)) {   // the whole old line moved onto an existing line: drop it
+        n.items = n.items.filter(function (x) { return x !== from; }); var ci = changed.indexOf(from); if (ci >= 0) changed.splice(ci, 1);
+        delete saveQ['line:' + from.id]; delete lineHold[from.id];
+        if (String(from.id).indexOf('tmpl-') === 0) delete saveQ['add:' + from.id];
+        else autoSave('rm:' + from.id, function () { return api('customerItem', { id: c.id, noteId: n.id, op: 'remove', lineId: from.id }).catch(function (er) { if (/not found|gone/i.test(er.message) && !/^project not found/i.test(er.message)) return; throw er; }); });
+      } else { from.qty = Number(from.qty) - k; hold(from); }
+    });
+  });
+  if (moved) scheduleAutosave();
+  return moved;
+}
 function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} = add picks to that note (note page pill)
   var rel = relOf(sink).slice().sort(function (a, b) { return accKind(a[2]) - accKind(b[2]); });
   if (!rel.length) return;
   var rows = rel.map(function (a) { var r = itemRow(a[0]); if (!r) return '';
     var it = itemFromRow(r), oh = r[3], enc = encodeURIComponent(a[0]).replace(/'/g, '%27');
     return '<div class="accrow" data-name="' + esc(a[0]) + '">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
-      '<div style="flex:1;min-width:0"><div class="name notr" style="font-weight:700">' + esc(a[0]) + '</div>' +
+      '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span class="notr">' + esc(a[0]) + '</span>' + (ACC_LABEL[a[2]] ? ' <span class="cutchip">' + ACC_LABEL[a[2]] + '</span>' : '') + '</div>' +
       '<div class="notr" style="font-size:12px;color:var(--muted)">' + esc(a[1] || '') + '</div>' +
       '<div style="font-size:12px"><span class="' + (oh > 0 ? 'accok' : 'accbad') + '">On hand</span> <b class="notr">' + (oh == null ? '—' : qty(oh)) + '</b>' +
       (priceState.prices && r[2] != null ? ' · <span class="notr">' + money(r[2]) + '</span>' : '') + '</div></div>' +
       '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }).join('');
+  if (packOf(sink) && !toNote) { var dr = itemRow(sink); if (dr) { var di = itemFromRow(dr);   // door pack doors: the card button adds the pack; this row adds the door alone
+    rows = '<div class="accrow" data-name="' + esc(sink) + '">' + (di.photo ? '<img class="thumb" loading="lazy" src="' + esc(di.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
+      '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span>Door only</span> <span class="cutchip">' + ACC_LABEL.pack + '</span></div>' +
+      '<div style="font-size:12px;color:var(--muted)"><span>No frame, no hinges</span></div></div>' +
+      '<button class="primary" data-accadd="' + encodeURIComponent(sink).replace(/'/g, '%27') + '">Add</button></div>' + rows; } }
   openSheet('<h3>' + (rel.every(function (a) { return a[2] === 'seat'; }) ? '<span>Compatible seats</span>' : '<span>Compatible accessories</span>') + '</h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
     '<div class="acclist">' + rows + '</div>');
   $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-accadd]'); if (!b) return;
@@ -2168,29 +2244,33 @@ function missHtml(label, names) {
 }
 function switchNoteFinish(label) {
   if (varBusy || ordBusy) return; var n = curNote(); if (!n || !localData) return;
-  var changed = [], missed = [];
+  var changed = [], missed = [], swaps = [];
   (n.items || []).forEach(function (l) {
     var sibs = variantSiblings(l.name);
-    if (sibs.length < 2) { missed.push(l.name); return; }
+    if (sibs.length < 2) { if (!packPart(l.name)) missed.push(l.name); return; }   // door-pack jambs/hinges follow their door (packSwap)
     var pick = variantPick_(sibs, l.name, label);
     if (pick === null) return;
+    var was = l.name;
     if (!pick || !applyVariantToLine(l, pick.name)) missed.push(l.name);
-    else changed.push(l);
+    else { changed.push(l); if (packOf(was)) swaps.push({ from: was, to: l.name, qty: Number(l.qty) || 1 }); }
   });
+  var nd = changed.length, jm = swaps.length ? packSwap(custOpen, n, swaps, changed) : 0;
   if (!changed.length && !missed.length) return;
   varMiss = missed.length ? { noteId: n.id, html: missHtml(label, missed) } : null;
   renderPicked(); syncCount();
   if (!changed.length) { toast('Could not switch ' + missed.length + ' item' + (missed.length === 1 ? '' : 's')); return; }
-  toast('Switched ' + changed.length + ' item' + (changed.length === 1 ? '' : 's'));
+  toast('Switched ' + nd + ' item' + (nd === 1 ? '' : 's') + (jm ? ' + frame' : ''));
   saveNoteVariants(n, changed);
 }
 function switchLineFinish(l, label) {
   if (varBusy || ordBusy) return; var n = curNote(); if (!n || !l || typeof variantPick_ !== 'function') return;
   var pick = variantPick_(variantSiblings(l.name), l.name, label);
   if (pick === null || !pick) return;
+  var was = l.name;
   if (!applyVariantToLine(l, pick.name)) { toast('Could not switch 1 item'); return; }
-  varMiss = null; renderPicked(); syncCount(); toast('Switched 1 item');
-  saveNoteVariants(n, [l]);
+  var changed = [l], jm = packOf(was) ? packSwap(custOpen, n, [{ from: was, to: l.name, qty: Number(l.qty) || 1 }], changed) : 0;
+  varMiss = null; renderPicked(); syncCount(); toast(jm ? 'Switched 1 item + frame' : 'Switched 1 item');
+  saveNoteVariants(n, changed);
 }
 function snapLines(n) { return (n.items || []).map(function (l) { return { id: l.id, name: l.name, desc: l.desc || '', qty: l.qty, note: l.note || '', photo: l.photo || '' }; }); }
 function linesMatch(serverItems, snap, ids) {
