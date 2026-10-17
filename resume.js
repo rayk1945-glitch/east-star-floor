@@ -37,6 +37,7 @@
     var o = ls(rk()) || {}, tab = onTab(), c = custOpen(), q = ($('q') && $('q').value || '').trim();
     o.tab = tab; o.t = Date.now(); o.ys = o.ys || {}; o.ys[tab] = Math.round(window.scrollY || 0);
     o.q = q; o.f = q && q === g('sQ') ? JSON.parse(JSON.stringify(g('sF') || {})) : {};
+    if (typeof g('sfFold') === 'boolean') o.sf = g('sfFold') ? 1 : 0;                    // 20261017k: Search filter rows folded
     if (c && c.id && c.notes && !tmpId(c.id)) { if (!idleBlank(c.id)) { o.p = c.id; var n = g('noteOpenId'); o.n = n && !tmpId(n) ? n : ''; o.idle = ''; } else o.idle = c.id; }   // the auto "new project after 30 min idle" is not a resume spot until used
     else if (tab === 'cust') { o.p = ''; o.n = ''; }
     ls(rk(), o); lastSnapT = Date.now();
@@ -68,6 +69,7 @@
         if (cc && cc.id === s.idle && c && c.notes) { var n = c.notes.filter(function (x) { return x.id === s.n; })[0] || c.notes[0]; if (n) { g('setCur')(c, n); lastKey = ckey(g('curCust')); } } }
       restoring = false; snapSoon(0); };
     try {
+      if ((s.sf === 0 || s.sf === 1) && g('setSfFold') && !!s.sf !== g('sfFold')) g('setSfFold')(!!s.sf, false);
       if (s.q && s.q.length >= 2) { window.sQ = s.q; window.sF = s.f || {}; g('runSearch')(s.q); } else if (g('renderRecent')) g('renderRecent')();
       if (s.tab === 'cust' && s.p) openProject(s.p, s.n, age > STALE_MS).then(function () { scrollBack(s.ys && s.ys.cust, 'cust'); }).then(done, done);
       else if (s.tab === 'cust') { g('go')('cust'); done(); }

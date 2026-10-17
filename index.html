@@ -86,6 +86,9 @@
   .searchbar svg { position:absolute; left:12px; top:15px; width:20px; height:20px; color:#6b7280; }
   .hint { font-size:13px; color:var(--muted); margin:8px 2px 0; }
   .meta { font-size:12.5px; color:var(--muted); margin:10px 2px 8px; display:flex; justify-content:space-between; gap:8px; }
+  #sfilt.fold { display:none; }
+  .sftog { flex:none; border:0; background:none; font:inherit; font-size:12.5px; font-weight:700; color:var(--accent); padding:6px 8px; margin:-6px -8px -6px 0; line-height:inherit; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+  .sftog .sfn { margin-left:3px; } .sftog .sfa { display:inline-block; width:.9em; margin-left:3px; text-align:center; }
   .item { padding:12px 14px; }
   .item .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
   .item .name { font-weight:700; font-size:16px; word-break:break-word; }
@@ -654,8 +657,8 @@
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
 <script src="sync.js?v=20261017h"></script>
-<script src="resume.js?v=20261017i"></script>
-<script src="i18n.js?v=20261017j"></script>
+<script src="resume.js?v=20261017k"></script>
+<script src="i18n.js?v=20261017k"></script>
 <script src="photoq.js?v=20261017i"></script>
 <script>
 'use strict';
@@ -714,7 +717,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017j';
+var PAGE_VER = '20261017k';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1085,7 +1088,7 @@ function searchPage(q, my, offset) {
     renderSearchFilters(r);
     var close = r.fallback;                              // nothing exact: these are typo / close matches
     var n = close ? (r.filtered ? r.listTotal : r.total) : r.filtered ? r.listExact || r.listTotal : r.exact, m = $('meta'); m.classList.remove('hidden');
-    m.innerHTML = '<span>' + (n ? n.toLocaleString() + (close ? ' close' : '') + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>';
+    m.innerHTML = '<span>' + (n ? n.toLocaleString() + (close ? ' close' : '') + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>' + sfTogHtml();
     var html = r.items.map(card).join('') + (r.more ? '<button class="btn" id="sMore" style="background:#fff;color:#111;border:1px solid var(--line-strong)">Load more (' + (r.listTotal - r.offset - r.shown).toLocaleString() + ' left)</button>' : '');
     if (offset) { var mb = $('sMore'); if (mb) mb.remove(); $('results').insertAdjacentHTML('beforeend', html); }
     else $('results').innerHTML = (close && r.items.length ? '<div class="closest" id="noExact">No exact match, showing close matches</div>' : '') +
@@ -1113,6 +1116,32 @@ $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('bu
   if (k === 'cat') delete sF.size;
   var my = ++seq; $('results').style.opacity = '.5';
   searchPage(sQ, my, 0).then(function () { $('results').style.opacity = ''; }); });
+
+// 20261017k: the Search chip rows (category, Finish, sizes, stock / shelf) fold away behind "Filters ▸" on the matches line.
+// Folded: no chip rows, the results move up; active filters keep applying and are counted ("Filters (2) ▸"). Per device.
+var SF_FOLD_KEY = 'esSfiltFold', sfFold = (function () { try { return localStorage.getItem(SF_FOLD_KEY) === '1'; } catch (e) { return false; } })();
+function sfActive() { return ['cat', 'size', 'finish', 'inStock', 'flooring', 'store'].filter(function (k) { return sF[k] != null && sF[k] !== '' && sF[k] !== false; }).length; }
+function sfTogHtml() { if (!$('sfilt').innerHTML) return ''; var a = sfActive();
+  return '<button type="button" class="sftog" id="sfTog" aria-controls="sfilt" aria-expanded="' + !sfFold + '"><span>Filters</span>' + (sfFold && a ? '<span class="sfn">(' + a + ')</span>' : '') + '<span class="sfa" aria-hidden="true">' + (sfFold ? '\u25B8' : '\u25BE') + '</span></button>'; }
+function sfTogUpd() { var b = $('sfTog'); if (b) b.outerHTML = sfTogHtml(); }
+function sfApply() { $('sfilt').classList.toggle('fold', sfFold); }
+function setSfFold(on, anim) {
+  on = !!on; var el = $('sfilt'), was = sfFold; sfFold = on;
+  try { localStorage.setItem(SF_FOLD_KEY, on ? '1' : '0'); } catch (e) {}
+  if (el._sfAn) { try { el._sfAn.cancel(); } catch (e) {} el._sfAn = null; }
+  var h0 = el.classList.contains('fold') ? 0 : el.offsetHeight;
+  sfApply(); sfTogUpd();
+  if (!on) window.dispatchEvent(new Event('resize'));                           // chip-row ‹ › arrows were measured while hidden
+  if (!anim || was === on || motionOff() || !el.innerHTML) return;
+  var h1 = on ? 0 : el.offsetHeight; if (h0 === h1) return;
+  if (on) el.classList.remove('fold');                                          // keep it visible while it closes
+  el.style.overflow = 'hidden';
+  var a = el._sfAn = el.animate([{ height: h0 + 'px', opacity: on ? 1 : 0 }, { height: h1 + 'px', opacity: on ? 0 : 1 }], { duration: 180, easing: 'cubic-bezier(.2,.7,.3,1)' });
+  var end = function () { if (el._sfAn !== a) return; el._sfAn = null; el.style.overflow = ''; sfApply(); };
+  a.onfinish = end; a.oncancel = function () { if (el._sfAn === a) { el._sfAn = null; el.style.overflow = ''; } };
+}
+sfApply();
+$('meta').addEventListener('click', function (e) { if (!e.target.closest('#sfTog')) return; setSfFold(!sfFold, true); if (window.ESRES && ESRES.snap) try { ESRES.snap(); } catch (x) {} });
 
 function sizeChrome() {
   var h = document.querySelector('#app header'), n = $('bnav');
