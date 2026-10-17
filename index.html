@@ -169,6 +169,17 @@
   .cbar .cbcli { border:1px solid var(--line-strong) !important; border-radius:999px; padding:0 !important; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; color:#1e3a6e; flex-shrink:0; }
   .cbar .cbcli svg { width:16px; height:16px; } .cbar .cbcli.has { background:#e3ecfa !important; border-color:#9fb6dc !important; }
   .cbar.hascli .nm { min-width:0; flex:0 1 auto; } .cbar.hascli { gap:4px; }
+  /* 20261017f: two tight rows (Ray OK'd this one extra row): project name + change + New project / target note + client + count */
+  .cbar { flex-direction:column; align-items:stretch; gap:0 !important; border-radius:14px; padding:2px 6px 2px 10px; }
+  .cbar .cbr1, .cbar .cbr2 { display:flex; align-items:center; gap:6px; min-width:0; }
+  .cbar .cbr1 { min-height:34px; gap:4px; } .cbar .cbr1 .cbnew { padding:4px 8px !important; } .cbar .cbr1 .chg { padding:6px 1px; } .cbar .cbr2 { min-height:28px; border-top:1px solid var(--line); font-size:13px; }
+  .cbar .cbr1 .nm { flex:0 1 auto; min-width:0; max-width:none; }
+  .cbar .cbr1 .chg { flex:0 0 auto; }
+  .cbar .cbnote { display:inline-flex; align-items:center; gap:4px; min-width:0; flex:0 1 auto; padding:3px 6px 3px 0 !important; border-radius:6px; color:var(--text); }
+  .cbar .cbnote b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; color:#1e3a6e; }
+  .cbar .cbnote .cv { color:#1e3a6e; font-size:11px; } .cbar .cbr2 .cbcli { width:24px; height:24px; margin-left:auto; } .cbar .cbr2 .cbcli svg { width:14px; height:14px; }
+  .cbar .cbr2 .cnt { margin-left:4px; }
+  .crow2.on { border-color:#9fb6dc; background:#f3f7fd; }
   .cisheet .twocol input { min-width:0; } .cisheet label.f { margin-top:6px; }
   .savest { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:55; border-radius:999px; padding:7px 14px; font-size:13.5px; font-weight:700; border:0; box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .savest.saving { background:#eef2f7; color:#334155; } .savest.ok { background:var(--ok-bg); color:var(--ok-fg); } .savest.bad { background:#fde8e6; color:#8a1c12; cursor:pointer; }
@@ -506,6 +517,14 @@
   .movelift { position:relative; z-index:6; background:#fff; border-radius:10px; }
   .pline.addok, .accrow.addok { background:#fff; border-radius:10px; }
   .badge.bump { animation:aBump var(--adp) cubic-bezier(.34,1.56,.64,1); }
+  /* 20261017f (Ray: "I can't tell if I am on the created new project"): + New project slides the project page in like a new page,
+     then the "Name · #1015" title (and on Search the Adding-to name) pops with a soft amber highlight. + Add note grows the new note in. */
+  @keyframes aTitle { 0% { transform:scale(1); background-color:rgba(253,230,138,0); box-shadow:0 0 0 3px rgba(253,230,138,0); }
+    35% { transform:scale(1.12); background-color:rgba(253,230,138,.9); box-shadow:0 0 0 3px rgba(253,230,138,.9); }
+    100% { transform:scale(1); background-color:rgba(253,230,138,0); box-shadow:0 0 0 3px rgba(253,230,138,0); } }
+  .titlepop { animation:aTitle .45s cubic-bezier(.34,1.56,.64,1); border-radius:6px; transform-origin:0 50%; }
+  .cbar .nm.titlepop { transform-origin:50% 50%; }
+  .growin { position:relative; z-index:6; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -632,9 +651,9 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017e"></script>
-<script src="i18n.js?v=20261017e"></script>
-<script src="photoq.js?v=20261017e"></script>
+<script src="sync.js?v=20261017f"></script>
+<script src="i18n.js?v=20261017f"></script>
+<script src="photoq.js?v=20261017f"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -692,7 +711,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017e';
+var PAGE_VER = '20261017f';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -792,6 +811,7 @@ function go(p, quiet) {
     if (custOpen && $('cuDetail').innerHTML) { if (noteOpenId) scrollToNote(noteOpenId); }
     else if (curCust) openCust(curCust.id, null, curCust.noteId);
     else { $('cuDetail').innerHTML = '<div class="card"><div class="spinner"></div><div class="hint" style="text-align:center">Starting a new project…</div></div>'; newProjectOpen(); } }
+  if (p === 'search') cbPopPending();
   if (p === 'plan') { planInit(); loadRecent('plan', 'plList', 5); }
   if (p === 'history') loadHistory();
   if (p === 'reported') renderReportedPage();
@@ -1194,21 +1214,57 @@ function adoptContacts(server, cached) {
 function setCur(c, n) { curCust = c && n ? { id: c.id, name: projLabel(c), noteId: n.id, noteTitle: n.title, count: n.count != null ? n.count : (n.items || []).length } : null;
   if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); else localStorage.removeItem(curKey()); renderCustBar(); }
 function saveCur() { if (curCust) localStorage.setItem(curKey(), JSON.stringify(curCust)); renderCustBar(); }
+/** 20261017f Adding-to bar, two tight rows (Ray: the project name was cut off): row 1 = project "Name · #1015" + change + "+ New project";
+ *  row 2 = the target note (tap = pick which note Search adds to) + client chip + item count. The project name pops when the project
+ *  changes, the note row when the target note changes (picker, + Add note, "Add items from Search here"). */
+var cbLast = null;
 function renderCustBar() {
   var b = $('custBar'); b.classList.toggle('none', !curCust);
-  b.innerHTML = curCust ? '<span class="lbl">Adding to:</span><button class="nm" id="cbOpen">' + esc(curCust.name) + ' · ' + esc(curCust.noteTitle) + '</button><span class="lbl">·</span><button class="chg" id="cbChange">change</button>' +
-      '<button class="cbcli" id="cbCli" title="Client info" aria-label="Client info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></button>' +
-      '<span class="cnt">' + (curCust.count || 0) + ' item' + (curCust.count === 1 ? '' : 's') + '</span>'
-    : '<span class="lbl">Adding to:</span><button class="nm" id="cbChange">pick a project</button>';
-  b.innerHTML += '<button class="cbnew" id="cbNew" title="New project with the next number">+ New project</button>';
+  var cli = '<button class="cbcli" id="cbCli" title="Client info" aria-label="Client info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></button>';
+  var nw = '<button class="cbnew" id="cbNew" title="New project with the next number">+ New project</button>';
+  b.innerHTML = curCust ? '<div class="cbr1"><button class="nm" id="cbOpen">' + esc(curCust.name) + '</button><button class="chg" id="cbChange">change</button>' + nw + '</div>' +
+      '<div class="cbr2"><button class="cbnote" id="cbNote" aria-haspopup="dialog" title="Which note items go into"><span class="lbl">Adding to note:</span><b>' + esc(curCust.noteTitle) + '</b><span class="cv" aria-hidden="true">▾</span></button>' + cli +
+      '<span class="cnt">' + (curCust.count || 0) + ' item' + (curCust.count === 1 ? '' : 's') + '</span></div>'
+    : '<div class="cbr1"><span class="lbl">Adding to:</span><button class="nm" id="cbChange">pick a project</button>' + nw + '</div>';
   $('cbChange').onclick = function () { openPicker(null); };
   $('cbNew').onclick = function () { this.disabled = true; newCustomerOpen(); };
   if ($('cbOpen')) $('cbOpen').onclick = function () { openCust(curCust.id, null, curCust.noteId); };
+  if ($('cbNote')) $('cbNote').onclick = function () { openNotePicker(); };
   b.classList.toggle('hascli', !!curCust);
   if ($('cbCli')) { var cc = cliProj(curCust.id); if (cc && (projectContacts(cc).some(contactHas) || String(cc.city || '').trim())) $('cbCli').classList.add('has');
     $('cbCli').onclick = function () { openClientInfo(curCust.id); }; }
   var bd = $('custBadge'); bd.textContent = curCust && curCust.count ? curCust.count : ''; bd.classList.toggle('hidden', !(curCust && curCust.count));
+  var was = cbLast, pop = null; cbLast = curCust ? { id: curCust.id, noteId: curCust.noteId } : null;
+  if (was && cbLast) { if (was.id !== cbLast.id) pop = 'cbOpen'; else if (String(was.noteId).indexOf('tmp-') !== 0 && was.noteId !== cbLast.noteId) pop = 'cbNote'; }
+  else if (!was && cbLast && cbInit) pop = 'cbOpen';
+  cbInit = true; if (!cbLast) cbPend = null;
+  if (pop) { if (b.offsetParent) { cbPend = null; popOk($(pop), 'titlepop'); } else if (!(cbPend === 'cbOpen' && pop === 'cbNote')) cbPend = pop; }   // changed on the Project tab: pop when Search shows again
 }
+var cbPend = null, cbInit = false;
+function cbPopPending() { var w = cbPend; cbPend = null; if (w) setTimeout(function () { popOk($(w), 'titlepop'); }, 60); }
+/** Row 2 of the bar: which note of the current project Search adds to. Same state as the Project tab's "adding here". */
+function openNotePicker() {
+  if (!curCust) { openPicker(null); return; }
+  var id = curCust.id, c = cliProj(id);
+  if (!c || !c.notes) { openSheet('<h3>' + esc(curCust.name) + ': which note?</h3><div class="spinner"></div>');
+    api('customerGet', { id: id }).then(function (r) { pcSave(r); if (curCust && curCust.id === id && $('sheet').classList.contains('on')) openNotePicker(); })
+      .catch(function (er) { $('sheetBody').innerHTML = '<h3>' + esc(curCust ? curCust.name : '') + '</h3><div class="msg err">' + esc(er.message) + '</div>'; }); return; }
+  var ns = c.notes || [];
+  openSheet('<h3>' + esc(projLabel(c)) + ': which note?</h3><div class="hint" style="margin:0 0 8px">Items from Search go into this note.</div>' +
+    ns.map(function (n) { var cnt = (n.items || []).length, on = isCurNote(c.id, n.id);
+      return '<button class="crow2' + (on ? ' on' : '') + '" data-tnote="' + esc(n.id) + '"><b>' + (on ? '✓ ' : '') + '<span>' + esc(n.title) + '</span></b>' + (on ? '<span class="cur">adding here</span>' : '') +
+        '<span class="s">' + cnt + ' item' + (cnt === 1 ? '' : 's') + '</span></button>'; }).join('') +
+    (ns.length < 12 ? '<button class="newc" id="tnNew">+ New note</button>' : ''));
+  $('sheetBody').onclick = function (e) { var t = e.target.closest('[data-tnote]'); if (!t) return;
+    var n = ns.filter(function (x) { return x.id === t.dataset.tnote; })[0]; if (!n) return;
+    $('sheetBody').onclick = null; closeSheet(); setTargetNote(c, n); };
+  if ($('tnNew')) $('tnNew').onclick = function () { var bt = this; bt.disabled = true; $('sheetBody').onclick = null;
+    if (custOpen && custOpen.id === id && custOpen.notes) { closeSheet(); addNoteNow(custOpen); return; }   // open on the Project tab: same instant path as + Add note
+    api('noteSave', { id: id }).then(function (r) { c.notes.push(r.note); pcSave(c); closeSheet(); setTargetNote(c, r.note); toast('New note: ' + r.note.title + ' (adding here)'); })
+      .catch(function (er) { bt.disabled = false; toast(er.message); }); };
+}
+function setTargetNote(c, n) { setCur(c, n);
+  if (custOpen && custOpen.id === c.id && $('cdNotes')) renderNoteCards(); }   // the Project tab's "adding here" pill follows
 /** "Client" chip on the Adding-to bar: compact sheet to fill contact 1 (name/role/phone/email), address and tax of the
  *  current project without leaving Search. Writes the same project fields the project page uses, then the normal autosave. */
 function cliProj(id) { return custOpen && custOpen.id === id && custOpen.notes ? custOpen : pcGet('c:' + id); }
@@ -1260,17 +1316,46 @@ function newProjToast(c) { var l = custLabel(c); toast(window.I18N && I18N.lang(
  *  next numbered project and open it right away at the top, Note 1 open + "adding here", its text box focused. */
 function newProjectOpen() {
   keepTyped(); saveBg();
+  var sw = newBusy ? null : npSwapStart();   // 20261017f: the old page slides out on the tap; the new one slides in when the server gives its number
   return createBlankProject().then(function (c) {
     if (!c || !c.notes || !c.notes[0]) throw new Error('No note');
-    infoOpen = false; pcSave(c); setCur(c, c.notes[0]);
-    openCust(c.id, c, c.notes[0].id); window.scrollTo(0, 0);
-    var t = $('nText'); if (t) { try { t.focus({ preventScroll: true }); } catch (e) {} window.scrollTo(0, 0); }
-    newProjToast(c); return c;
-  }).catch(function (er) { renderCustBar();
+    return (sw ? sw.ready : Promise.resolve()).then(function () {
+      npHold = false; infoOpen = false; pcSave(c); setCur(c, c.notes[0]);
+      openCust(c.id, c, c.notes[0].id); window.scrollTo(0, 0);
+      var t = $('nText'); if (t) { try { t.focus({ preventScroll: true }); } catch (e) {} window.scrollTo(0, 0); }
+      npSwapIn(sw); newProjToast(c); return c; });
+  }).catch(function (er) { if (sw) npSwapUndo(sw); renderCustBar();
     if (!custOpen && $('p-cust').classList.contains('on')) {   // nothing to fall back to: don't leave the "Starting…" spinner up
       $('cuDetail').innerHTML = '<div class="card"><div class="msg err">' + esc((er && er.message) || 'Not created') + '</div><button class="btn" id="cdRetryNew" style="margin-top:8px">+ New project</button></div>';
       $('cdRetryNew').onclick = function () { this.disabled = true; newProjectOpen(); }; } });
 }
+/** 20261017f page swap for + New project. Out: the open project slides left + fades (on the tap). If the server is slower than that,
+ *  a "New project · #…" stand-in slides in from the right. In: the new project slides in from the right (unless the stand-in already
+ *  did), then its "Name · #1015" title pops. Only transform/opacity; the final layout is the normal render. Reduced motion: none of it. */
+var npHold = false, NP_DX = 36;
+function npSwapStart() {
+  var d = $('cuDetail'), sw = { d: d, stand: false, out: null }; npHold = true;
+  if (motionOff() || !$('p-cust').classList.contains('on')) { sw.ready = Promise.resolve(); return sw; }
+  var had = !!(custOpen && $('cdProj'));
+  sw.ready = new Promise(function (res) {
+    if (!had) { res(); return; }                                    // empty Project tab: its "Starting a new project…" card is already up
+    var a = sw.out = d.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-' + NP_DX + 'px)' }], { duration: 170, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+    a.onfinish = function () { res(); if (!npHold) return;          // still waiting for the number: show the stand-in page
+      sw.stand = true; d.innerHTML = '<div class="proj"><div class="phead"><div class="nhead"><button class="back" disabled>‹</button><b class="nptitle">' + esc(window.I18N && I18N.lang() === 'zh' ? '新项目 · #…' : 'New project · #…') + '</b></div></div>' +
+        '<div class="card ngroup"><div class="spinner"></div></div></div>';
+      a.cancel(); npSlideIn(d); };
+    a.oncancel = function () { res(); };
+  });
+  return sw;
+}
+function npSlideIn(d) { if (motionOff()) return; d.animate([{ opacity: 0, transform: 'translateX(' + NP_DX + 'px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: MOTION_E }); }
+function npSwapIn(sw) { var d = $('cuDetail');
+  if (sw && sw.out) { try { sw.out.cancel(); } catch (e) {} }
+  if (motionOff()) return;
+  if (!(sw && sw.stand)) npSlideIn(d);
+  setTimeout(function () { popOk($('cdTitle'), 'titlepop'); }, sw && sw.stand ? 60 : 200); }
+function npSwapUndo(sw) { npHold = false; if (sw.out) { try { sw.out.cancel(); } catch (e) {} }
+  if (sw.stand && custOpen && custOpen.notes) { renderCustDetail(); npSlideIn($('cuDetail')); } }
 /** "+ New" from Search / the bar: create and make it the current note, without leaving the page. */
 function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function (c) { window.scrollTo(0, y); newProjToast(c); }).catch(function () { renderCustBar(); }); }   // Search: stay on the tab + scroll; the Adding-to bar switches to the new project
 /** Quick picker: recent customers + search + "+ New customer", then which note. then() runs after the pick. */
@@ -1899,6 +1984,7 @@ function applyRemote(c, R) {
   pcSave(c);
   if (curCust && curCust.id === c.id) { var cn = noteOf(c.id, curCust.noteId); if (!cn) setCur(null); else { curCust.count = cn.items.length; curCust.noteTitle = cn.title; curCust.name = custLabel(c); saveCur(); } }
   // repaint: never rebuild the element being typed in
+  if (npHold) return;                                                          // 20261017f: + New project page swap running; the model is saved, the new page paints next
   if (fl) { SYNC.deferred = true; return; }                                    // typing in an item: repaint when they leave the field
   var y = window.scrollY;
   if (g.focusNote) { renderPicked(); quoteBtn(); }                            // typing the note text: only its item list
@@ -1935,6 +2021,7 @@ function addNoteNow(c) {
   // Minimal paint: only the notes list. Full renderOverview rebuilds header/contacts/voice and feels slow.
   if ($('cdNotes')) { renderNoteCards(); scrollToNote(tmp); }
   else { renderOverview(); scrollToNote(tmp); }
+  growInNote(noteCardEl(tmp));
   toast('New note: ' + n.title + ' (adding here)');
   var projId = c.id, noteTitle = 'Note ' + k;
   autoSave('newnote:' + projId + ':' + tmp, function () {
@@ -1951,6 +2038,12 @@ function addNoteNow(c) {
     });
   });
 }
+/** 20261017f: the new note card grows in (fade + 0.96 -> 1.04 -> 1, lifted over its neighbours, ~300ms), from the tap. Transform/opacity only. */
+function growInNote(el) { if (!el || motionOff()) return; el.classList.add('growin');
+  var a = el.animate([{ opacity: 0, transform: 'scale(.96)', boxShadow: '0 0 0 rgba(15,23,42,0)' },
+    { offset: .45, opacity: 1, transform: 'scale(1.04)', boxShadow: '0 14px 30px rgba(15,23,42,.22), 0 3px 8px rgba(15,23,42,.12)' },
+    { opacity: 1, transform: 'none', boxShadow: '0 0 0 rgba(15,23,42,0)' }], { duration: 300, easing: 'cubic-bezier(.3,1.3,.6,1)' });
+  a.onfinish = a.oncancel = function () { el.classList.remove('growin'); }; }
 function scrollToNote(id) { var g = document.querySelector('[data-ng="' + id + '"]'); if (g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - document.querySelector('#app header').offsetHeight - 8); }
 function noteSummary(n) { var cnt = (n.items || []).length, ph = (n.photos || []).length;
   return cnt + ' item' + (cnt === 1 ? '' : 's') + (ph ? ' · ' + ph + ' photo' + (ph === 1 ? '' : 's') : '') + (n.updated ? ' · saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : ''); }
