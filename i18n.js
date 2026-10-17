@@ -24,7 +24,7 @@
     'No exact match, showing close matches': '没有完全匹配，显示相近结果', 'No match with these filters': '这些筛选条件下没有结果',
     'Nothing here with these filters. Tap a chip again to clear it.': '这些筛选条件下没有结果。再点一次标签即可取消。',
     'In stock': '有货', 'SF shelf': 'SF 货架', 'Fremont shelf': 'Fremont 货架', 'FRE shelf': 'FRE 货架', 'Stock by store': '各店库存',
-    'On hand': '现货', 'On order': '已订购', 'Incoming': '在途', 'After ctnrs': '到柜后', 'retail': '零售价', 'per piece': '每片', 'Price': '价格',
+    'On hand': '现货', 'Max cut': '最大切割', 'On order': '已订购', 'Incoming': '在途', 'After ctnrs': '到柜后', 'retail': '零售价', 'per piece': '每片', 'Price': '价格',
     'Add to note': '加入笔记', 'Accessories': '配件', 'Compatible accessories': '适配配件', 'Compatible seats': '适配马桶盖', 'Spec sheet': '规格表', 'Install guide': '安装说明', 'Links copied': '链接已复制', 'Spec sheets & install guides': '规格表和安装说明', 'Add': '加入', 'Added ✓': '已加入 ✓', 'Added': '已加入', 'Tile calculator': '瓷砖计算器', '▦ Tile calculator': '▦ 瓷砖计算器', 'discontinued': '已停产', 'partly received': '部分到货',
     'Adding to:': '添加到：', 'Adding to': '添加到', 'pick a project': '选择项目', 'change': '更换', '+ New project': '+ 新项目', 'New project with the next number': '用下一个编号新建项目',
     'Clear search': '清除搜索', 'Dismiss': '关闭', 'Close': '关闭', 'Photo': '照片', 'Edit': '编辑', 'Remove': '删除', 'Delete': '删除', 'Cancel': '取消', 'Select all': '全选', 'Select': '选择',

@@ -109,6 +109,7 @@
   .stat.inc { background:var(--info-bg); color:var(--info-fg); }
   .shelf { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   .chip { font-size:12.5px; font-weight:600; border-radius:999px; padding:3px 10px; background:#eef0f3; color:#374151; }
+  .cutchip { display:inline-block; vertical-align:2px; margin-left:4px; font-size:10.5px; font-weight:700; line-height:1.35; padding:0 6px; border-radius:999px; background:#fff4e5; color:#7c2d12; white-space:nowrap; }
   .chip.none { color:#8a93a0; font-weight:500; }
   .locstock .chip.good { background:#e7f6ec; color:#14532d; } .locstock .chip.bad { background:#fdecec; color:#7f1d1d; }
   .loclbl { font-size:12px; color:var(--muted); align-self:center; }
@@ -599,8 +600,8 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261016u"></script>
-<script src="i18n.js?v=20261016u"></script>
+<script src="sync.js?v=20261016v"></script>
+<script src="i18n.js?v=20261016v"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -658,7 +659,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016u';
+var PAGE_VER = '20261016v';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -886,6 +887,8 @@ function floorParse(cat, desc, tile) {
 function floorOf(it) { if (!it) return null; var f = floorParse(it.cat, it.desc, it.tile); if (!f) return null;
   try { var own = parseFloat(localStorage.getItem('esFloorSf:' + it.name)); if (own > 0) return { sf: own, src: 'staff' }; } catch (e) {} return f; }
 function isFloorRow(r) { return !!(r && floorOf(itemFromRow(r))); }
+/** Tile saw / cutter max cut length chip from bundle.cutLen (cut-lengths.csv), in the existing chip row (no extra height). */
+function cutChip(it) { var m = localData && localData.cutLen, v = m && m[it.name]; return v ? ' <span class="cutchip"><span>Max cut</span> <span class="notr">' + esc(v) + '</span></span>' : ''; }
 function card(it) {
   shown[it.name] = it;
   var oh = Number(it.onHand), byC = {};
@@ -895,7 +898,7 @@ function card(it) {
   var ps = perSqft(it), disc = /discontinu/i.test(it.desc) ? ' <span class="chip" style="background:#fdecec;color:#7f1d1d">discontinued</span>' : '';
   var nm = encodeURIComponent(it.name).replace(/'/g, '%27');  // names like 2' x 9' must not break the inline onclick string
   return '<div class="card item" data-name="' + nm + '"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
-    '<div style="flex:1;min-width:0"><div class="top"><div class="name notr">' + esc(it.name) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
+    '<div style="flex:1;min-width:0"><div class="top"><div class="name"><span class="notr">' + esc(it.name) + '</span>' + cutChip(it) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + missTagHtml(it.name) + '</div></div>' +
     '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
     '<div class="stats shelves"><div class="stat ohstat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b class="notr">' + ohCubeHtml(it.name, it.onHand) + '</b><span>On hand</span></div>' +
