@@ -207,6 +207,11 @@
   .proj .addnote { margin:0; min-height:46px; } .proj .pvoice { margin:0 0 8px; } .proj .vbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .proj .vbar .recbtn { min-height:40px; padding:0 14px; font-size:14px; }
   .proj .vtog { margin-left:auto; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 12px; font:inherit; font-size:13.5px; font-weight:700; color:#1f2937; cursor:pointer; }
   .proj #cdVoice { margin-top:8px; } .proj #cdQuote { margin-top:10px; } .proj #cdSaveAll { margin:10px 0 0; } .proj #cdSaveMsg { margin-top:4px; }
+  .psave { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0 0; min-height:20px; font-size:12.5px; line-height:20px; }
+  .psave .pst { border:0; background:none; padding:0 2px; font:inherit; font-weight:700; color:var(--muted); cursor:default; white-space:nowrap; }
+  .psave .pst.ok { color:var(--ok-fg); } .psave .pst.saving { color:#334155; } .psave .pst.off { color:#92400e; } .psave .pst.bad { color:#8a1c12; cursor:pointer; text-decoration:underline; }
+  .psave .pwho { color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; } .psave .pwho i { display:inline-block; width:7px; height:7px; border-radius:50%; background:#16a34a; margin-right:5px; vertical-align:1px; }
+  @keyframes rflash { 0% { background:#fef3c7; } 100% { background:transparent; } } .rflash { animation:rflash 1.6s ease-out; }
   .addnote { display:block; width:100%; margin:0 0 12px; min-height:50px; border:2px dashed #94a3b8; border-radius:14px; background:#fff; font:inherit; font-size:16px; font-weight:700; color:#1f2937; cursor:pointer; }
   .ntitle { font-size:20px; font-weight:700; border:0; border-bottom:1px dashed var(--line-strong); border-radius:0; padding:6px 2px; margin:2px 0 4px; min-height:0; }
   .nchips { display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 8px; } .ngroup:not(.open) .nchips { margin-right:36px; }
@@ -594,7 +599,8 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="i18n.js?v=20261016r"></script>
+<script src="sync.js?v=20261016s"></script>
+<script src="i18n.js?v=20261016s"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -624,6 +630,7 @@ function api(action, data) {
     if (!b) return serverApi(action, data);                                       // download failed: ask the server as before
     return JSON.parse(JSON.stringify(LOCAL_ACTIONS[action](b, data || {})));       // same functions the server runs
   });
+  if (OB && OB.handles(action, data)) return OB.call(action, data);
   return serverApi(action, data);
 }
 function serverApi(action, data) {
@@ -631,7 +638,7 @@ function serverApi(action, data) {
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('Unexpected server reply (HTTP ' + r.status + ').'); }
       if (!j.ok) { var er = new Error(noteWords(j.reason === 'not configured' ? 'The bot is not set up yet. Ask admin.' : (j.error || 'Something went wrong.'))); if (j.reason) er.reason = j.reason; if (j.auth) signedOut(); throw er; } return j.data; }); },
-      function () { throw new Error('No connection to the server. Check your internet and try again.'); });
+      function () { var er = new Error('No connection to the server. Check your internet and try again.'); er.network = true; throw er; });
 }
 /** Server messages still say "customer" (API unchanged); staff see "note". */
 function noteWords(m) { return String(m).replace('Go back and reopen the customer.', 'Go back and reopen the project.').replace('Go back and reopen the note.', 'Go back and reopen the project.').replace('This customer has no note yet. Tap + New note.', 'This project has no note yet. Tap + Add note.')
@@ -651,7 +658,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016r';
+var PAGE_VER = '20261016s';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -741,7 +748,7 @@ function signedOut() { clearIdleClose(); hSel = {}; if (typeof renderHSelBar ===
 function go(p, quiet) {
   if (p === 'reported' && !document.body.classList.contains('rmon')) p = 'search';
   if (session && session.role === 'warehouse' && p !== 'search' && p !== 'reported') p = 'search';     // warehouse: Search + reported inventory
-  if (p !== 'cust' && $('p-cust') && $('p-cust').classList.contains('on') && custOpen) saveBg();   // leaving the project saves whatever is still dirty
+  if (p !== 'cust' && $('p-cust') && $('p-cust').classList.contains('on') && custOpen) { saveBg(); if (typeof syncLeave === 'function') syncLeave(); }   // leaving the project saves whatever is still dirty
   document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === 'p-' + p); });
   document.querySelectorAll('#bnav button').forEach(function (b) { b.classList.toggle('active', b.dataset.go === p); });
   if (typeof renderHSelBar === 'function') renderHSelBar();
@@ -765,7 +772,7 @@ function enterApp() {
   show('app'); setHeader(session); initAppBack(); touchIdle();
   if (pkOffer) { pkOffer = false; setTimeout(pkMaybeOffer, 600); }
   loadCur(); custOpen = null; $('cuDetail').innerHTML = '';
-  checkData();
+  checkData(); initOutbox();
   sizeChrome(); setTimeout(a2hsShow, 1500);
   var lq = sessionStorage.getItem('esRedLastQ'); if (lq && !$('q').value) runSearch(lq); else renderRecent();
 }
@@ -1287,7 +1294,7 @@ function noteOf(cid, nid) { return custOpen && custOpen.id === cid ? (custOpen.n
 function curNote() { return noteOf(custOpen && custOpen.id, noteOpenId); }
 
 // ---- past notes live in History ("Notes" view; "Requests" = the plan / quote requests). Back from a note lands there.
-function loadCustList() { custOpen = null; noteOpenId = null; $('cuDetail').innerHTML = ''; setHView('notes'); go('history'); }
+function loadCustList() { if (typeof syncLeave === 'function') syncLeave(); custOpen = null; noteOpenId = null; $('cuDetail').innerHTML = ''; setHView('notes'); go('history'); }
 var hView = 'notes', hSel = {}, hRows = [];
 function canDeleteProj(c) { return !!(c && session && (c.mine || session.role === 'admin')); }
 function setHView(v) { hView = v; [].forEach.call($('hView').children, function (x) { x.classList.toggle('active', x.dataset.v === v); });
@@ -1582,7 +1589,7 @@ function renderOverview() {
     '<div class="pvoice" id="cdVoiceBox"><div class="vbar"><button class="recbtn" id="cdRec">● Record voice note</button><span id="cdRecT" class="hint"></span>' +
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
-      '<button class="btn" id="cdSaveAll">Save project</button><div class="saved" id="cdSaveMsg" style="text-align:center">' + (c._savedAt ? 'Saved ' + esc(whenTxt(c._savedAt)) + ' · contact info + all notes' : '') + '</div>' +
+      '<div class="psave" id="cdSaveRow"><button type="button" class="pst" id="cdSaveSt" aria-live="polite"></button><span class="pwho" id="cdWho"></span></div>' +
       '<div class="qrow"><button type="button" class="btn sec" id="cdShareProj">Share</button>' + (canShare ? '<button type="button" class="btn sec" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '</div>' +
       '<button type="button" class="btn sec" id="cdCloneProj" data-cloneproj="1">Clone project</button>' +
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
@@ -1599,7 +1606,7 @@ function renderOverview() {
   if ($('cdShareProj')) $('cdShareProj').onclick = function () { flushBatch().then(function () { if (custOpen === c) openClientLink(c); }); };
   $('cdTax').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('active', x === b); }); c.tax = b.dataset.t; queueInfo(); };
   $('cdNewNote').onclick = function () { addNoteNow(c); };
-  $('cdSaveAll').onclick = saveProject; applySaveCool(c);
+  $('cdSaveSt').onclick = function () { if (saveFail) retrySaves(); else if (OB) OB.kick(); }; saveState(); paintWho(); syncSchedule(1200);
   [].forEach.call(document.querySelectorAll('[data-cloneproj]'), function (b) { b.onclick = function () { cloneProject(c, b); }; });
   $('cdQuote').onclick = quoteCust; $('cdQuoteAll').onclick = quoteProject;
   $('cdRec').onclick = toggleRec;
@@ -1608,6 +1615,108 @@ function renderOverview() {
     api('customerDelete', { id: c.id }).then(function () { if (curCust && curCust.id === c.id) setCur(null); toast('Deleted ' + projLabel(c)); loadCustList(); }).catch(function (er) { toast(er.message); }); }); };
   renderNoteCards(); renderVoice();
 }
+// ---- live sync: while a project is open and on screen, poll every ~4 s (10 s / 30 s when idle, never when hidden).
+// The poll is cheap (server cache: rev + who is viewing); the full project comes back only when someone changed it.
+// Remote changes merge per note / per line (sync.js) and never overwrite what is being typed or still waiting to save.
+var OB = null, SYNC = { t: null, busy: false, act: Date.now(), remote: Date.now(), viewers: [], off: false, gen: 0, force: false, deferred: false, leftId: null };
+function obKey() { return 'esOutbox:' + (session && session.name || ''); }
+function initOutbox() {
+  if (!window.ESYNC || !session) return;
+  if (OB && OB._key === obKey()) { OB.kick(); return; }
+  OB = new ESYNC.Outbox({
+    send: function (ops) {
+      return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'projBatch', ops: ops, token: session && session.token }), redirect: 'follow' })
+        .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { var e1 = new Error('Unexpected server reply (HTTP ' + r.status + ').'); if (r.status >= 500 || r.status === 429) e1.network = true; throw e1; }
+          if (!j.ok) { var er = new Error(noteWords(j.error || 'Something went wrong.')); if (j.error === 'Unknown action.') er.unknownAction = true; if (j.auth) er.auth = true; throw er; }
+          (j.data.results || []).forEach(function (x) { if (x && !x.ok && x.error) x.error = noteWords(x.error); }); return j.data; }); },
+          function () { var er = new Error('No connection to the server.'); er.network = true; throw er; });
+    },
+    sendOne: function (action, data) { return serverApi(action, data); },
+    load: function () { try { return JSON.parse(localStorage.getItem(obKey()) || '[]'); } catch (e) { return []; } },
+    save: function (a) { try { if (a.length) localStorage.setItem(obKey(), JSON.stringify(a)); else localStorage.removeItem(obKey()); } catch (e) {} },
+    onState: function () { saveState(); },
+    onRevs: function (revs) { var c = custOpen, r = c && revs && revs[c.id]; if (r && r.after && Number(c.rev || 0) === Number(r.before || 0)) c.rev = r.after; },
+    onDone: function () { SYNC.gen++; },
+    onAuth: function () { signedOut(); }
+  });
+  OB._key = obKey();
+  if (OB.pending()) { OB.kick(); toast('Sending changes saved on this phone…'); }
+}
+function syncOn() { return !!(session && OB && custOpen && custOpen.id && custOpen.notes && !SYNC.off && !document.hidden && $('p-cust').classList.contains('on')); }
+function syncSchedule(ms) {
+  clearTimeout(SYNC.t); SYNC.t = null; if (!syncOn()) return;
+  if (ms == null) ms = ESYNC.pollDelay(Date.now() - Math.max(SYNC.act, SYNC.remote));
+  SYNC.t = setTimeout(syncPoll, ms);
+}
+/** Nothing local is waiting: a remote copy can be merged without fighting our own saves. */
+function syncQuiet() {
+  return !isBatchDirty() && !Object.keys(saveRun).length && !Object.keys(saveQ).length && !(OB && OB.pending()) && !Object.keys(tmpNotes).length &&
+    !(typeof ordBusy !== 'undefined' && ordBusy) && !(typeof varBusy !== 'undefined' && varBusy) && !(typeof phBusy !== 'undefined' && phBusy) && !(typeof lineDrag !== 'undefined' && lineDrag);
+}
+function syncPoll() {
+  SYNC.t = null; if (!syncOn()) return;
+  if (SYNC.busy) { syncSchedule(); return; }
+  var c = custOpen, gen = SYNC.gen, force = SYNC.force; SYNC.busy = true; SYNC.force = false; SYNC.leftId = c.id;
+  serverApi('projPoll', { id: c.id, rev: force ? 0 : (c.rev || 0) }).then(function (r) {
+    SYNC.busy = false; if (custOpen !== c) return;
+    setViewers(r.viewers || []);
+    if (!r.project) return;
+    if (gen !== SYNC.gen || !syncQuiet()) { SYNC.force = true; return; }      // our own save landed meanwhile / is waiting: look again next tick
+    applyRemote(c, adoptContacts(r.project, c));
+  }, function (er) { SYNC.busy = false;
+    if (er && er.network) setViewers([]);                                    // offline: don't show a stale "is viewing"
+    if (/Unknown action/.test(er.message || '')) SYNC.off = true;            // server not updated yet: no live sync, auto-save still works
+    else if (/not found/i.test(er.message || '')) SYNC.off = true;
+  }).then(function () { syncSchedule(); });
+}
+function syncLeave() { var id = SYNC.leftId; SYNC.leftId = null; clearTimeout(SYNC.t); SYNC.t = null; setViewers([]);
+  if (id && session && OB && !SYNC.off) serverApi('projPoll', { id: id, leave: 1 }).catch(function () {}); }
+function setViewers(v) { var was = SYNC.viewers.join('|'); SYNC.viewers = v || []; if (was !== SYNC.viewers.join('|')) paintWho(); }
+function paintWho() { var el = $('cdWho'); if (!el) return; var v = SYNC.viewers || [];
+  el.innerHTML = v.length ? '<i></i><span class="notr">' + esc(v.length > 2 ? v[0] + ', ' + v[1] + ' +' + (v.length - 2) : v.join(', ')) + '</span> <span>' + (v.length > 1 ? 'are viewing' : 'is viewing') + '</span>' : ''; }
+/** Merge a fresh server copy into the open project and repaint only what is safe to repaint. */
+function applyRemote(c, R) {
+  var ae = document.activeElement, inDetail = ae && ae !== document.body && $('cuDetail').contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName);
+  var fl = inDetail && ae.closest('#cdItems') ? lineOf(ae) : null;
+  var g = { infoDirty: !!c._infoDirty || !!(inDetail && ae.closest('#cdInfo')), dirtyNotes: {}, heldLines: {}, ordDirty: {}, focusNote: null, focusLine: fl ? fl.id : null };
+  if (noteDirty && noteOpenId) g.dirtyNotes[noteOpenId] = 1;
+  if (inDetail && (ae.id === 'nTitle' || ae.id === 'nText')) g.focusNote = noteOpenId;
+  Object.keys(lineHold || {}).forEach(function (id) { g.heldLines[id] = 1; });
+  Object.keys(ordDirty || {}).forEach(function (id) { g.ordDirty[id] = 1; });
+  var out = ESYNC.mergeProject(c, R, g, { beforeChange: function (n) { try { rememberNoteVersion(n, true); } catch (e) {} } });   // History keeps the version being replaced
+  if (out.skipped) SYNC.deferred = true;
+  if (!out.any) return;
+  SYNC.remote = Date.now();
+  (c.notes || []).forEach(function (n) { if (out.notes.indexOf(n.id) < 0) return;
+    if (!(g.dirtyNotes[n.id] || g.focusNote === n.id)) { n._baseTitle = n.title || ''; n._baseText = n.text || ''; }
+    if (typeof ordBase !== 'undefined' && typeof noteOrderKey === 'function') ordBase[n.id] = noteOrderKey(n);
+    try { rememberNoteVersion(n); } catch (e) {} });
+  if (noteOpenId && !curNote()) noteOpenId = c.notes.length ? c.notes[0].id : null;
+  c._baseInfo = null; rememberInfo(c);
+  pcSave(c);
+  if (curCust && curCust.id === c.id) { var cn = noteOf(c.id, curCust.noteId); if (!cn) setCur(null); else { curCust.count = cn.items.length; curCust.noteTitle = cn.title; curCust.name = custLabel(c); saveCur(); } }
+  // repaint: never rebuild the element being typed in
+  if (fl) { SYNC.deferred = true; return; }                                    // typing in an item: repaint when they leave the field
+  var y = window.scrollY;
+  if (g.focusNote) { renderPicked(); quoteBtn(); }                            // typing the note text: only its item list
+  else if (inDetail) { renderNoteCards(); renderVoice(); if ($('cdTitle')) $('cdTitle').textContent = projLabel(c); }   // typing contact info
+  else { renderOverview(); window.scrollTo(0, y); }
+  flashRemote(out);
+  toastMsgOnce(out);
+}
+function flashRemote(out) {
+  (out.lines || []).forEach(function (x) { var el = document.querySelector('#cdItems [data-lid="' + x.lineId + '"]'); if (el) { el.classList.remove('rflash'); void el.offsetWidth; el.classList.add('rflash'); } });
+  (out.notes || []).forEach(function (id) { var el = noteCardEl(id); if (!el) return; var t = el.querySelector('.nghead,.ngtop'); if (t) { t.classList.remove('rflash'); void t.offsetWidth; t.classList.add('rflash'); } });
+}
+function toastMsgOnce(out) { var who = '';
+  (custOpen.notes || []).some(function (n) { if (out.notes.indexOf(n.id) >= 0 && n.updated_by && n.updated_by !== (session && session.name)) { who = n.updated_by; return true; } return false; });
+  if (who) toast('Updated by ' + who); }
+document.addEventListener('focusout', function (e) { if (!SYNC.deferred || !e.target.closest || !e.target.closest('#cuDetail')) return;
+  setTimeout(function () { if (!SYNC.deferred) return; var ae = document.activeElement; if (ae && $('cuDetail').contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return;
+    SYNC.deferred = false; SYNC.force = true; syncSchedule(syncQuiet() ? 300 : 1500); }, 250); });
+['input', 'click', 'touchstart', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () {
+  var idle = Date.now() - Math.max(SYNC.act, SYNC.remote); SYNC.act = Date.now(); if (idle > 120000 && syncOn()) syncSchedule(800); }, { passive: true, capture: true }); });
+document.addEventListener('visibilitychange', function () { if (document.hidden) { clearTimeout(SYNC.t); SYNC.t = null; } else { if (OB) OB.kick(); SYNC.act = Date.now(); syncSchedule(300); } });
 /** "+ Add note": paint instantly with a temp id (note cards only — not a full project rebuild), then create on the
  *  server in the next tick. Real id swaps into the DOM when it returns; edits made meanwhile wait on tmpNotes. */
 function addNoteNow(c) {
@@ -1746,11 +1855,11 @@ function noteRoHtml(n, isCur, pill) { var cnt = (n.items || []).length;
     ((n.photos || []).length ? '<div class="sec-h" style="margin-top:12px"><h2>Photos (' + n.photos.length + ')</h2></div><div class="nph nphro">' + photosHtmlRO(n) + '</div>' : '') + '</div>'; }
 /** Old entry point (bar, picker, copy-to-customer): open the customer with that note expanded. */
 function renderNote() { renderOverview(); if (noteOpenId) scrollToNote(noteOpenId); }
-// ---- autosave: EVERY project write waits SAVE_AFTER (60s) after the LAST change, then one flush.
+// ---- autosave: EVERY project write waits SAVE_AFTER (1 s, live sync) after the LAST change, then one flush (one projBatch request).
 // UI updates instantly; saveQ holds the server work. Timer resets on every change. Immediate flush only for:
 // Save project, leave project tab, app hide/close, idle auto-close, Share/client/quote/bot, delete project.
 // Order on flush: create temp notes (newnote:) first, then everything else. Failed saves retry as before.
-var SAVE_AFTER = 60000, batchT = null, batchAt = 0, lineHold = {}, ordDirty = {}, saveFlushing = false;
+var SAVE_AFTER = 1000, batchT = null, batchAt = 0, lineHold = {}, ordDirty = {}, saveFlushing = false;
 var saveQ = {}, saveRun = {}, saveFail = null, saveOkT = null;
 function infoSnap(c) {
   var list = savedContacts(c);
@@ -1843,16 +1952,29 @@ function autoSave(key, fn) {
 }
 function runSave(key) {
   var fn = saveQ[key]; if (!fn) return Promise.resolve();
-  if (saveRun[key]) return saveRun[key].then(function () { return runSave(key); });      // one at a time per thing, in order
-  saveState(); var p = saveRun[key] = fn().then(function (r) { if (saveQ[key] === fn) delete saveQ[key]; delete saveRun[key]; saveState(); if (custOpen && !Object.keys(saveQ).length && !isBatchDirty()) pcSave(); return r; },
-    function (er) { delete saveRun[key]; if (/sign in|signed out/i.test(er.message)) { delete saveQ[key]; } else saveFail = er.message; saveState(); });
+  if (saveRun[key] && !(OB && OB.state().offline && /^(line|note|info):/.test(key))) return saveRun[key].then(function () { return runSave(key); });      // one at a time per thing, in order
+  saveState(); var p = saveRun[key] = fn().then(function (r) { if (saveQ[key] === fn) delete saveQ[key]; if (saveRun[key] === p) delete saveRun[key]; saveState(); if (custOpen && !Object.keys(saveQ).length && !isBatchDirty()) pcSave(); return r; },
+    function (er) { if (saveRun[key] === p) delete saveRun[key]; if (/sign in|signed out/i.test(er.message)) { delete saveQ[key]; } else saveFail = er.message; saveState(); });
   saveState(); return p;
 }
 function retrySaves() { saveFail = null; Object.keys(saveQ).forEach(runSave); }
-function saveState() { var el = $('saveSt'), pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length, hold = isBatchDirty();
+function syncLabel() {
+  var ob = OB ? OB.state() : { pending: 0, offline: false, busy: false }, pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length;
+  if ((ob.offline && ob.pending) || (navigator.onLine === false && (pend || ob.pending || isBatchDirty()))) return ['off', 'Offline, will sync'];
+  if (pend && saveFail && !busy) return ['bad', 'Not saved, tap to retry'];
+  if (busy || saveFlushing || ob.busy || ob.pending || isBatchDirty()) return ['saving', 'Saving…'];
+  return ['ok', 'Saved ✓'];
+}
+function paintSyncLabel() { var b = $('cdSaveSt'); if (!b) return; var st = syncLabel();
+  if (b.dataset.st !== st[0]) { b.dataset.st = st[0]; b.className = 'pst ' + st[0]; b.textContent = st[1]; }
+  b.title = st[0] === 'bad' ? (saveFail || '') : ''; }
+function saveState() { paintSyncLabel(); var el = $('saveSt'), pend = Object.keys(saveQ).length, busy = Object.keys(saveRun).length, hold = isBatchDirty();
+  var inline = !!($('cdSaveSt') && $('p-cust') && $('p-cust').classList.contains('on'));
   if (!el) { el = document.createElement('button'); el.id = 'saveSt'; el.className = 'savest hidden'; el.type = 'button'; el.onclick = function () { if (saveFail) retrySaves(); }; document.body.appendChild(el); }
   clearTimeout(saveOkT);
-  if (pend && saveFail && !busy) { el.className = 'savest bad'; el.textContent = 'Not saved, tap to retry'; el.title = saveFail; }
+  if (inline) { el.className = 'savest hidden'; }       // the project shows its own one-line status
+  else if (OB && OB.state().offline && OB.state().pending) { el.className = 'savest saving'; el.textContent = 'Offline, will sync'; }
+  else if (pend && saveFail && !busy) { el.className = 'savest bad'; el.textContent = 'Not saved, tap to retry'; el.title = saveFail; }
   else if (busy || saveFlushing) { el.className = 'savest saving'; el.textContent = 'Saving…'; }
   else if (hold && batchAt) {
     var sec = Math.max(1, Math.ceil((batchAt - Date.now()) / 1000));
@@ -1865,7 +1987,8 @@ function saveState() { var el = $('saveSt'), pend = Object.keys(saveQ).length, b
   if ($('cdSaved')) $('cdSaved').textContent = (custOpen && custOpen._infoDirty) ? 'Unsaved changes…' : (saveQ['info:' + (custOpen && custOpen.id)] ? (saveFail ? 'Not saved yet' : 'Saving…') : 'Saved');
 }
 setInterval(function () { if (batchT && batchAt && !saveFlushing) saveState(); }, 1000);
-window.addEventListener('online', retrySaves);
+window.addEventListener('online', function () { if (OB) OB.kick(); retrySaves(); });
+window.addEventListener('offline', saveState);
 setInterval(function () { if (saveFail && Object.keys(saveQ).length) retrySaves(); }, 20000);
 window.addEventListener('beforeunload', function (e) {
   if (isBatchDirty() || Object.keys(saveQ).length) { saveBg(); e.preventDefault(); e.returnValue = ''; }
@@ -3138,9 +3261,10 @@ function lineQs(l) { var o = { name: l.name, qty: l.qty }; if (lmeta(l).p != nul
 function linesQ(it) { return (it || []).reduce(function (a, l) { return a.concat(lineQs(l)); }, []); }
 function quoteSent(r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Max.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); }
 function drainSaves() {
-  return flushBatch().then(function () {
+  var all = flushBatch().then(function () {
     return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k]; }));
-  }).then(function () { saveState(); return !Object.keys(saveQ).length && !isBatchDirty(); });
+  }).then(function () { saveState(); return !Object.keys(saveQ).length && !isBatchDirty() && !(OB && OB.pending()); });
+  return Promise.race([all, new Promise(function (r) { setTimeout(function () { r(false); }, 12000); })]);   // offline: the outbox keeps it, the caller hears "not saved yet"
 }
 /* Idle auto-close: after 30 min with no taps/typing/scroll, if the open project has any content,
  * save (when dirty) and start a blank new project so the next customer is not added to the old one. */
