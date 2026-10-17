@@ -70,6 +70,7 @@
     'No reports for this filter.': '这个筛选条件下没有报告。',
     'Only the reporter can delete this report.': '只有报告人可以删除这条报告。',
     'Mark this as found?': '标为已找到？',
+    'Un-Polished Brass': '不抛光亮铜',   // door hinge finish picker (20261017c); Matte Black / Satin Nickel / Polished Brass reuse the faucet finish words below
     'Chrome': '铬', 'Polished Chrome': '抛光铬', 'Polished Nickel': '抛光镍', 'Brushed Nickel': '拉丝镍', 'Satin Nickel': '缎面镍',
     'Brushed Bronze': '拉丝青铜', 'Oil Rubbed Bronze': '油擦青铜', 'Venetian Bronze': '威尼斯青铜', 'Champagne Bronze': '香槟青铜',
     'Brushed Brass': '拉丝黄铜', 'Unlacquered Brass': '未上漆黄铜', 'Polished Brass': '抛光黄铜', 'Brushed Gold': '拉丝金',
@@ -186,7 +187,7 @@
     [/\b(\d+) boxes\b/g, '$1 箱'], [/ sq ft \(([\d.]+) \+ ([\d.]+)% waste\)/, ' 平方英尺（$1 + $2% 损耗）'], [/\bsq ft\b/g, '平方英尺'], [/\/box\b/g, '/箱'], [/\/pc\b/g, '/片'],
     [/^Line: (\d+) (boxes|pcs) · (.+) \(saved automatically\)$/, '这一行：$1 $2 · $3（已自动保存）'], [/\b(\d[\d,]*) pcs\b/g, '$1 片'],
     [/^Now (\d+) (boxes|pcs)/, '目前 $1 $2'], [/\. Sets the qty \(boxes\) and the sq ft note of this line\./, '。会设定这一行的数量（箱）和平方英尺备注。'], [/ · line in /, ' · 所在笔记 '],
-    [/^Switched /, '已更换 '], [/ \+ frame$/, ' + 门套'], [/^Could not switch /, '无法更换 '], [/^Moved /, '已移动 '], [/^Copied /, '已复制 '], [/^Cloned project: /, '已复制项目：'], [/^Cloned into another project: /, '已复制到另一个项目：'], [/^Cloned: /, '已复制：'], [/ \(adding here\)/, '（正在添加到这里）'],
+    [/^Switched /, '已更换 '], [/^Pack (\$[\d,.]+)$/, '套装 $1'], [/ \+ frame$/, ' + 门套'], [/^Could not switch /, '无法更换 '], [/^Moved /, '已移动 '], [/^Copied /, '已复制 '], [/^Cloned project: /, '已复制项目：'], [/^Cloned into another project: /, '已复制到另一个项目：'], [/^Cloned: /, '已复制：'], [/ \(adding here\)/, '（正在添加到这里）'],
     [/^New note: /, '新笔记：'], [/^New project from /, '新项目，来自 '], [/^Added /, '已添加 '], [/^Not added: /, '未添加：'], [/^Not created: /, '未创建：'], [/^Loaded /, '已载入 '],
     [/^Photo saved to /, '照片已保存到 '], [/^Photo moved to /, '照片已移到 '], [/^Uploading (\d+)\/(\d+)$/, '正在上传 $1/$2'], [/^(\d+) photos saved to /, '$1 张照片已保存到 '], [/^(\d+) saved, (\d+) failed: /, '已保存 $1 张，失败 $2 张：'], [/^This note has room for (\d+) more photos \(max 20 per note\)\.$/, '这个笔记还能放 $1 张照片（每个笔记最多 20 张）。'], [/^Plan form filled for /, '已为以下客户填好图纸表单：'], [/^Cabinet list from /, '柜子清单来自 '], [/\. Check it, then send\./, '。请检查后发送。'],
     [/\. Fix anything wrong, then send\./, '。改正错误后发送。'], [/^Delete the note “/, '删除笔记「'], [/” with its /, '」及其 '], [/^Delete \((\d+)\)$/, '删除（$1）'], [/^(\d+) selected$/, '已选 $1'],

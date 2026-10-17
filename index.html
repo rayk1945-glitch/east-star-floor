@@ -315,7 +315,8 @@
   .mvh { font-size:12.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:12px 0 6px; }
   .mvrow { display:flex; flex-wrap:wrap; gap:6px; } .mvbtn { min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:999px; padding:0 14px; font:inherit; font-size:14.5px; font-weight:700; color:#1f2937; cursor:pointer; }
   .mvbtn span { font-weight:600; color:var(--muted); font-size:12.5px; } .mvbtn.new { border-style:dashed; }
-  .pline .m { display:flex; gap:8px; align-items:center; margin-top:8px; } .pline .m input.lnote { flex:1; min-height:38px; font-size:15px; padding:7px 10px; }
+  .pline .m { display:flex; gap:8px; align-items:center; margin-top:8px; } .pline .m input.lnote, .pline .m select.lnote { flex:1; min-height:38px; font-size:15px; padding:7px 10px; } .pline .m select.lfin { min-width:0; text-overflow:ellipsis; font-size:14px; padding:7px 16px 7px 8px; -webkit-appearance:none; appearance:none;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 6px center; }
   .pline .ph { display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap; }
   .pline .ph img, .pline .ph .ld { width:54px; height:54px; border-radius:8px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
   .phbtn { display:inline-flex; align-items:center; min-height:36px; border:1px solid var(--line-strong); border-radius:999px; padding:0 11px; font-size:13px; font-weight:600; cursor:pointer; background:#fff; }
@@ -477,7 +478,7 @@
 
   /* ---- 20261017b motion (Ray: "Everywhere things open and close"): transform/opacity, ~180-250ms ease-out. Height expand/collapse
      runs in JS (animSet / animFrom / animOut: measured height, WAAPI). No layout change, nothing animates while typing/searching. ---- */
-  :root { --ae:cubic-bezier(.2,.8,.2,1); --ad:.22s; --adc:.18s; --adt:.16s; --adp:.3s; --adl:.35s; }
+  :root { --ae:cubic-bezier(.2,.8,.2,1); --ad:.22s; --adc:.18s; --adt:.16s; --adp:.25s; --adl:.25s; }
   @media (prefers-reduced-motion: reduce) { :root { --ad:0s; --adc:0s; --adt:0s; --adp:0s; --adl:0s; } }
   .sheet-bg { display:block; opacity:0; visibility:hidden; pointer-events:none; transition:opacity var(--adc) var(--ae), visibility 0s linear var(--adc); }
   .sheet-bg.on { opacity:1; visibility:visible; pointer-events:auto; transition:opacity var(--ad) var(--ae), visibility 0s; }
@@ -496,12 +497,13 @@
   #a2hs { animation:aUp var(--ad) var(--ae); }
   .msg:not(.hidden), .pbar:not(.hidden), .revbar:not(.hidden) { animation:aDrop var(--ad) var(--ae); }
   /* "grow" success pop (Ray 2026-10-17): the WHOLE item box (search card, note line, Accessories row) lifts as an overlay, 1 -> 1.05 -> 1,
-     springy ~350ms, above its neighbours (z-index + shadow), no layout change, no green halo; a faint light tint only. Same pop on a moved note line. */
+     springy ~250ms, fired on the tap itself (20261017c: not after the save), above its neighbours (z-index + shadow), no layout change, no green halo; a faint light tint only. Same pop on a moved note line. */
   @keyframes aBump { 0% { transform:scale(1); } 45% { transform:scale(1.35); } 100% { transform:scale(1); } }
   @keyframes aLift { 0% { transform:scale(1); box-shadow:0 0 0 rgba(15,23,42,0); filter:brightness(1); }
     40% { transform:scale(1.05); box-shadow:0 14px 30px rgba(15,23,42,.22), 0 3px 8px rgba(15,23,42,.12); filter:brightness(1.035); }
     100% { transform:scale(1); box-shadow:0 0 0 rgba(15,23,42,0); filter:brightness(1); } }
   .addok { position:relative; z-index:6; animation:aLift var(--adl) cubic-bezier(.34,1.56,.64,1); transform-origin:50% 50%; }
+  .movelift { position:relative; z-index:6; background:#fff; border-radius:10px; }
   .pline.addok, .accrow.addok { background:#fff; border-radius:10px; }
   .badge.bump { animation:aBump var(--adp) cubic-bezier(.34,1.56,.64,1); }
 </style>
@@ -630,8 +632,8 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017b"></script>
-<script src="i18n.js?v=20261017b"></script>
+<script src="sync.js?v=20261017c"></script>
+<script src="i18n.js?v=20261017c"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -689,7 +691,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017b';
+var PAGE_VER = '20261017c';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -906,8 +908,8 @@ function slideIn(d, x) { if (!motionOff()) d.animate([{ opacity: 0, transform: x
 function slideOut(d, x) { if (motionOff() || !d.isConnected) { d.remove(); return; }
   d.animate([{ opacity: 1, transform: x + ' translateY(0)' }, { opacity: 0, transform: x + ' translateY(12px)' }], { duration: 180, easing: MOTION_E, fill: 'forwards' }).onfinish = function () { d.remove(); }; }
 function popOk(el, cls) { if (!el || motionOff()) return; cls = cls || 'addok'; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
-  clearTimeout(el._popT); el._popT = setTimeout(function () { el.classList.remove(cls); }, 420); }
-/** "grow" success pop for an add that saved: the item's card (search) / accessory row, and the Project tab badge. */
+  clearTimeout(el._popT); el._popT = setTimeout(function () { el.classList.remove(cls); }, 300); }
+/** "grow" pop on the tap (optimistic, like native tap feedback; the save runs behind it): the item's card (search) / accessory row, and the Project tab badge. */
 function popAdded(name) {
   var enc = encodeURIComponent(name).replace(/'/g, '%27');
   document.querySelectorAll('.card.item[data-name], .accrow[data-name]').forEach(function (el) { var v = el.getAttribute('data-name');
@@ -920,10 +922,16 @@ function flipLines(before, movedId) {
   if (motionOff()) return;
   document.querySelectorAll('#cdItems .pline[data-lid]').forEach(function (r) {
     var t0 = before[r.dataset.lid]; if (t0 == null) return; var dy = t0 - r.getBoundingClientRect().top;
+    if (r.dataset.lid === movedId) { liftMove(r, dy); return; }   // the moved row slides AND grows at once, from the tap
     if (Math.abs(dy) >= 1) r.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }], { duration: 220, easing: MOTION_E });
-    if (r.dataset.lid === movedId) { clearTimeout(flipLines.t); flipLines.t = setTimeout(function () { var x = document.querySelector('#cdItems .pline[data-lid="' + movedId.replace(/"/g, '') + '"]'); popOk(x); }, Math.abs(dy) >= 1 ? 230 : 0); }
   });
 }
+/** Moved note line: one 250ms animation that slides from the old place and lifts (scale 1.05 + shadow) on the way, over its neighbours. */
+function liftMove(r, dy) { r.classList.add('movelift');
+  var a = r.animate([{ transform: 'translateY(' + dy + 'px) scale(1)', boxShadow: '0 0 0 rgba(15,23,42,0)' },
+    { offset: .4, transform: 'translateY(' + (dy * .45) + 'px) scale(1.05)', boxShadow: '0 14px 30px rgba(15,23,42,.22), 0 3px 8px rgba(15,23,42,.12)' },
+    { transform: 'none', boxShadow: '0 0 0 rgba(15,23,42,0)' }], { duration: 250, easing: 'cubic-bezier(.3,1.3,.6,1)' });
+  a.onfinish = a.oncancel = function () { r.classList.remove('movelift'); }; }
 function openSheet(html) { $('sheetBody').onclick = null; $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
 /** In-app confirm (replaces window.confirm). askOk(text, { danger: true, ok: 'Delete' }) -> Promise<boolean>. Text is translated like confirm() was. */
 var cfmDone = null;
@@ -983,7 +991,7 @@ function card(it) {
   var nm = encodeURIComponent(it.name).replace(/'/g, '%27');  // names like 2' x 9' must not break the inline onclick string
   return '<div class="card item" data-name="' + nm + '"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
     '<div style="flex:1;min-width:0"><div class="top"><div class="name"><span class="notr">' + esc(it.name) + '</span>' + cutChip(it) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
-    '<small>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail') + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + missTagHtml(it.name) + '</div></div>' +
+    '<small' + (packPrice(it.name) != null ? ' style="white-space:nowrap">Pack ' + money(packPrice(it.name)) : '>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail')) + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + missTagHtml(it.name) + '</div></div>' +
     '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
     '<div class="stats shelves"><div class="stat ohstat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b class="notr">' + ohCubeHtml(it.name, it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>Order</span></div>' +
@@ -1296,12 +1304,12 @@ document.addEventListener('change', function (e) {
   renderHSelBar();
 });
 /** Add to note: straight into the current note (asks for a customer + note first when none is picked). */
-function addToNote(lines) {
+function addToNote(lines, popped) {
   lines = [].concat(lines); if (!lines.length) return;
   if (!curCust) { openPicker(function () { addToNote(lines); }); return; }
+  if (!popped) popAdded(lines[0].name);   // "grow" pop right on the tap (Ray 2026-10-17: waiting for the save felt late)
   var c = curCust, n = noteOf(c.id, c.noteId);
   toast((lines.length > 1 ? 'Added ' + lines.length + ' items' : 'Added ' + lines[0].name) + ' → ' + c.name + ' · ' + c.noteTitle);
-  var popName = lines[0].name;
   lines.forEach(function (l, i) {
     var tmp = 'tmpl-' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5);
     var line = { id: tmp, name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' };
@@ -1310,7 +1318,6 @@ function addToNote(lines) {
     autoSave('add:' + tmp, function () {
       return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: { name: line.name, desc: line.desc, qty: line.qty, photo: line.photo, note: line.note } }).then(function (r) {
         if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
-        if (i === 0) popAdded(popName);   // "grow" pop once the add has saved
         var nn = noteOf(c.id, c.noteId) || n;
         if (!nn) return;
         if (r.items) {
@@ -1344,6 +1351,11 @@ var ACC_LABEL = { jamb: 'Frame', hinge: 'Hinge', lever: 'Lever', stop: 'Door sto
 // bundle.packs = {door: [[item, qtyPerDoor | "hinge"], ...]} from door-packs.csv. No packs key (older bundle) = plain "Add to note".
 // Hinges follow Ray's rule per note: 1 door = 2 sets, N doors = ceil(1.5 N) sets; each tap adds only the top-up.
 function packOf(name) { var m = localData && localData.packs; return (m && m[name]) || null; }
+/** Price of a 1-door pack (door + jambs + 2 hinge sets) from the bundle prices; null in no-price hours or when a part has no price. */
+function packPrice(name) { var pk = packOf(name), r = pk && itemRow(name); if (!r || !priceState.prices || r[2] == null) return null;
+  var t = Number(r[2]); for (var i = 0; i < pk.length; i++) { var a = itemRow(pk[i][0]); if (!a || a[2] == null) return null;
+    t += Number(a[2]) * (pk[i][1] === 'hinge' ? hingeSets(1) : (Number(pk[i][1]) || 1)); }
+  return Math.round(t * 100) / 100; }
 function hingeSets(doors) { return doors <= 0 ? 0 : doors === 1 ? 2 : Math.ceil(doors * 1.5); }
 function packDoorsIn(items) { return (items || []).reduce(function (s, x) { return s + (packOf(x.name) ? (Number(x.qty) || 0) : 0); }, 0); }
 var packTally = {};   // "project|note" -> {p: Promise(pack doors in the note), t: ms}; taps chain on it so quick double taps count right
@@ -1364,8 +1376,8 @@ function packLines(name, q, before) {
 function addPack(name, btn, qty) { var qi = btn && btn.previousElementSibling && btn.previousElementSibling.querySelector('input');
   var q = qty || (qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1); if (qi) qi.value = 1;
   if (!curCust) { openPicker(function () { addPack(name, null, q); }); return; }
-  var c = curCust, k = c.id + '|' + c.noteId;
-  var p = packBefore(c).then(function (before) { addToNote(packLines(name, q, before)); return before + q; });
+  var c = curCust, k = c.id + '|' + c.noteId; popAdded(name);   // pop on the tap; the lines follow once the pack count is known
+  var p = packBefore(c).then(function (before) { addToNote(packLines(name, q, before), true); return before + q; });
   if (!(noteOf(c.id, c.noteId) || {}).items) packTally[k] = { t: (packTally[k] || {}).t || Date.now(), p: p };
 }
 var PACK_PARTS_ = null;
@@ -1422,7 +1434,7 @@ function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} 
       '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }).join('');
   if (packOf(sink) && !toNote) { var dr = itemRow(sink); if (dr) { var di = itemFromRow(dr);   // door pack doors: the card button adds the pack; this row adds the door alone
     rows = '<div class="accrow" data-name="' + esc(sink) + '">' + (di.photo ? '<img class="thumb" loading="lazy" src="' + esc(di.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
-      '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span>Door only</span> <span class="cutchip">' + ACC_LABEL.pack + '</span></div>' +
+      '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span>Door only</span></div>' +
       '<div style="font-size:12px;color:var(--muted)"><span>No frame, no hinges</span></div></div>' +
       '<button class="primary" data-accadd="' + encodeURIComponent(sink).replace(/'/g, '%27') + '">Add</button></div>' + rows; } }
   openSheet('<h3>' + (rel.every(function (a) { return a[2] === 'seat'; }) ? '<span>Compatible seats</span>' : '<span>Compatible accessories</span>') + '</h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
@@ -2285,7 +2297,7 @@ function renderPicked() {
         (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
       lineVariants(l.name) +
       '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
-      '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(noteText(l.note)) + '" maxlength="280"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
+      (hingeFinishHtml(l.name) || '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(noteText(l.note)) + '" maxlength="280">') + '<span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
       (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isMoldRow(r) ? '<button class="link ltc" data-lmc="1">▦ Molding calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
       '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button></div>';
     return '<div class="pline hasord' + (open ? ' open' : '') + '" data-lid="' + esc(l.id) + '"><div class="lbody">' + head + det + '</div>' + (it.length > 1 ? ordHtml(i, it.length) : '') + '</div>';
@@ -2324,6 +2336,20 @@ function lineVariants(name) {
     return '<button type="button" data-vf="' + esc(lab) + '"' + (lab === f.current ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(lab) + '</button>';
   }).join('') + '</div></div>';
 }
+/** Door hinge lines (Hinge-<finish> <size>, Ray 2026-10-17): the Note box becomes a finish picker of the same size, listing every Hinge-* row of
+ *  that size in the bundle (hidden items are not in the bundle; "discontinued" ones are left out). Label = finish name from the description. */
+var HINGE_FIN_ = null;
+function hingeFamily(name) { var m = /^Hinge-(\S+) (.+)$/.exec(name || ''); if (!m || !localData) return null;
+  if (!HINGE_FIN_ || HINGE_FIN_.v !== localData.version) { var by = {}; localData.items.forEach(function (r) { var k = /^Hinge-(\S+) (.+)$/.exec(r[0]); if (!k || /discontinu/i.test(r[1] || '')) return;
+      var f = /Hinges?,\s*(?:\S+\s+)?(.+?)\s+Finish/i.exec(r[1] || ''), lab = f ? f[1].replace(/\s*\(.+\)$/, '') : k[1];   // short so it fits the Note box: "Satin Nickel", "Matte Black" 
+      (by[k[2]] = by[k[2]] || []).push({ name: r[0], code: k[1], label: lab }); });
+    HINGE_FIN_ = { v: localData.version, by: by }; }
+  var fam = HINGE_FIN_.by[m[2]] || []; return fam.length > 1 && fam.some(function (x) { return x.name === name; }) ? fam : null; }
+function hingeFinishHtml(name) { var fam = hingeFamily(name); if (!fam) return '';
+  return '<select class="lnote lfin" data-lfin="1" aria-label="Finish">' + fam.map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === name ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select>'; }
+function switchHingeFinish(l, to) { var n = curNote(); if (!n || !l || l.name === to || varBusy || ordBusy) return;
+  if (!applyVariantToLine(l, to)) { toast('Could not switch 1 item'); renderPicked(); return; }
+  varMiss = null; renderPicked(); syncCount(); toast('Switched 1 item'); saveNoteVariants(n, [l]); }
 function applyVariantToLine(l, sibName) {
   var r = itemRow(sibName); if (!r) return false;
   l.name = r[0]; l.desc = String(r[1] || '').slice(0, 110); l.photo = r[13] || '';
@@ -3403,6 +3429,7 @@ function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
   if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); var nq = curNote(); if (nq) lineHold[l.id] = nq.id; scheduleAutosave(); }
+  else if (t.dataset.lfin) switchHingeFinish(l, t.value);
   else if (t.dataset.lnote) { l.note = withMeta(t.value, lmeta(l)); var nn = curNote(); if (nn) lineHold[l.id] = nn.id; scheduleAutosave(); }
 });
 document.addEventListener('input', function (e) { var t = e.target; if (!t.dataset.lnote || !t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
