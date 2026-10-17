@@ -599,8 +599,8 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261016s"></script>
-<script src="i18n.js?v=20261016s"></script>
+<script src="sync.js?v=20261016t"></script>
+<script src="i18n.js?v=20261016t"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -658,7 +658,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261016s';
+var PAGE_VER = '20261016t';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1244,13 +1244,13 @@ function addToNote(lines) {
 function aqStep(b, d) { var i = b.parentNode.querySelector('input'); i.value = Math.max(1, Math.min(99999, (Math.round(Number(i.value)) || 1) + d)); }
 function addItem(name, btn) { var it = shown[name], qi = btn && btn.previousElementSibling && btn.previousElementSibling.querySelector('input');
   var q = qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1; if (qi) qi.value = 1;
-  addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' });
-  if (relOf(name).length && curCust) setTimeout(function () { accSheet(name, true); }, 350); }
+  addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' }); }   // accessories open only from the Accessories button (Ray 2026-10-16)
 // ---- sink -> compatible accessories (bundle.related from accessories.csv: {sink: [[accessory, note, kind], ...]}), Blanco + Franke
 function relOf(name) { var m = localData && localData.related; return (m && m[name]) || []; }
-var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6 };
+var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, autoflush: 14 };
+function accKind(k) { return Object.prototype.hasOwnProperty.call(ACC_KIND, k) ? ACC_KIND[k] : 20; }
 function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} = add picks to that note (note page pill)
-  var rel = relOf(sink).slice().sort(function (a, b) { return (ACC_KIND[a[2]] || 9) - (ACC_KIND[b[2]] || 9); });
+  var rel = relOf(sink).slice().sort(function (a, b) { return accKind(a[2]) - accKind(b[2]); });
   if (!rel.length) return;
   var rows = rel.map(function (a) { var r = itemRow(a[0]); if (!r) return '';
     var it = itemFromRow(r), oh = r[3], enc = encodeURIComponent(a[0]).replace(/'/g, '%27');
