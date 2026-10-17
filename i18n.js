@@ -23,6 +23,17 @@
     'Close match: tap the right one': '相近结果：请点选正确的商品', 'Not in the item list:': '不在商品清单中：', 'Search the item list': '搜索商品列表',
     'Search…': '搜索…', 'Change…': '更换…', 'not found': '未找到', 'Qty not on the quote: please check': '报价上没有数量：请检查', 'Add to a note…': '添加到笔记…', 'Add to': '添加到',
     'New project': '新项目', 'Add this line': '添加这一行', 'Less': '减少', 'More': '增加', 'Qty': '数量', 'door': '门板', 'box': '柜体',
+    // 20261017h quote import (photos, screenshots, scanned PDFs: read by Google on the server)
+    'Getting the photo ready…': '正在准备照片…', 'Google is reading the photo…': 'Google 正在读取照片…', 'Google is reading the scan…': 'Google 正在读取扫描件…',
+    'Google is busy. Trying again…': 'Google 正忙，正在重试…', 'Could not read the quote.': '无法读取这份报价。',
+    'Google limits how many photos can be read in a row. Wait a minute, then try again.': 'Google 限制连续读取照片的次数。请等一分钟再试。', 'Try again': '再试一次',
+    'Pick a PDF or a photo of the quote.': '请选择报价的 PDF 或照片。', 'Could not make this photo small enough to read.': '无法把这张照片压缩到可读取的大小。',
+    'This photo type can’t be opened here. Take a screenshot of it, or save it as a JPG, and pick that.': '这里打不开这种照片格式。请截图或另存为 JPG 后再选择。',
+    'No item lines found. Make sure the item codes and the Qty column are in the photo, sharp and straight, then try again.': '没有找到商品行。请确认照片里有商品编号和数量栏，并且清晰、端正，然后再试。',
+    'Read by Google from the photo: check each line against it.': '由 Google 从照片读取：请对照照片检查每一行。', 'Read by Google from the photo: check each line against it. Only the first 3 pages were read.': '由 Google 从照片读取：请对照照片检查每一行。只读取了前 3 页。',
+    'Show photo': '显示照片', 'Scan': '扫描件',
+    'That file is too big to read (over 1 MB).': '文件太大，无法读取（超过 1 MB）。', 'Google is busy reading photos right now.': 'Google 现在正忙着读取照片。',
+    'This file type cannot be read (use a JPG, PNG or PDF).': '无法读取这种文件类型（请使用 JPG、PNG 或 PDF）。',
     'Make a new link? The link your client already has stops working right away. Send them the new one.': '生成新链接？客户手上的旧链接会立即失效，请把新链接发给客户。',
     'OK': '确定', 'Make new link': '生成新链接', 'Stop link': '停用链接', 'Send again': '再次发送', 'Mark found': '标记已找到', 'Pause': '暂停', 'Change role': '更改角色', 'Make full admin': '设为完全管理员',
     // header / nav / sign in
@@ -183,6 +194,7 @@
 
   // ---------------------------------------------------------------- phrases / patterns inside longer texts (applied in order)
   var PH = [
+    [/^Could not read the quote \((.*)\)\.$/, '无法读取这份报价（$1）。'],
     [/^(\d+) matched$/, '$1 个已匹配'], [/^(\d+) to check$/, '$1 个待核对'], [/^(\d+) not found$/, '$1 个未找到'],
     [/^(\d+) of (\d+) lines checked · (\d+) items? to add$/, '已勾选 $1/$2 行 · 将添加 $3 件商品'],
     [/^Send plan to /, '图纸发给 '], [/^Send to /, '发送给 '], [/^Sent to /, '已发送给 '], [/\. Request /g, '。请求 '], [/^Request /, '请求 '],

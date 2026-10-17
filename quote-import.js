@@ -1,7 +1,10 @@
-/* East Star floor app: quote import (20261017g). Loaded on first use from index.html (quoteImport). PDF only for now:
- * NetSuite estimates and East Star quote PDFs are read from the PDF text layer with pdf.js (CDN, loaded only when a PDF is picked),
- * parsed and matched to the item list on the phone, then shown in a review sheet. Photos / scanned PDFs: "coming soon" message.
- * Nothing is sent to the server except the normal new-project / add-to-note writes. */
+/* East Star floor app: quote import (20261017g PDF, 20261017h photos). Loaded on first use from index.html (quoteImport).
+ * Digital PDFs (NetSuite estimates, East Star quote PDFs): read from the PDF text layer with pdf.js (CDN, loaded only when a PDF
+ * is picked), parsed and matched to the item list on the phone, then shown in a review sheet. Nothing is sent to the server.
+ * 20261017h: photos / screenshots / JPG quotes (up to 5 = one quote) and scanned PDFs (pages 1-3 rendered with pdf.js) are made
+ * into one small JPEG copy each on the phone (long side <= 2000 px, under 900 KB; the server refuses > 1.1 MB) and sent one at a
+ * time to the server's 'quoteRead' (Drive OCR, v26). The returned text goes through the same parser (parseText: amount ÷ rate qty
+ * recovery) and the same review sheet. Old server (no quoteRead, "Unknown action."): the 20261017g "coming soon" message. */
 /* East Star quote import — parser + matcher (prototype, Phase 1). Plain ES5-ish JS, runs in the page and in node.
  * Input A: layout rows from pdf.js (digital PDFs: NetSuite estimates, our quote_pdf.py quotes).
  * Input B: plain OCR text (Drive OCR on the server for photos / scanned PDFs).
@@ -190,7 +193,9 @@
   function parseText(text, bundle) {
     var ix = buildIndex(bundle), H = headerInfo(text, ix), style = H.style;
     var raw = String(text || '').split(/\r?\n/), lines = [], started = false, stopped = false, orphan = null, out = [];
-    for (var li = 0; li < raw.length && !stopped; li++) {
+    for (var li = 0; li < raw.length; li++) {
+      if (stopped && raw[li] !== '\f') continue;
+      if (raw[li] === '\f') { stopped = false; continue; }                       // next photo / page of the same quote (20261017h)
       var line = raw[li].replace(/[|]/g, ' ').replace(/\s+/g, ' ').trim(); if (!line) continue;
       var flat = despaceAll(line);
       if (!started && /\b(ITEM|Quantity|QTY)\b/i.test(flat) && /\b(Description|Quantity|QTY|Rate|Amount)\b/i.test(flat)) { started = true; continue; }
@@ -337,6 +342,7 @@
     '.qiqt.warn{border-color:#d97706;box-shadow:0 0 0 2px #fde7c2}.qiqt.warn input{background:#fff7e8}' +
     '.qift{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom));margin:0 -16px -16px;background:#fff;border-top:1px solid var(--line);padding:8px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 14px rgba(16,24,40,.08)}' +
     '.qift .qicnt{font-size:12.5px;color:var(--muted);margin-bottom:6px}.qibt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.qibt .btn{margin:0;min-height:50px;min-width:0;width:100%;line-height:1.15;padding:4px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.qibt .btn .qbt{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.qiph{margin:0 0 8px}.qiph summary{font-size:13px;font-weight:600;color:#1e3a6e;cursor:pointer;padding:2px 0}.qiph img{display:block;width:100%;height:auto;margin-top:6px;border:1px solid var(--line);border-radius:8px}' +
     '.qibt .btn small{display:block;max-width:100%;font-weight:500;font-size:11.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qibt .btn:disabled{opacity:.45}';
   function css() { if (document.getElementById('qiCss')) return; var st = document.createElement('style'); st.id = 'qiCss'; st.textContent = CSS; document.head.appendChild(st); }
   var S = null;                                                     // the open review: {res, rows, to, file}
@@ -345,7 +351,7 @@
   function priceOf(name) { var r = row(name); return r && root.priceState && priceState.prices && r[2] != null ? Number(r[2]) : null; }
   function money(v) { return root.money ? root.money(v) : '$' + Number(v).toFixed(2); }
   function kindOf(name, multi) { return !multi ? '' : /^BOX-/i.test(name) ? 'box' : /^(DF|DR|DOOR)-/i.test(name) ? 'door' : ''; }
-  function qtyWarn(l) { return /not found|set to 1|check/.test(l.qtyHow || ''); }
+  function qtyWarn(l) { return /not found|set to 1|check|number on the line|number before|line above/.test(l.qtyHow || ''); }   // 20261017h: a qty guessed from a loose number on an OCR line ("15 inch shower arm") is flagged too
 
   function sheetMsg(title, text, err) {
     openSheet('<div class="qish"><h3>' + esc(title) + '</h3><div class="msg ' + (err ? 'err' : 'ok') + '" style="margin-top:8px">' + esc(text) + '</div>' +
@@ -355,14 +361,132 @@
   function soon(to) { S = { to: to };
     sheetMsg('Photo import is coming soon', 'For now, pick a PDF quote: a NetSuite estimate or an East Star quote PDF. Reading photos and scans is the next update.', false); }
 
-  /** Entry from index.html (file already picked). to = {cid, noteId} or null (current note). */
-  function run(file, to) {
+  function scanSoon(to) { S = { to: to };
+    sheetMsg('Photo import is coming soon', 'This PDF is a scan (it has no text in it). Reading scans and photos is the next update. For now, use the PDF from NetSuite or from our quote app.', false); }
+
+  // ------------------------------------------------------------------ 20261017h: photos + scanned PDFs -> server Drive OCR ('quoteRead')
+  var OCR_MAX_SIDE = 2000, OCR_TARGET = 900 * 1024, OCR_PDF_PAGES = 3, OCR_MAX_FILES = 5, BUSY_WAIT = 20;
+  var QR = { avail: null };                                         // does the server have quoteRead? null = not asked yet (asked once per page load)
+  function isPdfFile(f) { return /pdf/i.test(f.type || '') || /\.pdf$/i.test(f.name || ''); }
+  function isImgFile(f) { return /^image\//i.test(f.type || '') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || ''); }
+  /** Cheap check with no file: v26 answers "No quote file to read.", an older server "Unknown action.". */
+  function quoteReadAvail() {
+    if (QR.avail != null) return Promise.resolve(QR.avail);
+    return root.api('quoteRead', {}).then(function () { QR.avail = true; return true; }, function (er) {
+      var m = String((er && er.message) || '');
+      if (/unknown action/i.test(m)) { QR.avail = false; return false; }
+      if (/no quote file/i.test(m)) { QR.avail = true; return true; }
+      throw er; });
+  }
+  function b64Bytes(d) { var i = d.indexOf(','); return Math.floor((d.length - i - 1) * 3 / 4); }
+  /** Any drawable -> one JPEG copy for OCR: long side 2000 px (big photos shrunk; small screenshots / JPG quotes enlarged up to 2x
+   *  so the letters are big enough to read: S4 JPG 993 px read 9/18 lines as is, 15/18 at 2000 px), white behind transparent PNGs, quality stepped down (then size) until it is under 900 KB. */
+  function ocrJpeg(src, w, h) {
+    var L = Math.max(w, h) || 1, k = Math.min(OCR_MAX_SIDE / L, 2), qs = [0.86, 0.76, 0.66, 0.56], d = '', cw = 0, ch = 0;
+    for (var round = 0; round < 5; round++) {
+      cw = Math.max(1, Math.round(w * k)); ch = Math.max(1, Math.round(h * k));
+      var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; var cx = cv.getContext('2d');
+      cx.fillStyle = '#fff'; cx.fillRect(0, 0, cw, ch); cx.drawImage(src, 0, 0, cw, ch);
+      for (var i = 0; i < qs.length; i++) { d = cv.toDataURL('image/jpeg', qs[i]); if (b64Bytes(d) <= OCR_TARGET) break; }
+      cv.width = cv.height = 0;
+      if (b64Bytes(d) <= OCR_TARGET) break;
+      k *= 0.8;
+    }
+    if (!/^data:image\/jpeg/.test(d) || b64Bytes(d) > OCR_TARGET) throw new Error('Could not make this photo small enough to read.');
+    return { data: d, mimeType: 'image/jpeg', w: cw, h: ch, bytes: b64Bytes(d) };
+  }
+  function imgCopy(file) {
+    return new Promise(function (res, rej) {
+      var u = (root.URL && URL.createObjectURL) ? URL.createObjectURL(file) : null, im = new Image();
+      function done() { if (u) try { URL.revokeObjectURL(u); } catch (e) {} }
+      im.onload = function () { try { var c = ocrJpeg(im, im.naturalWidth || im.width, im.naturalHeight || im.height); done(); res(c); } catch (e) { done(); rej(e); } };
+      im.onerror = function () { done(); var e = new Error('This photo type can’t be opened here. Take a screenshot of it, or save it as a JPG, and pick that.'); e.prep = true; rej(e); };
+      if (u) im.src = u; else { var r = new FileReader(); r.onload = function () { im.src = r.result; }; r.onerror = im.onerror; r.readAsDataURL(file); }
+    });
+  }
+  /** Scanned PDF: pages 1-3 rendered with pdf.js (long side ~2000 px) -> one JPEG copy each. */
+  function pdfCopies(file) {
+    return fileBytes(file).then(function (buf) { return loadPdfjs().then(function (lib) { return lib.getDocument({ data: new Uint8Array(buf), verbosity: 0 }).promise; }); }).then(function (doc) {
+      var out = [], n = Math.min(doc.numPages, OCR_PDF_PAGES), p = 0;
+      function next() { p++; if (p > n) return Promise.resolve();
+        return doc.getPage(p).then(function (page) { var v1 = page.getViewport({ scale: 1 }), sc = Math.min(OCR_MAX_SIDE / Math.max(v1.width, v1.height), 3), vp = page.getViewport({ scale: sc });
+          var cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+          return page.render({ canvasContext: cx, viewport: vp }).promise.then(function () { out.push(ocrJpeg(cv, cv.width, cv.height)); cv.width = cv.height = 0; }); }).then(next); }
+      return next().then(function () { var more = doc.numPages > n; try { doc.destroy(); } catch (e) {} out.more = more; return out; });
+    });
+  }
+  function readingHtml(title) {
+    return '<div class="qish" id="qiRd"><h3>' + esc(title) + '</h3><div class="spinner"></div><div class="hint" style="text-align:center" id="qiRdT">Getting the photo ready…</div>' +
+      '<div class="hint" style="text-align:center;font-size:12px" id="qiRdS"></div></div>';
+  }
+  function reading(run) { return S && S.run === run && document.getElementById('qiRd') && document.getElementById('sheet').classList.contains('on'); }   // the sheet was closed / another file picked: stop quietly
+  function rdText(t, sub) { var a = document.getElementById('qiRdT'), b = document.getElementById('qiRdS'); if (a) a.textContent = t; if (b && sub != null) b.textContent = sub; }
+  function pageLabel(i, n, pdf) { return n > 1 ? T((pdf ? 'Google is reading page ' : 'Google is reading photo ') + (i + 1) + ' of ' + n + '…', 'Google 正在读取第 ' + (i + 1) + ' / ' + n + (pdf ? ' 页…' : ' 张照片…'))
+    : (pdf ? 'Google is reading the scan…' : 'Google is reading the photo…'); }
+  /** One OCR copy -> text. Rate limited: wait 20 s (countdown) and try once more, then give up with a retry button. */
+  function readOne(c, i, n, pdf, run, again) {
+    if (!reading(run)) return Promise.reject({ quiet: true });
+    rdText(pageLabel(i, n, pdf), T('Usually 3–10 seconds', '通常需要 3–10 秒'));
+    return root.api('quoteRead', { file: { data: c.data, mimeType: c.mimeType } }).then(function (r) {
+      if (r && r.ok) return String(r.text || '');
+      if (r && r.rate_limited && !again) return wait(BUSY_WAIT, run).then(function () { return readOne(c, i, n, pdf, run, true); });
+      var e = new Error(r && r.rate_limited ? 'Google is still busy reading photos.' : ((r && r.error) || 'Could not read the quote.')); e.busy = !!(r && r.rate_limited); throw e;
+    });
+  }
+  function wait(sec, run) { return new Promise(function (res, rej) { var left = sec;
+    (function tick() { if (!reading(run)) return rej({ quiet: true });
+      rdText('Google is busy. Trying again…', T('Trying again in ' + left + ' s', left + ' 秒后重试')); if (left-- <= 0) return res(); setTimeout(tick, 1000); })(); }); }
+  /** src = {files:[images]} or {pdf:file}; texts already read are kept when "Try again" continues after an error. */
+  function runOcr(src, to, fname) {
+    var run = Date.now() + Math.random(); S = { to: to, run: run };
+    var pdf = !!src.pdf, title = 'Items from a quote';
+    openSheet(readingHtml(title));
+    var avail = quoteReadAvail();                                    // asked while the photo is being made small
+    var prep = src.copies ? Promise.resolve(src.copies) : (pdf ? pdfCopies(src.pdf) : src.files.reduce(function (pr, f, i) { return pr.then(function (acc) {
+      if (src.files.length > 1) rdText(T('Getting photo ' + (i + 1) + ' of ' + src.files.length + ' ready…', '正在准备第 ' + (i + 1) + ' / ' + src.files.length + ' 张照片…'));
+      return imgCopy(f).then(function (c) { acc.push(c); return acc; }); }); }, Promise.resolve([])));
+    return Promise.all([avail, prep]).then(function (r) {
+      var ok = r[0], copies = r[1]; src.copies = copies;
+      if (!reading(run)) return;
+      if (!ok) { if (pdf) scanSoon(to); else soon(to); return; }
+      var texts = src.texts || (src.texts = []);
+      function next(i) { if (i >= copies.length) return Promise.resolve();
+        if (texts[i] != null) return next(i + 1);
+        return readOne(copies[i], i, copies.length, pdf, run, false).then(function (t) { texts[i] = t; return next(i + 1); }); }
+      return next(0).then(function () {
+        if (!reading(run)) return;
+        var data = root.localData;
+        if (!data || !data.items) { sheetMsg(title, 'The item list is still loading. Try again in a moment.', true); return; }
+        var res = QP.parseText(texts.join('\n\f\n'), data);              // \f = page break: a Total on one photo does not end the next one
+        if (!res.lines.length) { sheetMsg(title, 'No item lines found. Make sure the item codes and the Qty column are in the photo, sharp and straight, then try again.', true); return; }
+        res.source = pdf ? 'scan' : 'photo';
+        review(res, to, fname, { src: pdf ? 'Scan' : (copies.length > 1 ? T(copies.length + ' photos', copies.length + ' 张照片') : 'Photo'), photos: copies.map(function (c) { return c.data; }), more: !!copies.more });
+      });
+    }).catch(function (er) {
+      if (er && er.quiet) return;
+      if (S && S.run !== run) return;
+      var m = (er && er.message) || 'Could not read the quote.';
+      openSheet('<div class="qish"><h3>' + esc(title) + '</h3><div class="msg err" style="margin-top:8px">' + esc(m) + '</div>' +
+        ((er && er.busy) ? '<div class="hint" style="margin-top:6px">Google limits how many photos can be read in a row. Wait a minute, then try again.</div>' : '') +
+        (er && er.prep ? '' : '<button class="btn" id="qiRetry" type="button" style="margin-top:10px">Try again</button>') + '<button class="btn sec" id="qiAgain" type="button" style="margin-top:8px">Pick another file</button></div>');
+      var rb = document.getElementById('qiRetry'); if (rb) rb.onclick = function () { runOcr(src, to, fname); };
+      document.getElementById('qiAgain').onclick = function () { root.quoteImport(to); };
+    });
+  }
+
+  /** Entry from index.html (file(s) already picked). to = {cid, noteId} or null (current note). */
+  function run(files, to) {
     css(); S = { to: to };
-    var isPdf = /pdf/i.test(file.type || '') || /\.pdf$/i.test(file.name || '');
-    if (!isPdf) { soon(to); return Promise.resolve(); }
+    files = [].slice.call(files && files.length != null && !files.name ? files : [files]).filter(Boolean);
+    var file = files.filter(isPdfFile)[0];
+    if (!file) {
+      var imgs = files.filter(isImgFile).slice(0, OCR_MAX_FILES);
+      if (!imgs.length) { sheetMsg('Items from a quote', 'Pick a PDF or a photo of the quote.', true); return Promise.resolve(); }
+      return runOcr({ files: imgs }, to, imgs[0].name || '');
+    }
     if (file.size > 25e6) { sheetMsg('Items from a quote', 'This PDF is too big (over 25 MB).', true); return Promise.resolve(); }
     return fileBytes(file).then(pdfRows).then(function (r) {
-      if (r.chars < 40) { S = { to: to }; sheetMsg('Photo import is coming soon', 'This PDF is a scan (it has no text in it). Reading scans and photos is the next update. For now, use the PDF from NetSuite or from our quote app.', false); return; }
+      if (r.chars < 40) return runOcr({ pdf: file }, to, file.name || '');          // a scan: no text layer
       var data = root.localData;
       if (!data || !data.items) { sheetMsg('Items from a quote', 'The item list is still loading. Try again in a moment.', true); return; }
       var res = QP.parseRows(r.rows, data);
@@ -370,8 +494,9 @@
       review(res, to, file.name || '');
     }).catch(function (er) { sheetMsg('Items from a quote', (er && er.message) || 'Could not read this PDF.', true); });
   }
-  function review(res, to, fname) {
-    S = { res: res, to: to, file: fname, rows: res.lines.map(function (l) {
+  function review(res, to, fname, ex) {
+    ex = ex || {};
+    S = { res: res, to: to, file: fname, src: ex.src || 'PDF', photos: ex.photos || null, more: !!ex.more, rows: res.lines.map(function (l) {
       var per = l.status === 'ok' ? l.picks.map(function (p) { return { name: p.name, k: Math.max(1, Math.round(p.qty / (l.qty || 1))) }; }) : [];
       return { on: l.status === 'ok' && per.length > 0, qty: Math.max(1, Math.min(99999, l.qty || 1)), per: per, pick: null, srch: false, sq: '' }; }) };
     paint();
@@ -416,10 +541,12 @@
   }
   function paint() {
     var r = S.res, n = counts(), head = [r.quoteNo, r.customer && r.customer.name, r.customer && r.customer.phone].filter(Boolean).join(' · ') || S.file;
-    openSheet('<div class="qish"><h3>Items from quote</h3><div class="qis notr">' + esc(head) + '</div><div class="qisum"><span class="qic src">PDF</span>' +
+    openSheet('<div class="qish"><h3>Items from quote</h3><div class="qis notr">' + esc(head) + '</div><div class="qisum"><span class="qic src">' + esc(S.src || 'PDF') + '</span>' +
       '<span class="qic ok">' + n.ok + ' matched</span>' + (n.check ? '<span class="qic chk">' + n.check + ' to check</span>' : '') + (n.none ? '<span class="qic no">' + n.none + ' not found</span>' : '') +
       (r.style ? '<span class="qic src">Style <span class="notr">' + esc(r.style) + '</span></span>' : '') + '</div>' +
       '<div class="hint" style="margin:2px 0 6px">Prices are today’s list prices. Check the qty, then add.</div>' +
+      (S.photos ? '<div class="hint" style="margin:0 0 6px">Read by Google from the photo: check each line against it.' + (S.more ? ' Only the first 3 pages were read.' : '') + '</div>' +
+        '<details class="qiph"><summary>Show photo</summary>' + S.photos.map(function (d) { return '<img alt="" src="' + d + '">'; }).join('') + '</details>' : '') +
       '<div class="qil" id="qiList">' + r.lines.map(rowHtml).join('') + '</div><div class="qift" id="qiFt">' + footHtml() + '</div></div>');
     bind();
   }
@@ -476,5 +603,6 @@
       var c = S.res.customer || {}, info = { name: c.name || '', phone: c.phone || '', notes: 'From quote ' + (S.res.quoteNo || S.file || '') };
       S = null; newProjectFromQuote(info, L); };
   }
-  root.QIUI = { run: run, review: review, lines: function () { return S ? lines() : []; }, state: function () { return S; }, loadPdfjs: loadPdfjs, pdfRows: pdfRows };
+  root.QIUI = { run: run, review: review, lines: function () { return S ? lines() : []; }, state: function () { return S; }, loadPdfjs: loadPdfjs, pdfRows: pdfRows,
+    ocrJpeg: ocrJpeg, quoteReadAvail: quoteReadAvail, _qr: QR };
 })(this);

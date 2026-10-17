@@ -653,9 +653,9 @@
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
 <script src="search.js?v=20261015o"></script>
-<script src="sync.js?v=20261017g"></script>
-<script src="i18n.js?v=20261017g"></script>
-<script src="photoq.js?v=20261017g"></script>
+<script src="sync.js?v=20261017h"></script>
+<script src="i18n.js?v=20261017h"></script>
+<script src="photoq.js?v=20261017h"></script>
 <script>
 'use strict';
 // The page itself holds NO item data, keys or webhook URLs. After a password (or fingerprint / Face ID) sign-in it downloads the item data once per
@@ -713,7 +713,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017g';
+var PAGE_VER = '20261017h';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1362,8 +1362,10 @@ function npSwapUndo(sw) { npHold = false; if (sw.out) { try { sw.out.cancel(); }
 function newCustomerOpen() { var y = window.scrollY; newCustomer().then(function (c) { window.scrollTo(0, y); newProjToast(c); }).catch(function () { renderCustBar(); }); }   // Search: stay on the tab + scroll; the Adding-to bar switches to the new project
 /** 20261017g quote import (PDF): "Add items from a quote…" (note ⋯ menu, empty note) and "From a quote…" (project picker, + New project fallback).
  *  The file picker opens right on the tap (iOS needs the tap); quote-import.js (parser + review sheet) loads on first use and pdf.js
- *  from the CDN only when a PDF is picked. to = {cid, noteId} target note, else the current note. Photos: "coming soon" for now. */
-var QI_VER = '20261017g', qiLoad = null;
+ *  from the CDN only when a PDF is picked. to = {cid, noteId} target note, else the current note.
+ *  20261017h: photos / screenshots (several = one quote) and scanned PDFs are read by the server (quoteRead, Drive OCR); an older
+ *  server without quoteRead still gets the "coming soon" message. */
+var QI_VER = '20261017h', qiLoad = null;
 function loadQuoteImport() {
   if (window.QIUI) return Promise.resolve(window.QIUI);
   if (qiLoad) return qiLoad;
@@ -1375,12 +1377,12 @@ function loadQuoteImport() {
 }
 function quoteImport(to) {
   loadQuoteImport().catch(function () {});
-  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,.pdf,image/*'; inp.id = 'qiFile';
+  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,.pdf,image/*'; inp.multiple = true; inp.id = 'qiFile';   // 20261017h: several photos = one quote
   inp.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
   var old = $('qiFile'); if (old) old.remove();
-  inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return;
+  inp.onchange = function () { var fs = inp.files ? [].slice.call(inp.files) : []; if (!fs.length) return;
     openSheet('<h3>Items from a quote</h3><div class="spinner"></div><div class="hint" style="text-align:center">Reading the quote…</div>');
-    loadQuoteImport().then(function (Q) { Q.run(f, to || null); }, function (er) { $('sheetBody').innerHTML = '<h3>Items from a quote</h3><div class="msg err">' + esc(er.message) + '</div>'; })
+    loadQuoteImport().then(function (Q) { Q.run(fs, to || null); }, function (er) { $('sheetBody').innerHTML = '<h3>Items from a quote</h3><div class="msg err">' + esc(er.message) + '</div>'; })
       .then(function () { inp.remove(); }); };
   document.body.appendChild(inp); inp.click();
 }
