@@ -30,7 +30,7 @@
     var ac = !keepalive && typeof AbortController === 'function' ? new AbortController() : null, to = ac ? setTimeout(function () { ac.abort(); }, 90000) : 0;   // a hung request never holds a photo forever
     return fetch(e.api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', keepalive: !!keepalive, signal: ac ? ac.signal : undefined })
       .then(function (r) { clearTimeout(to); return r; }, function (er) { clearTimeout(to); throw er; })
-      .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(t); } catch (x) { var er = new Error('Unexpected server reply (HTTP ' + r.status + ').'); er.net = true; throw er; }
+      .then(function (r) { return r.text().then(function (t) { var j; try { j = JSON.parse(typeof window !== 'undefined' && typeof window.unMoji === 'function' ? window.unMoji(t) : t); } catch (x) { var er = new Error('Unexpected server reply (HTTP ' + r.status + ').'); er.net = true; throw er; }
         if (!j.ok) { var e2 = new Error(j.error || 'Something went wrong.'); e2.auth = !!j.auth; throw e2; } return j.data; }); },
         function () { var er = new Error('No connection to the server. Check your internet and try again.'); er.net = true; throw er; }); }
   function claim(uid, owner) { return update(uid, function (e) { var now = Date.now(); if (!realNote(e) || !e.token || e.authWait || !open_(e, now)) return null;

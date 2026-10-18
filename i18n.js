@@ -79,7 +79,7 @@
     'Saving…': '保存中…', 'Offline, will sync': '离线，稍后同步', 'is viewing': '正在查看', 'are viewing': '正在查看', 'Sending changes saved on this phone…': '正在发送这部手机上保存的修改…', 'Not saved, tap to retry': '没保存，点这里重试', 'Not saved yet': '还没保存', 'Not saved yet (will retry)': '还没保存（会自动重试）',
     'Not saved yet. Check the connection and try again.': '还没保存。请检查网络后重试。',
     'Quote this note': '为这个笔记报价', 'Quote this note (open a note first)': '为这个笔记报价（先打开一个笔记）', 'Delete this project': '删除这个项目', 'Delete this note': '删除这个笔记',
-    'Kitchen': '厨房', 'Bath 1': '浴室 1', 'Bath 2': '浴室 2', 'Bath 3': '浴室 3', 'Custom': '自定义', 'Kitchen quote': '廨房报价',
+    'Kitchen': '厨房', 'Bath 1': '浴室 1', 'Bath 2': '浴室 2', 'Bath 3': '浴室 3', 'Custom': '自定义', 'Kitchen quote': '厨房报价',
     'Quote Kitchen': '报价：厨房', 'Quote Bath 1': '报价：浴室 1', 'Quote Bath 2': '报价：浴室 2', 'Quote Bath 3': '报价：浴室 3',
     'Note title': '笔记标题', 'Collapse note': '收起笔记', 'Note actions': '笔记操作', 'Add items from Search here': '在这里添加搜索到的商品', 'Items': '商品', 'Photos': '照片', 'Notes': '备注',
     '+ Add from Search': '+ 从搜索添加', '📷 Add photo': '📷 添加照片', 'No photos yet.': '还没有照片。', 'Remove photo': '删除照片', 'adding here': '正在添加到这里',

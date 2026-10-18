@@ -11,7 +11,7 @@
   * { box-sizing:border-box; }
   body { margin:0; font:16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color:var(--text); background:var(--bg); }
   .wrap { max-width:760px; margin:0 auto; padding:0 0 24px; }
-  .lang { position:absolute; top:12px; right:12px; border:1px solid var(--line); background:#fff; border-radius:999px; min-height:36px; padding:0 12px; font:inherit; font-size:14px; font-weight:700; color:var(--text); cursor:pointer; }
+  .lang { position:absolute; top:12px; right:12px; border:1px solid var(--line); background:#fff; border-radius:999px; min-height:29px; height:29px; padding:0 10px; font:inherit; font-size:13px; font-weight:700; line-height:1; color:var(--text); cursor:pointer; }   /* 20261017l: same size as the app top bar */
   header { position:relative; background:#fff; border-bottom:1px solid var(--line); padding:18px 16px 14px; text-align:center; }
   header .logo { width:min(220px,64vw); height:auto; display:block; margin:0 auto; }
   h1 { font-size:22px; margin:14px 0 2px; }
@@ -59,7 +59,8 @@
      light #f6f8fa, lines #d9e4ec, muted #526776, Montserrat, pill buttons. ---- */
   :root { --bg:#f6f8fa; --text:#15334b; --muted:#526776; --line:#d9e4ec; --line-strong:#c3d3df; --accent:#0078bd; --brand-dark:#005d9a;
     --navy:#15334b; --red:#c92330; --focus:rgba(0,120,189,.28); --info-bg:#e6f2fa; --info-fg:#005d9a; }
-  body { font-family:Montserrat,-apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; letter-spacing:-.005em; }
+  body { font-family:Montserrat,-apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC","Source Han Sans SC",sans-serif; letter-spacing:-.005em; }
+  :lang(zh) { letter-spacing:0; }
   h1, h2, h3 { color:var(--navy); }
   header { background:rgba(255,255,255,.96); border-bottom:2px solid var(--accent); }
   .btn { background:var(--accent); font-weight:600; letter-spacing:.01em; }
@@ -100,7 +101,7 @@
 // The sharer's language rides along (&l=zh) the first time; after that the client's own toggle is remembered.
 try { if (/[?&]l=zh\b/.test(location.search) && !localStorage.getItem('esLang')) localStorage.setItem('esLang', 'zh'); } catch (e) {}
 </script>
-<script src="i18n.js?v=20261016r"></script>
+<script src="i18n.js?v=20261017l"></script>
 <script>
 // Read-only client view of one project (client.html?c=TOKEN). No sign-in, no item data download, no prices:
 // the server answers token requests with a whitelist copy (titles, text, items, qty, item notes, photos) only.
@@ -110,10 +111,29 @@ var TOKEN = (new URLSearchParams(location.search).get('c') || '').trim();
 function T(s) { return window.I18N ? I18N.t(s) : s; }
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+/** 20261017l: repair mojibake = UTF-8 text that was decoded as Windows-1252 once ("Mon\u00e2\u20ac\u201cSat" -> "Mon\u2013Sat").
+ *  The live Apps Script Code.gs has its non-ASCII literals stored that way (en dash, em dash, middle dot, bullet, ellipsis, CJK), so
+ *  every server reply goes through this. Only a run that re-encodes to a complete, valid UTF-8 sequence is replaced. */
+var MOJI_CP = { 0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E,
+  0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F };
+var MOJI_RE = /[\u00C2-\u00F4][\u0080-\u00BF\u0152\u0153\u0160\u0161\u0178\u017D\u017E\u0192\u02C6\u02DC\u2013\u2014\u2018-\u201A\u201C-\u201E\u2020-\u2022\u2026\u2030\u2039\u203A\u20AC\u2122]{1,3}/g;
+function mojiByte(ch) { var c = ch.charCodeAt(0); return c < 0x100 ? c : MOJI_CP[c] || -1; }
+function unMoji(t) {
+  if (typeof t !== 'string' || !/[\u00C2-\u00F4]/.test(t)) return t;
+  return t.replace(MOJI_RE, function (m) {
+    var lead = m.charCodeAt(0), need = lead >= 0xF0 ? 3 : lead >= 0xE0 ? 2 : 1; if (m.length < need + 1) return m;
+    var out = '', tail = m.slice(need + 1), b = [lead], i, cp;
+    for (i = 1; i <= need; i++) { var x = mojiByte(m[i]); if (x < 0x80 || x > 0xBF) return m; b.push(x); }
+    cp = need === 1 ? ((b[0] & 0x1F) << 6) | (b[1] & 0x3F) : need === 2 ? ((b[0] & 0x0F) << 12) | ((b[1] & 0x3F) << 6) | (b[2] & 0x3F) : ((b[0] & 0x07) << 18) | ((b[1] & 0x3F) << 12) | ((b[2] & 0x3F) << 6) | (b[3] & 0x3F);
+    if ((need === 1 && cp < 0x80) || (need === 2 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) || (need === 3 && (cp < 0x10000 || cp > 0x10FFFF))) return m;   // overlong / surrogate: not real UTF-8
+    out = String.fromCodePoint(cp);
+    return out + (tail ? unMoji(tail) : '');
+  });
+}
 function call(action, data) {
   var body = Object.assign({ action: action, c: TOKEN }, data || {});
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', credentials: 'omit' })
-    .then(function (r) { return r.json(); }, function () { throw new Error('No connection. Check your internet and reload the page.'); })
+    .then(function (r) { return r.text().then(function (t) { return JSON.parse(unMoji(t)); }); }, function () { throw new Error('No connection. Check your internet and reload the page.'); })
     .then(function (j) { if (!j || !j.ok) throw new Error((j && j.error) || 'Something went wrong.'); return j.data; });
 }
 function fail(m) { m = String(m == null ? '' : m).replace(/Ask East Star(?! Max)/g, 'Ask East Star Max'); $('title').textContent = 'East Star Max'; $('sub').textContent = ''; $('main').innerHTML = '<div class="msgbox">' + esc(m) + '</div>'; }
