@@ -703,7 +703,7 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
-<script src="search.js?v=20261017n"></script>
+<script src="search.js?v=20261017o"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
 <script src="i18n.js?v=20261017n"></script>
@@ -784,7 +784,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017n';
+var PAGE_VER = '20261017o';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1182,7 +1182,9 @@ function searchPage(q, my, offset) {
   }).catch(function (er) { if (my === seq) $('results').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
 /** The normalized code for the Ends with chip, or '' when the search is not one 3-6 letter/digit word. */
-function endsQ(q) { q = String(q || '').trim(); if (!q || /\s/.test(q)) return ''; var n = q.toUpperCase().replace(/[^A-Z0-9]/g, ''); return n.length >= 3 && n.length <= 6 ? n : ''; }
+function endsQ(q) { q = String(q || '').trim(); if (!q || /\s/.test(q)) return '';
+  var p = typeof wildPattern_ === 'function' ? wildPattern_(q) : '';   // 20261017o: 67x / 2?30 = one-digit wildcards (search.js), shown as typed: "Ends with 67x"
+  var n = p ? p.replace(/~/g, 'x') : q.toUpperCase().replace(/[^A-Z0-9]/g, ''); return n.length >= 3 && n.length <= 6 ? n : ''; }
 function renderSearchFilters(r) {
   var fc = r.facets; if (!fc || !(r.exact || r.total)) { $('sfilt').innerHTML = ''; return; }
   var chip = function (k, v, label, n) { return '<button data-sk="' + k + '" data-sv="' + esc(v) + '" class="' + (String(sF[k] || '') === String(v) ? 'on' : '') + '">' + esc(label) + (n != null ? '<small>' + n.toLocaleString() + '</small>' : '') + '</button>'; };

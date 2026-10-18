@@ -1,6 +1,7 @@
 /**
  * East Star Red app - forgiving ranked search (v2). Pure JS, no Apps Script services, so the same
  * file runs in Apps Script, the local test server and the Node index builder (sync/build_index.js).
+ * 20261017o: one-digit wildcards in codes: "67x" / "67?" = 670-679 anywhere in a code, "67xx" = 2 digits, "67*" = any run (wildPattern_).
  *
  * Bundle (built by Red's sync step):
  *   items:    [name, description, price, onHand, onOrder, sfShelf, freShelf, ..., photo(13), locStock(14)]
@@ -77,9 +78,42 @@ function brandOf_(r) {
 }
 function codeEndsWith_(code, qn) {
   if (!qn) return false;
+  if (/[?~*]/.test(qn)) { var wre = wildRe_(qn, '$'); return wre.test(normCode_(code)) || wre.test(normCode_(String(code || '').split('#')[0])); }   // 20261017o wildcard
   var a = normCode_(code), b = normCode_(String(code || '').split('#')[0]);
   return (a.length >= qn.length && a.slice(-qn.length) === qn) || (b.length >= qn.length && b.slice(-qn.length) === qn);
 }
+
+/** 20261017o one-digit wildcard (Ray: "67x, x can be any number"). One query word -> a pattern over A-Z / 0-9 plus
+ *  '?' = one digit, '~' = one digit OR the letter X as typed (an x right after a digit, or after such an x, that is not
+ *  followed by more digits: 67x, 67xx, MS67xCEFG; 12x24 / 4 x 4 are sizes and are taken out before this runs),
+ *  '*' = any run of letters / digits. Dashes, spaces, # ... are ignored like normCode_. '' = not a wildcard code
+ *  (needs a digit, 2+ fixed characters and 3+ characters besides '*'). */
+function wildPattern_(w) {
+  var s = String(w || '').toUpperCase().replace(/[^A-Z0-9?*]/g, ''), out = '', i, j;
+  if (!/[0-9]/.test(s) || !/[?*X]/.test(s)) return '';
+  for (i = 0; i < s.length; i++) {
+    var c = s.charAt(i);
+    if (c === 'X' && i > 0 && (/[0-9]/.test(s.charAt(i - 1)) || out.charAt(out.length - 1) === '~')) {
+      for (j = i; j < s.length && s.charAt(j) === 'X'; j++) {}
+      if (!/[0-9]/.test(s.charAt(j))) { out += '~'; continue; }
+    }
+    out += c;
+  }
+  out = out.replace(/\*+/g, '*');
+  if (!/[?~*]/.test(out)) return '';
+  return out.replace(/[?~*]/g, '').length >= 2 && out.replace(/\*/g, '').length >= 3 ? out : '';
+}
+var WILD_RE_ = {}, WILD_RE_N_ = 0;
+/** Pattern -> RegExp on a normCode_ string: mode '' = anywhere in the code, '$' = at the end (Ends with). Cached. */
+function wildRe_(p, mode) {
+  var k = (mode || '') + p;
+  if (WILD_RE_[k]) return WILD_RE_[k];
+  if (++WILD_RE_N_ > 300) { WILD_RE_ = {}; WILD_RE_N_ = 1; }
+  var src = p.replace(/\?/g, '[0-9]').replace(/~/g, '[0-9X]').replace(/\*/g, '[A-Z0-9]*');
+  return (WILD_RE_[k] = new RegExp(src + (mode === '$' ? '$' : '')));
+}
+/** Does any code in the item list match this wildcard pattern? */
+function wildAny_(idx, p) { var re = wildRe_(p, ''), nn = idx.nn; for (var i = 0; i < nn.length; i++) if (re.test(nn[i])) return true; return false; }
 
 /** Text -> tokens. Splits on anything not A-Z/0-9 and at digit->letter edges ("2068W3040" -> 2068, W3040; "A125ACG" -> A125, ACG). */
 function tokenize_(s, glued) {
@@ -181,12 +215,14 @@ function vocabMatches_(t, vocab, allowFuzzy) {
 
 // ------------------------------------------------------------------ query parsing
 /** Query -> terms. Each term = {label, alts: [[tokens...]...]}; a term matches when every token of any alt matches. */
-function parseQuery_(q, syn) {
+function parseQuery_(q, syn, noWild) {
   syn = syn || DEFAULT_SYNONYMS_;
   var tokS = {}, k;
   for (k in (syn.tokens || {})) tokS[normCode_(k)] = syn.tokens[k];
   var sizes = [];
   q = String(q).replace(/(\d+(?:\.\d+)?)\s*(?:"|in)?\s*[x×*]\s*(\d+(?:\.\d+)?)\s*(?:"|in)?/gi, function (m0, a, b) { sizes.push([a, b]); return ' '; });
+  var wild = [];                                             // 20261017o: wildcard code words (67x, 2?30) -> own terms
+  if (!noWild) q = q.replace(/\S+/g, function (w) { var p = wildPattern_(w); if (!p) return w; wild.push(p); return ' '; });
   var words = tokenize_(q);
   var used = new Array(words.length), terms = [];
   var phrases = Object.keys(syn.phrases || {}).map(function (p) { return { toks: tokenize_(p), alts: syn.phrases[p] }; })
@@ -209,6 +245,7 @@ function parseQuery_(q, syn) {
     if (m && tokS[m[1]]) tokS[m[1]].forEach(function (a) { alts.push([normCode_(a) + m[2]]); });
     terms.push({ label: w, alts: alts });
   }
+  wild.forEach(function (p) { terms.push({ label: p.replace(/~/g, 'x'), alts: [], wild: p }); });
   sizes.forEach(function (ab) { terms.push({ label: ab[0] + 'x' + ab[1], alts: [[ab[0] + 'X' + ab[1]], [ab[1] + 'X' + ab[0]]] }); });
   return terms;
 }
@@ -244,8 +281,13 @@ function searchBundle_(bundle, q, limit, f) {
   if (q.length > 100) q = q.slice(0, 100);
   limit = Math.min(Number(limit) || SEARCH_LIMIT, 100);
   var items = bundle.items || [], idx = getIndex_(bundle), inc = incomingIndex_(bundle);
-  var terms = parseQuery_(q, bundle.synonyms).slice(0, 8).concat(cjk.map(function (w) { return { label: w, alts: [], cjk: w }; }));
+  var terms = parseQuery_(q, bundle.synonyms).slice(0, 8);
+  // 20261017o: a wildcard word no code matches -> the query is read the old way (x / ? ignored, typo / close matches)
+  if (terms.some(function (t) { return t.wild && !wildAny_(idx, t.wild); })) terms = parseQuery_(q, bundle.synonyms, true).slice(0, 8);
+  var hasWild = terms.some(function (t) { return t.wild; });
+  terms = terms.concat(cjk.map(function (w) { return { label: w, alts: [], cjk: w }; }));
   var qNorm = normCode_(q), N = items.length, T = terms.length;
+  var wq = T === 1 && terms[0].wild ? terms[0].wild : '';    // 20261017o: the whole search is one wildcard code
   var tokCache = {}, dirCache = {}, best = {};         // best[token] = best vocab correction for Did you mean
 
   /** token -> Float32Array of per-item scores (name 1.0, description 0.55) */
@@ -281,6 +323,10 @@ function searchBundle_(bundle, q, limit, f) {
   terms.forEach(function (term) {
     var termBest = new Float32Array(N), termDir = new Uint8Array(N);
     if (term.cjk) { var hay = cjkHay_(bundle); for (var h = 0; h < N; h++) if (hay[h] && hay[h].indexOf(term.cjk) >= 0) { termBest[h] = 55; termDir[h] = 1; } }
+    if (term.wild) {                                     // 20261017o: wildcard code = an exact match inside the code
+      var wre = wildRe_(term.wild, '');
+      for (var h2 = 0; h2 < N; h2++) { var wn = idx.nn[h2], wm = wre.exec(wn); if (wm) { termBest[h2] = wm.index === 0 ? (wm[0].length === wn.length ? 100 : 88) : 72; termDir[h2] = 1; } }
+    }
     term.alts.forEach(function (alt, ai) {
       var arrs = alt.map(tokenScores), dirs = alt.map(function (t) { return dirCache[t]; });
       for (var i = 0; i < N; i++) {
@@ -296,7 +342,7 @@ function searchBundle_(bundle, q, limit, f) {
   // typo / close matches are the fallback when nothing is exact (strict: 0, fallback: true).
   var strictN = 0; for (var si = 0; si < N; si++) if (strictCover[si] === T) strictN++;
 
-  var catWant = {}, sizeNums = [], qw = tokenize_(q), nType = 0;
+  var catWant = {}, sizeNums = [], qw = tokenize_(hasWild ? q.replace(/\S+/g, function (w) { return wildPattern_(w) ? ' ' : w; }) : q), nType = 0;
   qw.forEach(function (w) { var c = CATEGORY_WORDS_[w]; if (c) { catWant[c] = 1; nType++; } if (/^\d{2}$/.test(w)) sizeNums.push(w); });
   // TYPE search ("hood", "range hood", "sinks"): every word is a type word or a filler -> items OF that type come first
   // (matched by their category tag even when code/description lack the word), then other items that merely mention it.
@@ -307,7 +353,12 @@ function searchBundle_(bundle, q, limit, f) {
   for (i = 0; i < N; i++) {
     if (strictN ? strictCover[i] !== T : (!cover[i] || cover[i] < minCover)) continue;
     var nn = idx.nn[i], s = total[i] / T;
-    if (nn === qNorm) s += 200;
+    if (wq) {                                            // 20261017o: whole code / start / inside, like the typed-code boosts below
+      var wm3 = wildRe_(wq, '').exec(nn);
+      if (wm3 && wm3.index === 0) s += wm3[0].length === nn.length ? 200 : 60; else if (wm3 && wq.length >= 4) s += 40;
+      if (/~/.test(wq) && nn.indexOf(qNorm) >= 0) s += 5;   // the X really is in the code (ES-KLD-4822X for 4822x)
+    }
+    else if (nn === qNorm) s += 200;
     else if (qNorm.length >= 3 && nn.lastIndexOf(qNorm, 0) === 0) s += 60;
     else if (qNorm.length >= 4 && nn.indexOf(qNorm) >= 0) s += 40;
     if (nameCover[i] === T) s += 15;
@@ -333,7 +384,7 @@ function searchBundle_(bundle, q, limit, f) {
   var set = cands;                                     // exact set, or (fallback) every close match that is listed
   var store = f.store === 'SF' ? 5 : f.store === 'FRE' ? 6 : 0, sizeOn = f.cat === 'Tile' || f.cat === 'Flooring';
   var vix = variantIndex_(bundle);
-  var endsQ = f.ends ? qNorm : '', endsOn = !!endsQ;   // 20261017n: Ends with (the typed code, normalized)
+  var endsQ = f.ends ? (wq || qNorm) : '', endsOn = !!endsQ;   // 20261017o: or the wildcard pattern (2?30, 67x)   // 20261017n: Ends with (the typed code, normalized)
   var pass = function (r, skip) {
     var ve = vix.byName[r[0]];
     return (skip === 'cat' || !f.cat || r[7] === f.cat) && (skip === 'stock' || !f.inStock || Number(r[3]) > 0) &&
@@ -347,7 +398,7 @@ function searchBundle_(bundle, q, limit, f) {
   for (var fi = 0; fi < set.length; fi++) {
     var fr = items[set[fi][3]];
     if (pass(fr, 'cat')) fc[fr[7]] = (fc[fr[7]] || 0) + 1;
-    if (qNorm && pass(fr, 'ends') && codeEndsWith_(fr[0], qNorm)) facets.ends++;
+    if (qNorm && pass(fr, 'ends') && codeEndsWith_(fr[0], wq || qNorm)) facets.ends++;
     if (pass(fr, 'brand')) { var bk = brandOf_(fr); if (bk) br[bk] = (br[bk] || 0) + 1; }
     if (pass(fr, 'stock') && Number(fr[3]) > 0) facets.stock++;
     if (pass(fr, 'store')) { if (fr[5]) facets.sf++; if (fr[6]) facets.fre++; }
@@ -378,7 +429,7 @@ function searchBundle_(bundle, q, limit, f) {
   var extra = [];
   Object.keys(inc).forEach(function (k) {
     if (known[k] || qNorm.length < 3 || filtered || offset) return;
-    if (k.indexOf(qNorm) >= 0) extra.push(itemOut_([inc[k][0].code, '(not in the item list yet - incoming only)', null, null, null, '', ''], inc, 'incoming'));
+    if (wq ? wildRe_(wq, '').test(k) : k.indexOf(qNorm) >= 0) extra.push(itemOut_([inc[k][0].code, '(not in the item list yet - incoming only)', null, null, null, '', ''], inc, 'incoming'));
   });
   var listExact = filtered ? list.filter(function (c) { return c[0] === T; }).length : exactCount;
   return { q: q, total: cands.length, exact: exactCount, shown: out.length, items: out.concat(extra.slice(0, 5)),
