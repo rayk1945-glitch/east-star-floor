@@ -49,7 +49,7 @@
     'Set your own PIN': '设置你自己的密码', 'You were given a temporary PIN. Pick your own 4 to 10 digit PIN.': '你收到的是临时密码。请设置 4 到 10 位数字的新密码。',
     'New PIN': '新密码', 'New PIN again': '再次输入新密码', 'Save PIN': '保存密码',
     'Typos are OK. Model numbers, colors, sizes and words all work.': '可以有错字。型号、颜色、尺寸和文字都能搜。',
-    'Recent searches': '最近搜索', 'Filters': '筛选', 'Recent': '最近', 'Clear': '清除', 'Did you mean': '你是不是要找', 'No match': '没有结果', 'Nothing found': '没有找到',
+    'Recent searches': '最近搜索', 'Calculator': '计算器', 'Acc.': '配件', 'Add pack': '加入套装', 'Molding calculator': '线条计算器', 'Filters': '筛选', 'Recent': '最近', 'Clear': '清除', 'Did you mean': '你是不是要找', 'No match': '没有结果', 'Nothing found': '没有找到',
     'No exact match, showing close matches': '没有完全匹配，显示相近结果', 'No match with these filters': '这些筛选条件下没有结果',
     'Nothing here with these filters. Tap a chip again to clear it.': '这些筛选条件下没有结果。再点一次标签即可取消。',
     'In stock': '有货', 'SF shelf': 'SF 货架', 'Fremont shelf': 'Fremont 货架', 'FRE shelf': 'FRE 货架', 'Stock by store': '各店库存',

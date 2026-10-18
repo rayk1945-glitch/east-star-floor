@@ -117,6 +117,10 @@
   .chip.none { color:#8a93a0; font-weight:500; }
   .locstock .chip.good { background:#e7f6ec; color:#14532d; } .locstock .chip.bad { background:#fdecec; color:#7f1d1d; }
   .loclbl { font-size:12px; color:var(--muted); align-self:center; }
+  /* 20261017m: "Stock by store" pills = the same small tag size as the ON HAND / SF # / FRE # tags above (colors kept); row shorter */
+  .shelf.locstock { gap:3px; margin-top:6px; align-items:center; }
+  .locstock .chip { font-size:10.5px; padding:2px 5px; white-space:nowrap; }
+  .locstock .loclbl { font-size:11px; line-height:1.2; margin-right:2px; }
 .acclist { margin-top:10px; }
   .accrow { display:flex; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line); }
   .accrow .thumb { width:52px; height:52px; object-fit:cover; border-radius:8px; flex:none; }
@@ -372,6 +376,19 @@
   .actions .aqty input::-webkit-inner-spin-button, .actions .aqty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
   .actions.sact { gap:6px; } .actions.sact > button { min-width:0; padding:0 4px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   @media (max-width:480px) { .actions.sact > button { font-size:13px; } .actions.sact > button.primary { flex:1.25; } }
+  /* 20261017m: item-card action row = the 29px / 13px bold size ("+ New project"); secondary buttons as wide as their label, the Add
+     button takes the rest; wider qty stepper. fitActs() shortens labels (v1 / v2 / v3) only when the full ones do not fit. */
+  .actions.sact { align-items:center; gap:6px; }
+  .actions.sact > button { flex:0 1 auto; height:29px; min-height:29px; padding:0 10px; font-size:13px; font-weight:700; line-height:1; letter-spacing:0; }
+  .actions.sact > button.primary { flex:1 1 auto; }
+  .actions.sact .aqty { height:29px; }
+  .actions.sact .aqty button { flex:0 0 30px; height:27px; min-height:27px; font-size:18px; font-weight:600; }
+  .actions.sact .aqty input { width:34px; height:27px; min-height:0; }
+  .alab > span { display:none; } .alab > .v0 { display:inline; }
+  .sact.f1 .alab > .v0 { display:none; } .sact.f1 .alab > .v1 { display:inline; }
+  .sact.f2 .alab > .v0, .sact.f2 .alab > .v1 { display:none; } .sact.f2 .alab > .v2 { display:inline; }
+  .sact.f3 .alab > .v0, .sact.f3 .alab > .v1, .sact.f3 .alab > .v2 { display:none; } .sact.f3 .alab > .v3 { display:inline; }
+  .sact.fitm > * { flex:none !important; }
   .persq { font-size:11.5px; color:var(--muted); text-align:right; font-weight:600; }
   .sheet-bg { position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:40; display:none; } .sheet-bg.on { display:block; }
   .sheet { position:fixed; left:0; right:0; bottom:0; z-index:41; background:#fff; border-radius:18px 18px 0 0; max-height:88vh; overflow:auto;
@@ -408,6 +425,16 @@
   .schips.sub button { font-size:12.5px; padding:4px 10px; background:#f4f4f5; } .schips.sub button.on { background:#374151; border-color:#374151; }
   .schips .sep { flex:none; width:1px; background:var(--line-strong); margin:4px 2px; }
   .dym { font-size:14px; margin:6px 2px 10px; } .dym button { border:0; background:#e9f0fb; color:#1e3a6e; border-radius:999px; padding:5px 10px; margin:3px 4px 0 0; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
+  /* 20261017m: every Search filter chip (category, Finish, sizes, stock / shelf) = one size: 29px, 13px bold,
+     like "+ New project" (17l). Same white pill + border everywhere; counts 12px grey; active = solid navy. Widths follow the text. */
+  #sfilt .schips { gap:6px; padding:2px 0 5px; align-items:center; }
+  #sfilt .schips button, #sfilt .schips.sub button, #sfilt .schips.fin button { display:inline-flex; align-items:center; height:29px; min-height:29px; padding:0 10px;
+    border:1px solid var(--line-strong); border-radius:999px; background:#fff; color:#111; font:inherit; font-size:13px; font-weight:700; line-height:1; }
+  #sfilt .schips button small { font-size:12px; font-weight:600; color:var(--muted); margin-left:4px; }
+  #sfilt .schips button.on, #sfilt .schips.sub button.on { background:var(--navy, #0b2545); border-color:var(--navy, #0b2545); color:#fff; }
+  #sfilt .schips button.on small { color:#d6dde6; }
+  #sfilt .schips .flab { font-size:11px; line-height:29px; }
+  #dym { display:none; }   /* 20261017m: no "Did you mean" row (Ray: takes too much room); close matches still show below */
   .closest { background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
   .planpreview { max-width:100%; max-height:200px; border-radius:10px; margin-top:8px; display:block; }
   .acctcard { border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:10px; }
@@ -477,6 +504,7 @@
   .locstock button.rmmiss { appearance:none; -webkit-appearance:none; display:inline-flex; align-items:center; gap:3px; margin:0; border:1px solid #e08a1e; background:var(--warn-bg); color:var(--warn-fg);
     cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; text-align:center; border-radius:999px; padding:4px 8px; min-height:32px;
     white-space:nowrap; align-self:center; }
+  .locstock button.rmmiss { min-height:0; font-size:10.5px; line-height:1.2; padding:1px 5px; }   /* 20261017m: same small size as the pills */
   .locstock button.rmmiss .rmico { font-size:11px; line-height:1; }
   .rmrow { border-top:1px solid var(--line); padding:10px 0; } .rmrow:first-child { border-top:0; } .rmrow .rmmeta { font-size:12.5px; color:var(--muted); margin-top:2px; } .rmrow .rmnote { font-size:13px; margin-top:4px; } .rmrow .actions { margin-top:6px; }
   .rmseg { display:flex; gap:6px; margin:6px 0 10px; } .rmseg button { flex:1; min-height:40px; border:1px solid var(--line-strong); background:#fff; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; } .rmseg button.active { background:var(--navy,#1f2937); color:#fff; border-color:var(--navy,#1f2937); }
@@ -678,7 +706,7 @@
 <script src="search.js?v=20261015o"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261017l"></script>
+<script src="i18n.js?v=20261017m"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -756,7 +784,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017l';
+var PAGE_VER = '20261017m';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1067,13 +1095,29 @@ function card(it) {
     chip('SF', it.sf) + chip('FRE', it.fre) + '</div>' +
     missBadges(it.name) + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="descTap(this)">' + esc(it.desc) + '</div>' +
-    '<div class="actions sact">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))">Flooring calculator</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))">Molding calculator</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))">Tile calculator</button>' : '') +
-    (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))">Accessories <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
-    '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))">Report missing</button>' +
+    '<div class="actions sact">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))" title="Flooring calculator">' + actLab('Flooring calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))" title="Molding calculator">' + actLab('Molding calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))" title="Tile calculator">' + actLab('Tile calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : '') +
+    (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))" title="Accessories">' + actLab('Accessories', 'Acc.', 'Acc.') + ' <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
+    '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))" title="Report missing">' + actLab('Report missing', 'Missing', 'Missing', '\u26A0\uFE0E') + '</button>' +
     (it.price != null || !priceState.prices ? '<span class="aqty"><button type="button" aria-label="Less" onclick="aqStep(this,-1)">−</button><input type="number" inputmode="numeric" min="1" max="99999" value="1" aria-label="Qty" onfocus="this.select()"><button type="button" aria-label="More" onclick="aqStep(this,1)">+</button></span>' +
-    (packOf(it.name) ? '<button class="primary" style="white-space:nowrap" onclick="addPack(decodeURIComponent(\'' + nm + '\'), this)">Add door pack</button>' :
-    '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'), this)">Add to note</button>') : '') + '</div></div>';
+    (packOf(it.name) ? '<button class="primary" style="white-space:nowrap" onclick="addPack(decodeURIComponent(\'' + nm + '\'), this)">' + actLab('Add door pack', 'Add door pack', 'Add pack', 'Add pack') + '</button>' :
+    '<button class="primary" onclick="addItem(decodeURIComponent(\'' + nm + '\'), this)">' + actLab('Add to note', 'Add to note', 'Add', 'Add') + '</button>') : '') + '</div></div>';
 }
+/** 20261017m: card action-row label in 4 lengths: v0 full, v1 short side buttons (Calculator / Acc. / Missing), v2 + short Add, v3 icons. fitActs() picks the longest that fits the row on this
+ *  phone, so labels are not cut off with "…". v2 / v3 may be an icon; the full label stays in the button title. */
+function actLab(a, b, c, d) { c = c == null ? b : c; d = d == null ? c : d;
+  return '<span class="alab">' + [a, b, c, d].map(function (t, i) { return '<span class="v' + i + '">' + t + '</span>'; }).join('') + '</span>'; }
+function fitActs(root) {
+  [].forEach.call((root || document).querySelectorAll('.actions.sact'), function (a) {
+    if (!a.offsetParent) return; a.classList.remove('f1', 'f2', 'f3'); a.classList.add('fitm');
+    var need = function () { var k = [].filter.call(a.children, function (x) { return x.offsetParent; }); if (!k.length) return 0;   // content width with no shrinking
+      return k[k.length - 1].getBoundingClientRect().right - k[0].getBoundingClientRect().left; };
+    for (var l = 1; l <= 3 && need() > a.clientWidth - 2; l++) { if (l > 1) a.classList.remove('f' + (l - 1)); a.classList.add('f' + l); }
+    a.classList.remove('fitm'); });
+}
+var fitT = null; function fitSoon() { cancelAnimationFrame(fitT); fitT = requestAnimationFrame(function () { fitActs($('results')); }); }
+window.addEventListener('resize', fitSoon);
+if (document.fonts && document.fonts.addEventListener) { document.fonts.addEventListener('loadingdone', fitSoon); document.fonts.ready.then(fitSoon); }   // Montserrat arriving later changes label widths
+document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('[data-lang-toggle]')) setTimeout(fitSoon, 350); });
 
 // ---------------- search
 var timer = null, seq = 0;
@@ -1123,15 +1167,16 @@ function searchPage(q, my, offset) {
   var f = Object.assign({}, sF, { offset: offset });
   return api('search', { q: q, f: f }).then(function (r) { if (my !== seq) return;
     sLast = r;
-    $('dym').innerHTML = r.suggestions && r.suggestions.length ? '<div class="dym">Did you mean ' + r.suggestions.map(function (s) { return '<button onclick="runSearch(\'' + esc(s).replace(/'/g, '') + '\', true)">' + esc(s) + '</button>'; }).join('') + '</div>' : '';
+    $('dym').innerHTML = '';                                                        // 20261017m: "Did you mean" row removed (close matches still show)
     renderSearchFilters(r);
     var close = r.fallback;                              // nothing exact: these are typo / close matches
     var n = close ? (r.filtered ? r.listTotal : r.total) : r.filtered ? r.listExact || r.listTotal : r.exact, m = $('meta'); m.classList.remove('hidden');
     m.innerHTML = '<span>' + (n ? n.toLocaleString() + (close ? ' close' : '') + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>' + sfTogHtml();
     var html = r.items.map(card).join('') + (r.more ? '<button class="btn" id="sMore" style="background:#fff;color:#111;border:1px solid var(--line-strong)">Load more (' + (r.listTotal - r.offset - r.shown).toLocaleString() + ' left)</button>' : '');
-    if (offset) { var mb = $('sMore'); if (mb) mb.remove(); $('results').insertAdjacentHTML('beforeend', html); }
+    if (offset) { var mb = $('sMore'); if (mb) mb.remove(); $('results').insertAdjacentHTML('beforeend', html); fitSoon(); }
     else $('results').innerHTML = (close && r.items.length ? '<div class="closest" id="noExact">No exact match, showing close matches</div>' : '') +
       (r.items.length ? html : '<div class="card empty">' + (r.filtered ? 'Nothing here with these filters. Tap a chip again to clear it.' : 'Nothing close to “' + esc(r.q) + '”. Try fewer words.') + '</div>');
+    fitSoon();
     if ($('sMore')) $('sMore').onclick = function () { this.disabled = true; this.textContent = 'Loading…'; searchPage(q, my, r.offset + r.shown); };
   }).catch(function (er) { if (my === seq) $('results').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
