@@ -703,10 +703,10 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
-<script src="search.js?v=20261015o"></script>
+<script src="search.js?v=20261017n"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261017m"></script>
+<script src="i18n.js?v=20261017n"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -784,7 +784,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261017m';
+var PAGE_VER = '20261017n';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1161,9 +1161,10 @@ function runSearch(qq, remember) {
   $('results').innerHTML = '<div class="spinner"></div>';
   searchPage(q, my, 0);
 }
-/** Search filters: category chips (+ Tile/Flooring sizes), In stock, SF / Fremont shelf. Counts cover every match. */
+/** Search filters: category chips (+ Tile/Flooring sizes), Finish, Brand (+ Ends with). Counts cover every match. */
 var sQ = '', sF = {}, sLast = null;
 function searchPage(q, my, offset) {
+  delete sF.inStock; delete sF.flooring; delete sF.store;                         // 20261017n: stock / shelf chips removed, never filter invisibly
   var f = Object.assign({}, sF, { offset: offset });
   return api('search', { q: q, f: f }).then(function (r) { if (my !== seq) return;
     sLast = r;
@@ -1180,10 +1181,16 @@ function searchPage(q, my, offset) {
     if ($('sMore')) $('sMore').onclick = function () { this.disabled = true; this.textContent = 'Loading…'; searchPage(q, my, r.offset + r.shown); };
   }).catch(function (er) { if (my === seq) $('results').innerHTML = '<div class="msg err">' + esc(er.message) + '</div>'; });
 }
+/** The normalized code for the Ends with chip, or '' when the search is not one 3-6 letter/digit word. */
+function endsQ(q) { q = String(q || '').trim(); if (!q || /\s/.test(q)) return ''; var n = q.toUpperCase().replace(/[^A-Z0-9]/g, ''); return n.length >= 3 && n.length <= 6 ? n : ''; }
 function renderSearchFilters(r) {
   var fc = r.facets; if (!fc || !(r.exact || r.total)) { $('sfilt').innerHTML = ''; return; }
   var chip = function (k, v, label, n) { return '<button data-sk="' + k + '" data-sv="' + esc(v) + '" class="' + (String(sF[k] || '') === String(v) ? 'on' : '') + '">' + esc(label) + (n != null ? '<small>' + n.toLocaleString() + '</small>' : '') + '</button>'; };
-  var top = chip('flooring', 'true', 'Flooring', fc.flooring) + chip('inStock', 'true', 'In stock', fc.stock) + chip('store', 'SF', 'SF shelf', fc.sf) + chip('store', 'FRE', 'Fremont shelf', fc.fre);
+  // 20261017n: "Ends with “2124”" (the typed code is 3-6 letters/digits, one word): only codes ending in it. Older servers send no facets.ends = no chip.
+  var en = endsQ(r.q), ends = en && (sF.ends || fc.ends > 0) ? chip('ends', 'true', 'Ends with \u201C' + en + '\u201D', fc.ends != null ? fc.ends : null) : '';
+  // 20261017n: Brand row replaces the In stock / shelf row (Ray). Tapped brand first, never disappears. Older servers: no facets.brands = no brand chips.
+  var bl = (fc.brands || []).filter(function (x) { return x[0] !== sF.brand; }); if (sF.brand) bl.unshift([sF.brand, ((fc.brands || []).filter(function (x) { return x[0] === sF.brand; })[0] || [0, 0])[1]]);
+  var brands = ends + (bl.length > 1 || sF.brand ? bl.map(function (x) { return chip('brand', x[0], x[0], x[1]).replace('">' + esc(x[0]) + '<small>', '"><span class="notr">' + esc(x[0]) + '</span><small>'); }).join('') : '');
   var cl = fc.cats.filter(function (c) { return c[0] !== sF.cat; }); if (sF.cat) cl.unshift([sF.cat, (fc.cats.filter(function (c) { return c[0] === sF.cat; })[0] || [0, 0])[1]]);   // tapped chip first, never disappears
   var cats = cl.length > 1 || sF.cat ? '<div class="schips">' + cl.map(function (c) { return chip('cat', c[0], c[0], c[1]); }).join('') + '</div>' : '';
   var sizes = (sF.cat === 'Tile' || sF.cat === 'Flooring') && fc.sizes.length > 1 ? '<div class="schips sub">' + fc.sizes.map(function (z) { return chip('size', z[0], z[0], z[1]); }).join('') + '</div>' : '';
@@ -1192,10 +1199,10 @@ function renderSearchFilters(r) {
   if (sF.finish && !useF.some(function (x) { return x[0] === sF.finish; })) useF.unshift([sF.finish, 0, 1]);
   useF = sortFinishes(useF.map(function (x) { return x[0]; })).map(function (k) { return useF.filter(function (x) { return x[0] === k; })[0]; });
   var finishes = useF.length > 1 ? '<div class="schips sub fin"><span class="flab">Finish</span>' + useF.map(function (z) { return chip('finish', z[0], z[0], z[1]); }).join('') + '</div>' : '';
-  $('sfilt').innerHTML = cats + finishes + sizes + '<div class="schips sub tog">' + top + '</div>';
+  $('sfilt').innerHTML = cats + finishes + sizes + (brands ? '<div class="schips brand">' + brands + '</div>' : '');
 }
 $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
-  var k = b.dataset.sk, v = (k === 'inStock' || k === 'flooring') ? true : b.dataset.sv;
+  var k = b.dataset.sk, v = (k === 'inStock' || k === 'flooring' || k === 'ends') ? true : b.dataset.sv;
   if (String(sF[k] || '') === String(v)) delete sF[k]; else sF[k] = v;                        // tap again = clear
   if (k === 'cat') delete sF.size;
   var my = ++seq; $('results').style.opacity = '.5';
@@ -1204,7 +1211,7 @@ $('sfilt').addEventListener('click', function (e) { var b = e.target.closest('bu
 // 20261017k: the Search chip rows (category, Finish, sizes, stock / shelf) fold away behind "Filters ▸" on the matches line.
 // Folded: no chip rows, the results move up; active filters keep applying and are counted ("Filters (2) ▸"). Per device.
 var SF_FOLD_KEY = 'esSfiltFold', sfFold = (function () { try { return localStorage.getItem(SF_FOLD_KEY) === '1'; } catch (e) { return false; } })();
-function sfActive() { return ['cat', 'size', 'finish', 'inStock', 'flooring', 'store'].filter(function (k) { return sF[k] != null && sF[k] !== '' && sF[k] !== false; }).length; }
+function sfActive() { return ['ends', 'brand', 'cat', 'size', 'finish'].filter(function (k) { return sF[k] != null && sF[k] !== '' && sF[k] !== false; }).length; }
 function sfTogHtml() { if (!$('sfilt').innerHTML) return ''; var a = sfActive();
   return '<button type="button" class="sftog" id="sfTog" aria-controls="sfilt" aria-expanded="' + !sfFold + '"><span>Filters</span>' + (sfFold && a ? '<span class="sfn">(' + a + ')</span>' : '') + '<span class="sfa" aria-hidden="true">' + (sfFold ? '\u25B8' : '\u25BE') + '</span></button>'; }
 function sfTogUpd() { var b = $('sfTog'); if (b) b.outerHTML = sfTogHtml(); }
@@ -5012,7 +5019,7 @@ document.addEventListener('focusout', function (e) { if ($('cuDetail') && $('cuD
   function upd(w) { var r = w.querySelector('.schips'); if (!r) return; var m = r.scrollWidth - r.clientWidth;
     w.classList.toggle('cl', m > 2 && r.scrollLeft > 2); w.classList.toggle('cr', m > 2 && r.scrollLeft < m - 2); }
   function wrap(r) {
-    if (r.dataset.hs) return; r.dataset.hs = '1';
+    if (r.dataset.hs || !r.parentNode) return; r.dataset.hs = '1';   // 20261017n: a row already replaced before the observer ran
     var w = r.parentNode && r.parentNode.classList && r.parentNode.classList.contains('hsw') ? r.parentNode : null;
     if (!w) { w = document.createElement('div'); w.className = 'hsw'; r.parentNode.insertBefore(w, r); w.appendChild(r); }
     ['l', 'r'].forEach(function (d) { var b = document.createElement('button'); b.type = 'button'; b.className = 'hsa ' + d; b.tabIndex = -1;
