@@ -586,6 +586,22 @@
   .titlepop { animation:aTitle .45s cubic-bezier(.34,1.56,.64,1); border-radius:6px; transform-origin:0 50%; }
   .cbar .nm.titlepop { transform-origin:50% 50%; }
   .growin { position:relative; z-index:6; }
+  /* 20261019b (Ray: "can the new project animation be more noticeable?"): a NEW project flashes the whole Adding-to bar
+     (green glow ring + tint + scale pop 1 -> 1.06 -> 1, ~1.3s, overlay/transform only) and the "Project #1074" name flashes green twice.
+     Reduced motion: no scale, just a soft green tint/ring fade. */
+  @keyframes aBarNew { 0% { transform:scale(1); box-shadow:0 0 0 0 rgba(22,163,74,0); background-color:#fff; }
+    18% { transform:scale(1.06); box-shadow:0 0 0 4px rgba(22,163,74,.85), 0 10px 26px rgba(22,163,74,.35); background-color:#dcfce7; }
+    40% { transform:scale(.99); }
+    55% { transform:scale(1.02); box-shadow:0 0 0 3px rgba(22,163,74,.7), 0 6px 18px rgba(22,163,74,.25); background-color:#ecfdf3; }
+    100% { transform:scale(1); box-shadow:0 0 0 0 rgba(22,163,74,0); background-color:#fff; } }
+  @keyframes aNumNew { 0%,100% { color:var(--text); background-color:rgba(22,163,74,0); transform:scale(1); }
+    15%,45% { color:#fff; background-color:#16a34a; transform:scale(1.12); } 30% { color:#14532d; background-color:rgba(22,163,74,.25); transform:scale(1.04); }
+    70% { color:#15803d; background-color:rgba(22,163,74,.12); transform:scale(1); } }
+  @keyframes aBarNewRm { 0% { box-shadow:0 0 0 3px rgba(22,163,74,.7); background-color:#dcfce7; } 100% { box-shadow:0 0 0 0 rgba(22,163,74,0); background-color:#fff; } }
+  .cbar.cbfresh { position:relative; z-index:7; animation:aBarNew 1.3s cubic-bezier(.34,1.56,.64,1); transform-origin:50% 50%; }
+  .cbar.cbfresh .nm { animation:aNumNew 1.3s ease-out; border-radius:6px; padding-left:4px; margin-left:-4px; }
+  .cbar.cbfresh-rm { animation:aBarNewRm 1.5s ease-out; }
+  .cdoc{color:var(--accent,#1a73e8);text-decoration:underline;white-space:nowrap}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -714,7 +730,7 @@
 <script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261019a"></script>
+<script src="i18n.js?v=20261019d"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -792,7 +808,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261019a';
+var PAGE_VER = '20261019d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1095,7 +1111,7 @@ function card(it) {
   return '<div class="card item" data-name="' + nm + '"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
     '<div style="flex:1;min-width:0"><div class="top"><div class="name"><span class="notr">' + esc(it.name) + '</span>' + cutChip(it) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
     '<small' + (packPrice(it.name) != null ? ' style="white-space:nowrap">Pack ' + money(packPrice(it.name)) : '>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail')) + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + missTagHtml(it.name) + '</div></div>' +
-    '<div class="notr" style="font-size:12px;color:var(--muted);margin-top:2px">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</div></div></div>' +
+    '<div style="font-size:12px;color:var(--muted);margin-top:2px"><span class="notr">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</span>' + cardDocsHtml(it.name) + '</div></div></div>' +
     '<div class="stats shelves"><div class="stat ohstat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b class="notr">' + ohCubeHtml(it.name, it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>Order</span></div>' +
     '<div class="stat ' + (it.incomingTotal ? 'inc' : '') + '"><b>' + (it.incomingTotal ? '+' + qty(it.incomingTotal) : '—') + '</b><span>Inc</span></div>' +
@@ -1381,10 +1397,16 @@ function renderCustBar() {
   if (was && cbLast) { if (was.id !== cbLast.id) pop = 'cbOpen'; else if (String(was.noteId).indexOf('tmp-') !== 0 && was.noteId !== cbLast.noteId) pop = 'cbNote'; }
   else if (!was && cbLast && cbInit) pop = 'cbOpen';
   cbInit = true; if (!cbLast) cbPend = null;
-  if (pop) { if (b.offsetParent) { cbPend = null; popOk($(pop), 'titlepop'); } else if (!(cbPend === 'cbOpen' && pop === 'cbNote')) cbPend = pop; }   // changed on the Project tab: pop when Search shows again
+  if (pop === 'cbOpen' && cbFresh && curCust && cbFresh === curCust.id) { cbFresh = null; pop = 'new'; }
+  if (pop) { if (b.offsetParent) { cbPend = null; cbPop(pop); } else if (!(cbPend === 'cbOpen' && pop === 'cbNote')) cbPend = pop; }   // changed on the Project tab: pop when Search shows again
 }
-var cbPend = null, cbInit = false;
-function cbPopPending() { var w = cbPend; cbPend = null; if (w) setTimeout(function () { popOk($(w), 'titlepop'); }, 60); }
+var cbPend = null, cbInit = false, cbFresh = null;
+function cbPopPending() { var w = cbPend; cbPend = null; if (w) setTimeout(function () { cbPop(w); }, 60); }
+function cbPop(w) { if (w === 'new') barNewPop(); else popOk($(w), 'titlepop'); }
+/** 20261019b: the "new project created" moment on the Adding-to bar (glow + scale pop + number flash, ~1.3s). CSS animation, overlay only. */
+function barNewPop() { var b = $('custBar'); if (!b) return; var c = MOTION_RM && MOTION_RM.matches ? 'cbfresh-rm' : 'cbfresh';
+  b.classList.remove('cbfresh', 'cbfresh-rm'); void b.offsetWidth; b.classList.add(c);
+  clearTimeout(barNewPop.t); barNewPop.t = setTimeout(function () { b.classList.remove(c); }, 1600); }
 /** Row 2 of the bar: which note of the current project Search adds to. Same state as the Project tab's "adding here". */
 function openNotePicker() {
   if (!curCust) { openPicker(null); return; }
@@ -1449,12 +1471,12 @@ function isCurNote(cid, nid) { return !!(curCust && curCust.id === cid && curCus
 var newBusy = false;
 function createBlankProject(info) { if (newBusy) return Promise.reject(new Error('busy')); newBusy = true;   // 20261017g: info = {name, phone, notes} from an imported quote
   return api('customerSave', { customer: Object.assign({ tax: myStore() }, info || {}) }).then(function (c) { newBusy = false; return c; }, function (er) { newBusy = false; toast('Not created: ' + er.message); throw er; }); }
-function newCustomer() { return createBlankProject().then(function (c) { pcSave(c); setCur(c, c.notes[0]); dropStaleProject(c.id); return c; }); }
+function newCustomer() { return createBlankProject().then(function (c) { pcSave(c); cbFresh = c.id; setCur(c, c.notes[0]); dropStaleProject(c.id); return c; }); }
 /** 20261017e: a new project made from Search (bar / picker) while another project was left open behind the Project tab:
  *  close that stale view (its edits are already flushed when Search was opened) so the Project tab shows the new one. */
 function dropStaleProject(id) { if (!custOpen || custOpen.id === id || $('p-cust').classList.contains('on')) return;
   saveBg(); if (typeof syncLeave === 'function') syncLeave(); custOpen = null; noteOpenId = null; $('cuDetail').innerHTML = ''; }
-function newProjToast(c) { var l = custLabel(c); toast(window.I18N && I18N.lang() === 'zh' ? '已新建项目 ' + l : 'New project ' + l + ' created'); }
+function newProjToast(c) { var l = c && c.num ? '#' + c.num : custLabel(c); toast(window.I18N && I18N.lang() === 'zh' ? '新项目 ' + l + ' 已创建' : 'New project ' + l + ' created'); }
 /** "+ New project" on the Project tab (project header, or the tab with nothing current): save the open project, create the
  *  next numbered project and open it right away at the top, Note 1 open + "adding here", its text box focused. */
 function newProjectOpen(opts) {
@@ -1463,7 +1485,7 @@ function newProjectOpen(opts) {
   return createBlankProject(opts.info).then(function (c) {
     if (!c || !c.notes || !c.notes[0]) throw new Error('No note');
     return (sw ? sw.ready : Promise.resolve()).then(function () {
-      npHold = false; infoOpen = false; pcSave(c); setCur(c, c.notes[0]);
+      npHold = false; infoOpen = false; pcSave(c); cbFresh = c.id; setCur(c, c.notes[0]);
       openCust(c.id, c, c.notes[0].id); window.scrollTo(0, 0);
       var ql = opts.lines && opts.lines.length, t = $('nText'); if (t && !ql) { try { t.focus({ preventScroll: true }); } catch (e) {} window.scrollTo(0, 0); }
       npSwapIn(sw); if (ql) addToNote(opts.lines, true); else newProjToast(c); return c; });   // 20261017g: a quote import fills Note 1 (same add + autosave path)
@@ -1614,6 +1636,7 @@ document.addEventListener('change', function (e) {
   renderHSelBar();
 });
 /** Add to note: straight into the current note (asks for a customer + note first when none is picked). */
+var addPend = {};   // 20261019d: "project|note|name" -> qty of Add-to-note taps not answered by the server yet
 function addToNote(lines, popped, to) {   // to (20261017g quote import into a note from its ⋯ menu) = {id, name, noteId, noteTitle}; default = the current note
   lines = [].concat(lines); if (!lines.length) return;
   if (!curCust && !to) { openPicker(function () { addToNote(lines); }); return; }
@@ -1625,8 +1648,14 @@ function addToNote(lines, popped, to) {   // to (20261017g quote import into a n
     var line = { id: tmp, name: l.name, desc: String(l.desc || '').slice(0, 110), qty: l.qty || 1, photo: l.photo || '', note: l.note || '' };
     var dup = n && (n.items || []).filter(function (x) { return x.name === line.name; })[0];   // server merges same name: qty += (mirror it here)
     if (dup) dup.qty = Math.min(99999, (Number(dup.qty) || 0) + line.qty); else if (n) n.items = (n.items || []).concat([line]);
+    // 20261019d (Ray 2026-10-19 "Add to note a few times, the quantity is still 1"): send THIS tap's own qty, snapshotted now. Before, the
+    // queued save read line.qty when it ran, and a 2nd tap had already bumped that same object (counted twice); and identical adds
+    // (same name + qty) rode along as ONE outbox op (lost taps). "tap" makes each tap its own op; addPend keeps unsaved taps on screen.
+    var send = { name: line.name, desc: line.desc, qty: line.qty, photo: line.photo, note: line.note }, pk = c.id + '|' + c.noteId + '|' + line.name;
+    addPend[pk] = (addPend[pk] || 0) + send.qty;
     autoSave('add:' + tmp, function () {
-      return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', line: { name: line.name, desc: line.desc, qty: line.qty, photo: line.photo, note: line.note } }).then(function (r) {
+      return api('customerItem', { id: c.id, noteId: c.noteId, op: 'add', tap: tmp, line: send }).then(function (r) {
+        addPend[pk] = Math.max(0, (addPend[pk] || 0) - send.qty); var more = addPend[pk]; if (!more) delete addPend[pk];
         if (isCurNote(c.id, c.noteId)) { curCust.count = r.items.length; saveCur(); }
         var nn = noteOf(c.id, c.noteId) || n;
         if (!nn) return;
@@ -1636,6 +1665,7 @@ function addToNote(lines, popped, to) {   // to (20261017g quote import into a n
             r.items.filter(function (x) { return x.name === line.name; }).pop();
           var ix = nn.items ? nn.items.indexOf(line) : -1; if (dup) { nn.items = r.items; ix = -2; }
           if (ix === -2) {} else if (got && ix >= 0) nn.items[ix] = got; else if (r.items) nn.items = r.items;
+          if (more) (nn.items || []).forEach(function (x) { if (x.name === line.name && !/^tmpl-/.test(x.id)) x.qty = Math.min(99999, (Number(x.qty) || 0) + more); });   // taps still on their way
           nn.updated = r.note.updated; nn.updated_by = r.note.updated_by;
         }
         if (noteOpenId === nn.id && $('cdItems')) renderPicked();
@@ -1774,7 +1804,7 @@ function accSheet(sink, justAdded, toNote, list) {   // toNote: {c: project, n: 
     var line = { name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' };
     if (toNote && toNote.c && toNote.n) { var keep = curCust; setCur(toNote.c, toNote.n); addToNote(line); curCust = keep; if (keep) saveCur(); else { localStorage.removeItem(curKey()); renderCustBar(); } }
     else addToNote(line);
-    b.textContent = 'Added ✓'; b.disabled = true; };
+    b.textContent = 'Added ✓'; };   // 20261019d: stays tappable, each tap adds its qty again (was disabled after one tap)
 }
 // ---- 20261019a (Ray 2026-10-19): Countertops "Sizes (n)": every size / edge / backsplash of the same stone color, computed on the page from the
 // bundle. Group = brand prefix + color code: QTZ-G069-, GRNT-001-, VCT-51-, SOLID-ES-101- (letters-only 2nd part joins the next part: ES-101,
@@ -4926,6 +4956,11 @@ function pzApply() {
 function pzReset() { photoScale = 1; photoTx = 0; photoTy = 0; pzPinch = null; pzPan = null; pzApply(); }
 function pzDist(a, b) { var dx = a.clientX - b.clientX, dy = a.clientY - b.clientY; return Math.sqrt(dx * dx + dy * dy); }
 // ---- spec sheet / install guide links (bundle.docs from doc-links.csv: {code: [spec_url, install_url]}) under the zoomed photo (20261016d)
+/** 20261019c: Spec sheet / Install guide also on the search card, inline after the category line (no extra row), so they show without a photo tap. */
+function cardDocsHtml(name) { var d = docsOf(name), h = '';
+  if (d && /^https:\/\//.test(d[0] || '')) h += ' · <a class="cdoc" href="' + esc(d[0]) + '" target="_blank" rel="noopener">Spec sheet</a>';
+  if (d && /^https:\/\//.test(d[1] || '')) h += ' · <a class="cdoc" href="' + esc(d[1]) + '" target="_blank" rel="noopener">Install guide</a>';
+  return h; }
 function docsOf(name) { var m = localData && localData.docs; return (name && m && m[name]) || null; }
 function thumbName(im) { var c = im.closest('[data-name]'); if (c) { var v = c.getAttribute('data-name'); try { v = decodeURIComponent(v); } catch (e) {} return v; }
   var l = im.closest('.lhead'); var b = l && l.querySelector('.lnm'); return b ? b.textContent : ''; }
