@@ -146,6 +146,11 @@
     'from the description': '取自商品描述', 'pcs/box × sq ft/pc': '每箱片数 × 每片平方英尺', 'set on this phone': '本机已修改', 'not in the description: enter it': '描述里没有：请输入',
     'Enter the sq ft per box (on the box label or price list).': '请输入每箱平方英尺（见箱子标签或价目表）。', 'Enter the sq ft per box first': '请先输入每箱平方英尺', 'Total (retail)': '合计（零售价）', 'Retail list prices, no discount. Discounts are applied on the official quote.': '零售标价，未打折。折扣在正式报价中计算。',
     'Retail today (before tax)': '今日零售价（税前）', 'Total': '合计', 'Tile': '瓷砖', 'Flooring': '地板',
+    // 20261018a: floor categories (chips + Browse grid). Tile / Flooring / Other were already here.
+    'Countertops': '台面', 'Cabinets': '橱柜', 'Vanities & mirrors': '浴室柜与镜子', 'Sinks': '水槽', 'Faucets': '水龙头', 'Tub fillers': '浴缸龙头',
+    'Shower': '淋浴', 'Bathtubs': '浴缸', 'Toilets': '马桶', 'Bath accessories': '浴室配件', 'Plumbing parts': '水管配件', 'Range hoods': '抽油烟机',
+    'Appliances': '电器', 'Lighting': '灯具', 'Hardware': '五金', 'Doors & trim': '门与线条', 'Panels & boards': '板材', 'Grout & setting': '填缝剂与瓷砖胶',
+    'Tools': '工具', 'Labor & services': '人工服务',
     // plan / cart
     'Send a kitchen plan to': '发送厨房图纸给', 'Goes straight to the bot for an official quote. The bot replies to East Star Max with the quote JPG and CSV.': '直接发给机器人做正式报价。机器人会把报价 JPG 和 CSV 回复给劍鋒高級建材 Max。',
     'Plan photo or PDF': '图纸照片或 PDF', 'Style': '款式', 'Pick style…': '选择款式…', 'default for style': '按款式默认', 'Discount %': '折扣 %', 'Tax': '税', 'SF 8.625%': 'SF 8.625%', 'Fremont 10.25%': 'Fremont 10.25%',

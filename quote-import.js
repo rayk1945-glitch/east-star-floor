@@ -24,8 +24,8 @@
   // 20261017i: hidden / discontinued items (same lists as the bundle build: /workspace/bot-app/hidden-codes.json = exact codes,
   // hidden-prefixes.json = style prefixes ending in "-", case-insensitive at the start). The bundle already leaves them out; this
   // is the second lock so a quote can never match, suggest or add one (e.g. an older cached item list). Keep in sync with those files.
-  var HIDDEN_CODES = ["AS TUB 2390202.020", "AS TUB 2391202.020", "AS TUB 2460002.020", "AS TUB 2461002.020", "AS TUB 2544102.020", "AS TUB 2544202.020", "AS TUB 2545102.020", "AS TUB 2545202.020", "AS TUB 2946102.020", "AS TUB 2946202.020", "AS TUB 2973102.020", "AS TUB 2973202.020", "TOTO SW3346#01"];
-  var HIDDEN_PREFIXES = ["DF-#16-", "DF-#18-", "DF-#60-", "DF-#2889-", "BOX-#16-", "BOX-#18-", "BOX-#60-", "BOX-#2889-", "CB-LM12-", "CB-LK04-", "CB-LG99-"];
+  var HIDDEN_CODES = ["AS TUB 2390202.020", "AS TUB 2391202.020", "AS TUB 2460002.020", "AS TUB 2461002.020", "AS TUB 2544102.020", "AS TUB 2544202.020", "AS TUB 2545102.020", "AS TUB 2545202.020", "AS TUB 2946102.020", "AS TUB 2946202.020", "AS TUB 2973102.020", "AS TUB 2973202.020", "TOTO SW3346#01", "MHK-LG99-M230-0017/M", "MHK-LK04-M230-11707/", "MHK-LM12-M231-4416/M"];
+  var HIDDEN_PREFIXES = ["DF-#16-", "DF-#18-", "DF-#60-", "DF-#2889-", "BOX-#16-", "BOX-#18-", "BOX-#60-", "BOX-#2889-", "CB-LM12-", "CB-LK04-", "CB-LG99-", "PN-LG99-", "PN-LK04-", "PN-LM12-"];
   var HIDDEN_EXTRA = ['TOTO SW3346#', 'SW3346#'];   // Ray: TOTO S2 SW3346 in every color (hidden-codes.json has #01, the only one we stocked)
   function isHidden(code) { var c = String(code || '').trim().toUpperCase(); if (!c) return false;
     if (HIDDEN_CODES.indexOf(c) >= 0) return true;

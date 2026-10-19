@@ -2,6 +2,7 @@
  * East Star Red app - forgiving ranked search (v2). Pure JS, no Apps Script services, so the same
  * file runs in Apps Script, the local test server and the Node index builder (sync/build_index.js).
  * 20261017o: one-digit wildcards in codes: "67x" / "67?" = 670-679 anywhere in a code, "67xx" = 2 digits, "67*" = any run (wildPattern_).
+ * 20261018a: categories v2 words (tub, tub filler / roman tub, plumbing, light, hardware, door / trim, panel, tool, labor) via categoryWords_().
  *
  * Bundle (built by Red's sync step):
  *   items:    [name, description, price, onHand, onOrder, sfShelf, freShelf, ..., photo(13), locStock(14)]
@@ -24,7 +25,25 @@ var CATEGORY_WORDS_ = { FAUCET: 'Faucets', FAUCETS: 'Faucets', TAP: 'Faucets', S
   VANITY: 'Vanities & mirrors', MIRROR: 'Vanities & mirrors', SHOWER: 'Shower', APPLIANCE: 'Appliances', OVEN: 'Appliances', COOKTOP: 'Appliances',
   GROUT: 'Grout & setting', THINSET: 'Grout & setting', FLOORING: 'Flooring', CABINET: 'Cabinets',
   TAPS: 'Faucets', RANGEHOOD: 'Range hoods', RANGEHOODS: 'Range hoods', VANITIES: 'Vanities & mirrors', MIRRORS: 'Vanities & mirrors',
-  SHOWERS: 'Shower', APPLIANCES: 'Appliances', COUNTERTOPS: 'Countertops', CABINETS: 'Cabinets' };
+  SHOWERS: 'Shower', APPLIANCES: 'Appliances', COUNTERTOPS: 'Countertops', CABINETS: 'Cabinets',
+  // 20261018a: categories v2
+  TUB: 'Bathtubs', TUBS: 'Bathtubs', BATHTUB: 'Bathtubs', BATHTUBS: 'Bathtubs', ROMAN: 'Tub fillers', PLUMBING: 'Plumbing parts',
+  LIGHT: 'Lighting', LIGHTS: 'Lighting', LIGHTING: 'Lighting', DOWNLIGHT: 'Lighting', DOWNLIGHTS: 'Lighting', HARDWARE: 'Hardware',
+  DOOR: 'Doors & trim', DOORS: 'Doors & trim', JAMB: 'Doors & trim', CASING: 'Doors & trim', MOLDING: 'Doors & trim', MOLDINGS: 'Doors & trim', MOULDING: 'Doors & trim',
+  PANEL: 'Panels & boards', PANELS: 'Panels & boards', EDGEBANDING: 'Panels & boards', TOOL: 'Tools', TOOLS: 'Tools',
+  LABOR: 'Labor & services', LABOUR: 'Labor & services' };
+/** 20261018a: word -> category for THIS query. Pairs win over single words: "tub filler" / "roman tub" = Tub fillers,
+ *  "tub spout" = Shower. Not category words on purpose: "filler" alone (cabinet fillers) and "trim" alone (shower / tile trims
+ *  outnumber door trim; "trim" alone would put 148 doors first). */
+function categoryWords_(qw) {
+  var m = {}, has = {}, i;
+  for (i = 0; i < qw.length; i++) { has[qw[i]] = 1; if (CATEGORY_WORDS_[qw[i]]) m[qw[i]] = CATEGORY_WORDS_[qw[i]]; }
+  var set = function (ws, c) { ws.forEach(function (w) { if (has[w]) m[w] = c; }); };
+  var tub = has.TUB || has.TUBS || has.BATHTUB || has.BATH;
+  if (tub && (has.FILLER || has.FILLERS || has.ROMAN)) set(['TUB', 'TUBS', 'BATHTUB', 'BATH', 'FILLER', 'FILLERS', 'ROMAN'], 'Tub fillers');
+  else if ((has.TUB || has.BATHTUB) && (has.SPOUT || has.SPOUTS)) set(['TUB', 'BATHTUB', 'SPOUT', 'SPOUTS'], 'Shower');
+  return m;
+}
 /** Words that only narrow a type ("range hood", "vent hood", "kitchen sink"): a query made of these + type words is a TYPE search. */
 var TYPE_FILLER_ = { RANGE: 1, VENT: 1, EXHAUST: 1, KITCHEN: 1, BATH: 1, BATHROOM: 1, ALL: 1, KITCHENS: 1 };
 /** Chinese type words -> English, so 抽油烟机 = range hood (the index is A-Z/0-9 only). Longest first. */
@@ -343,10 +362,10 @@ function searchBundle_(bundle, q, limit, f) {
   var strictN = 0; for (var si = 0; si < N; si++) if (strictCover[si] === T) strictN++;
 
   var catWant = {}, sizeNums = [], qw = tokenize_(hasWild ? q.replace(/\S+/g, function (w) { return wildPattern_(w) ? ' ' : w; }) : q), nType = 0;
-  qw.forEach(function (w) { var c = CATEGORY_WORDS_[w]; if (c) { catWant[c] = 1; nType++; } if (/^\d{2}$/.test(w)) sizeNums.push(w); });
+  var cw = categoryWords_(qw); qw.forEach(function (w) { var c = cw[w]; if (c) { catWant[c] = 1; nType++; } if (/^\d{2}$/.test(w)) sizeNums.push(w); });
   // TYPE search ("hood", "range hood", "sinks"): every word is a type word or a filler -> items OF that type come first
   // (matched by their category tag even when code/description lack the word), then other items that merely mention it.
-  var typeOnly = nType > 0 && qw.every(function (w) { return CATEGORY_WORDS_[w] || TYPE_FILLER_[w]; });
+  var typeOnly = nType > 0 && qw.every(function (w) { return cw[w] || TYPE_FILLER_[w]; });
   var cands = [], maxCover = 0;
   for (var i = 0; i < N; i++) if (cover[i] > maxCover) maxCover = cover[i];
   var minCover = Math.max(1, T >= 3 ? maxCover - 1 : maxCover);
