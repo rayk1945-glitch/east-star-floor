@@ -126,6 +126,14 @@
   .accrow .thumb { width:52px; height:52px; object-fit:cover; border-radius:8px; flex:none; }
   .accnoph { background:#eee; }
   .accok { color:#15803d; } .accbad { color:#b91c1c; }
+  /* 20261019a: Countertops "Sizes" sheet: qty stepper + Add per size (same look as the card stepper) */
+  .accrow .aqty { display:flex; align-items:center; flex:0 0 auto; height:29px; border:1px solid var(--line-strong); border-radius:999px; background:#fff; overflow:hidden; }
+  .accrow .aqty button { flex:0 0 28px; height:27px; min-height:27px; border:0; border-radius:0; padding:0; font-size:18px; font-weight:600; background:transparent; }
+  .accrow .aqty input { width:32px; height:27px; min-height:0; border:0; padding:0; text-align:center; font:inherit; font-size:14px; font-weight:700; background:transparent; -moz-appearance:textfield; }
+  .accrow .aqty input::-webkit-inner-spin-button, .accrow .aqty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+  .accrow.szcur { background:#f3f6fb; border-radius:10px; }
+  .accrow .szdesc { font-size:12px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+  .meta .mline { display:flex; align-items:center; gap:8px; min-width:0; } .meta .mmeta { display:inline-flex; margin:-5px 0; padding:0; overflow:visible; } .meta .mmeta button { margin:0; padding:2px 9px; font-size:12px; line-height:16px; }   /* 20261019a: same line height as before */
   .incoming { margin-top:8px; border-top:1px dashed var(--line); padding-top:8px; font-size:13px; }
   .incoming .row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; }
   .incoming .row span:last-child { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -703,10 +711,10 @@
 <div class="sheet cfm" id="cfmSheet" role="alertdialog" aria-modal="true"><div class="cfmmsg notr" id="cfmMsg"></div><div class="cfmbtns"><button class="btn sec2" id="cfmNo" type="button">Cancel</button><button class="btn" id="cfmYes" type="button">OK</button></div></div>
 <div class="sheet" id="sheet"><button class="x" id="sheetX">×</button><div id="sheetBody"></div></div>
 <div id="photoZoom" role="dialog" aria-modal="true" aria-label="Photo"><button type="button" class="x" id="photoZoomX" aria-label="Close">×</button><div class="stage" id="photoZoomStage"><img id="photoZoomImg" alt=""></div><div id="photoZoomDocs" class="hidden"></div></div>
-<script src="search.js?v=20261018a"></script>
+<script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261018a"></script>
+<script src="i18n.js?v=20261019a"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -784,7 +792,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261018a';
+var PAGE_VER = '20261019a';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1096,7 +1104,9 @@ function card(it) {
     missBadges(it.name) + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="descTap(this)">' + esc(it.desc) + '</div>' +
     '<div class="actions sact">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))" title="Flooring calculator">' + actLab('Flooring calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))" title="Molding calculator">' + actLab('Molding calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))" title="Tile calculator">' + actLab('Tile calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : '') +
-    (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))" title="Accessories">' + actLab('Accessories', 'Acc.', 'Acc.') + ' <span class="notr">(' + relOf(it.name).length + ')</span></button>' : '') +
+    (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))" title="Accessories">' + actLab('Accessories', 'Acc.', 'Acc.') + ' <span class="notr">(' + relOf(it.name).length + ')</span></button>' :
+     sizesOf(it.name).length ? '<button onclick="sizeSheet(decodeURIComponent(\'' + nm + '\'))" title="Sizes">' + actLab('Sizes', 'Sizes', 'Sizes') + ' <span class="notr">(' + sizesOf(it.name).length + ')</span></button>' :
+     moldFloorsOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'), false, null, moldFloorsOf(decodeURIComponent(\'' + nm + '\')))" title="Matching floors">' + actLab('Floors', 'Floors', 'Floors') + ' <span class="notr">(' + moldFloorsOf(it.name).length + ')</span></button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))" title="Report missing">' + actLab('Report missing', 'Missing', 'Missing', '\u26A0\uFE0E') + '</button>' +
     (it.price != null || !priceState.prices ? '<span class="aqty"><button type="button" aria-label="Less" onclick="aqStep(this,-1)">−</button><input type="number" inputmode="numeric" min="1" max="99999" value="1" aria-label="Qty" onfocus="this.select()"><button type="button" aria-label="More" onclick="aqStep(this,1)">+</button></span>' +
     (packOf(it.name) ? '<button class="primary" style="white-space:nowrap" onclick="addPack(decodeURIComponent(\'' + nm + '\'), this)">' + actLab('Add door pack', 'Add door pack', 'Add pack', 'Add pack') + '</button>' :
@@ -1162,7 +1172,7 @@ function runSearch(qq, remember) {
   searchPage(q, my, 0);
 }
 /** Search filters: category chips (+ Tile/Flooring sizes), Finish, Brand (+ Ends with). Counts cover every match. */
-var sQ = '', sF = {}, sLast = null;
+var sQ = '', sF = {}, sLast = null, sMoldMeta = '';
 function searchPage(q, my, offset) {
   delete sF.inStock; delete sF.flooring; delete sF.store;                         // 20261017n: stock / shelf chips removed, never filter invisibly
   var f = Object.assign({}, sF, { offset: offset });
@@ -1172,7 +1182,7 @@ function searchPage(q, my, offset) {
     renderSearchFilters(r);
     var close = r.fallback;                              // nothing exact: these are typo / close matches
     var n = close ? (r.filtered ? r.listTotal : r.total) : r.filtered ? r.listExact || r.listTotal : r.exact, m = $('meta'); m.classList.remove('hidden');
-    m.innerHTML = '<span>' + (n ? n.toLocaleString() + (close ? ' close' : '') + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + '</span>' + sfTogHtml();
+    m.innerHTML = '<span' + (sMoldMeta ? ' class="mline"' : '') + '>' + (n ? n.toLocaleString() + (close ? ' close' : '') + ' match' + (n === 1 ? '' : 'es') + (r.filtered ? ' with these filters' : '') : r.shown ? '' : r.filtered ? 'No match with these filters' : 'No match') + (sMoldMeta ? '<span class="schips mmeta">' + sMoldMeta + '</span>' : '') + '</span>' + sfTogHtml();
     var html = r.items.map(card).join('') + (r.more ? '<button class="btn" id="sMore" style="background:#fff;color:#111;border:1px solid var(--line-strong)">Load more (' + (r.listTotal - r.offset - r.shown).toLocaleString() + ' left)</button>' : '');
     if (offset) { var mb = $('sMore'); if (mb) mb.remove(); $('results').insertAdjacentHTML('beforeend', html); fitSoon(); }
     else $('results').innerHTML = (close && r.items.length ? '<div class="closest" id="noExact">No exact match, showing close matches</div>' : '') +
@@ -1186,13 +1196,17 @@ function endsQ(q) { q = String(q || '').trim(); if (!q || /\s/.test(q)) return '
   var p = typeof wildPattern_ === 'function' ? wildPattern_(q) : '';   // 20261017o: 67x / 2?30 = one-digit wildcards (search.js), shown as typed: "Ends with 67x"
   var n = p ? p.replace(/~/g, 'x') : q.toUpperCase().replace(/[^A-Z0-9]/g, ''); return n.length >= 3 && n.length <= 6 ? n : ''; }
 function renderSearchFilters(r) {
-  var fc = r.facets; if (!fc || !(r.exact || r.total)) { $('sfilt').innerHTML = ''; return; }
+  var fc = r.facets; sMoldMeta = ''; if (!fc || !(r.exact || r.total)) { $('sfilt').innerHTML = ''; return; }
   var chip = function (k, v, label, n) { return '<button data-sk="' + k + '" data-sv="' + esc(v) + '" class="' + (String(sF[k] || '') === String(v) ? 'on' : '') + '">' + esc(label) + (n != null ? '<small>' + n.toLocaleString() + '</small>' : '') + '</button>'; };
   // 20261017n: "Ends with “2124”" (the typed code is 3-6 letters/digits, one word): only codes ending in it. Older servers send no facets.ends = no chip.
   var en = endsQ(r.q), ends = en && (sF.ends || fc.ends > 0) ? chip('ends', 'true', 'Ends with \u201C' + en + '\u201D', fc.ends != null ? fc.ends : null) : '';
   // 20261017n: Brand row replaces the In stock / shelf row (Ray). Tapped brand first, never disappears. Older servers: no facets.brands = no brand chips.
   var bl = (fc.brands || []).filter(function (x) { return x[0] !== sF.brand; }); if (sF.brand) bl.unshift([sF.brand, ((fc.brands || []).filter(function (x) { return x[0] === sF.brand; })[0] || [0, 0])[1]]);
+  // 20261019a: "Moldings" shows flooring trim in the results again (hidden by default; they open from the floor's Accessories). Same row, no extra height.
+  var molds = sF.moldings || fc.moldings > 0 ? '<button data-sk="moldings" data-sv="true" class="' + (sF.moldings ? 'on' : '') + '"><span>Moldings</span><small>' + Number(fc.moldings || 0).toLocaleString() + '</small></button>' : '';
   var brands = ends + (bl.length > 1 || sF.brand ? bl.map(function (x) { return chip('brand', x[0], x[0], x[1]).replace('">' + esc(x[0]) + '<small>', '"><span class="notr">' + esc(x[0]) + '</span><small>'); }).join('') : '');
+  sMoldMeta = '';   // no brand row to sit in: the chip goes on the matches line instead of adding a row (Ray: no extra height)
+  if (brands) brands = (ends ? ends + molds + brands.slice(ends.length) : molds + brands); else sMoldMeta = molds;
   var cl = fc.cats.filter(function (c) { return c[0] !== sF.cat; }); if (sF.cat) cl.unshift([sF.cat, (fc.cats.filter(function (c) { return c[0] === sF.cat; })[0] || [0, 0])[1]]);   // tapped chip first, never disappears
   var cats = cl.length > 1 || sF.cat ? '<div class="schips">' + cl.map(function (c) { return chip('cat', c[0], c[0], c[1]); }).join('') + '</div>' : '';
   var sizes = (sF.cat === 'Tile' || sF.cat === 'Flooring') && fc.sizes.length > 1 ? '<div class="schips sub">' + fc.sizes.map(function (z) { return chip('size', z[0], z[0], z[1]); }).join('') + '</div>' : '';
@@ -1203,17 +1217,19 @@ function renderSearchFilters(r) {
   var finishes = useF.length > 1 ? '<div class="schips sub fin"><span class="flab">Finish</span>' + useF.map(function (z) { return chip('finish', z[0], z[0], z[1]); }).join('') + '</div>' : '';
   $('sfilt').innerHTML = cats + finishes + sizes + (brands ? '<div class="schips brand">' + brands + '</div>' : '');
 }
-$('sfilt').addEventListener('click', function (e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
-  var k = b.dataset.sk, v = (k === 'inStock' || k === 'flooring' || k === 'ends') ? true : b.dataset.sv;
+function sfClick(e) { var b = e.target.closest('button[data-sk]'); if (!b) return;
+  var k = b.dataset.sk, v = (k === 'inStock' || k === 'flooring' || k === 'ends' || k === 'moldings') ? true : b.dataset.sv;
   if (String(sF[k] || '') === String(v)) delete sF[k]; else sF[k] = v;                        // tap again = clear
   if (k === 'cat') delete sF.size;
   var my = ++seq; $('results').style.opacity = '.5';
-  searchPage(sQ, my, 0).then(function () { $('results').style.opacity = ''; }); });
+  searchPage(sQ, my, 0).then(function () { $('results').style.opacity = ''; }); }
+$('sfilt').addEventListener('click', sfClick);
+$('meta').addEventListener('click', function (e) { if (e.target.closest('.mmeta button[data-sk]')) sfClick(e); });   // 20261019a: Moldings chip on the matches line
 
 // 20261017k: the Search chip rows (category, Finish, sizes, stock / shelf) fold away behind "Filters ▸" on the matches line.
 // Folded: no chip rows, the results move up; active filters keep applying and are counted ("Filters (2) ▸"). Per device.
 var SF_FOLD_KEY = 'esSfiltFold', sfFold = (function () { try { return localStorage.getItem(SF_FOLD_KEY) === '1'; } catch (e) { return false; } })();
-function sfActive() { return ['ends', 'brand', 'cat', 'size', 'finish'].filter(function (k) { return sF[k] != null && sF[k] !== '' && sF[k] !== false; }).length; }
+function sfActive() { return ['ends', 'moldings', 'brand', 'cat', 'size', 'finish'].filter(function (k) { return sF[k] != null && sF[k] !== '' && sF[k] !== false; }).length; }
 function sfTogHtml() { if (!$('sfilt').innerHTML) return ''; var a = sfActive();
   return '<button type="button" class="sftog" id="sfTog" aria-controls="sfilt" aria-expanded="' + !sfFold + '"><span>Filters</span>' + (sfFold && a ? '<span class="sfn">(' + a + ')</span>' : '') + '<span class="sfa" aria-hidden="true">' + (sfFold ? '\u25B8' : '\u25BE') + '</span></button>'; }
 function sfTogUpd() { var b = $('sfTog'); if (b) b.outerHTML = sfTogHtml(); }
@@ -1637,10 +1653,25 @@ function addItem(name, btn) { var it = shown[name], qi = btn && btn.previousElem
   var q = qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1; if (qi) qi.value = 1;
   addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' }); }   // accessories open only from the Accessories button (Ray 2026-10-16)
 // ---- sink -> compatible accessories (bundle.related from accessories.csv: {sink: [[accessory, note, kind], ...]}), Blanco + Franke
-function relOf(name) { var m = localData && localData.related; return (m && m[name]) || []; }
-var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, washlet: 14, autoflush: 15, jamb: 16, hinge: 17, lever: 18, stop: 19, pack: 21 };
+function relOf(name) { var m = localData && localData.related, r = (m && m[name]) || [];
+  if (!r.length && localData && localData.items && typeof floorMoldMap_ === 'function') r = floorMoldMap_(localData).byFloor[name] || [];   // 20261019a: a floor's matching moldings
+  return r; }
+/** 20261019a: a flooring molding's matching floor(s) (reverse of floorMoldMap_), as [[floor, description, 'floor'], ...]. */
+var MOLD_FLOORS_ = null;
+function moldFloorsOf(name) { if (!localData || !localData.items || typeof floorMoldMap_ !== 'function') return [];
+  var mm = floorMoldMap_(localData); if (!mm.molds[name]) return [];
+  if (!MOLD_FLOORS_ || MOLD_FLOORS_.d !== localData) { var o = {}; Object.keys(mm.byFloor).forEach(function (fl) { var r = itemRow(fl);
+      mm.byFloor[fl].forEach(function (x) { (o[x[0]] = o[x[0]] || []).push([fl, r ? String(r[1] || '').slice(0, 110) : '', 'floor']); }); });
+    MOLD_FLOORS_ = { d: localData, m: o }; }
+  return MOLD_FLOORS_.m[name] || []; }
+var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, washlet: 14, autoflush: 15, jamb: 16, hinge: 17, lever: 18, stop: 19, pack: 21, reducer: 22, tmold: 23, stairnose: 24, endcap: 25, qround: 26, threshold: 27, stair: 28, base: 29, floor: 30 };
 function accKind(k) { return Object.prototype.hasOwnProperty.call(ACC_KIND, k) ? ACC_KIND[k] : 20; }
-var ACC_LABEL = { jamb: 'Frame', hinge: 'Hinge', lever: 'Lever', stop: 'Door stop', pack: 'Door pack' };   // small chip next to the code (same line, no extra height)
+var ACC_LABEL = { jamb: 'Frame', hinge: 'Hinge', lever: 'Lever', stop: 'Door stop', pack: 'Door pack',
+  reducer: 'Reducer', tmold: 'T-molding', stairnose: 'Stair nose', endcap: 'End cap', qround: 'Quarter round', threshold: 'Threshold', stair: 'Stair tread', base: 'Base molding' };
+var FLOOR_ACC_KINDS = { reducer: 1, tmold: 1, stairnose: 1, endcap: 1, qround: 1, threshold: 1, stair: 1, base: 1 };
+/** 20261019a: qty stepper for a sheet row (same look as the search card stepper); Add uses its number. */
+function accQtyHtml() { return '<span class="aqty"><button type="button" aria-label="Less" data-szq="-1">−</button><input type="number" inputmode="numeric" min="1" max="99999" value="1" aria-label="Qty" onfocus="this.select()"><button type="button" aria-label="More" data-szq="1">+</button></span>'; }
+function accQtyOf(b) { var qi = b && b.parentNode && b.parentNode.querySelector('.aqty input'); return qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1; }   // small chip next to the code (same line, no extra height)
 // ---- door pack (Ray 2026-10-17): one tap adds an ISD door + its frame (3 jambs) + hinge sets.
 // bundle.packs = {door: [[item, qtyPerDoor | "hinge"], ...]} from door-packs.csv. No packs key (older bundle) = plain "Add to note".
 // Hinges follow Ray's rule per note: 1 door = 2 sets, N doors = ceil(1.5 N) sets; each tap adds only the top-up.
@@ -1715,8 +1746,8 @@ function packSwap(c, n, swaps, changed) {
   if (moved) scheduleAutosave();
   return moved;
 }
-function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} = add picks to that note (note page pill)
-  var rel = relOf(sink).slice().sort(function (a, b) { return accKind(a[2]) - accKind(b[2]); });
+function accSheet(sink, justAdded, toNote, list) {   // toNote: {c: project, n: note} = add picks to that note (note page pill); list = rows to show instead of relOf (molding -> floors)
+  var rel = (list || relOf(sink)).slice().sort(function (a, b) { return accKind(a[2]) - accKind(b[2]); });
   if (!rel.length) return;
   var rows = rel.map(function (a) { var r = itemRow(a[0]); if (!r) return '';
     var it = itemFromRow(r), oh = r[3], enc = encodeURIComponent(a[0]).replace(/'/g, '%27');
@@ -1725,21 +1756,68 @@ function accSheet(sink, justAdded, toNote) {   // toNote: {c: project, n: note} 
       '<div class="notr" style="font-size:12px;color:var(--muted)">' + esc(a[1] || '') + '</div>' +
       '<div style="font-size:12px"><span class="' + (oh > 0 ? 'accok' : 'accbad') + '">On hand</span> <b class="notr">' + (oh == null ? '—' : qty(oh)) + '</b>' +
       (priceState.prices && r[2] != null ? ' · <span class="notr">' + money(r[2]) + '</span>' : '') + '</div></div>' +
-      '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }).join('');
+      accQtyHtml() + '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }).join('');
   if (packOf(sink) && !toNote) { var dr = itemRow(sink); if (dr) { var di = itemFromRow(dr);   // door pack doors: the card button adds the pack; this row adds the door alone
     rows = '<div class="accrow" data-name="' + esc(sink) + '">' + (di.photo ? '<img class="thumb" loading="lazy" src="' + esc(di.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
       '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span>Door only</span></div>' +
       '<div style="font-size:12px;color:var(--muted)"><span>No frame, no hinges</span></div></div>' +
-      '<button class="primary" data-accadd="' + encodeURIComponent(sink).replace(/'/g, '%27') + '">Add</button></div>' + rows; } }
-  openSheet('<h3>' + (rel.every(function (a) { return a[2] === 'seat'; }) ? '<span>Compatible seats</span>' : '<span>Compatible accessories</span>') + '</h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
+      accQtyHtml() + '<button class="primary" data-accadd="' + encodeURIComponent(sink).replace(/'/g, '%27') + '">Add</button></div>' + rows; } }
+  var head = rel.every(function (a) { return a[2] === 'seat'; }) ? 'Compatible seats' : rel.every(function (a) { return a[2] === 'floor'; }) ? 'Matching floors' :
+    rel.every(function (a) { return FLOOR_ACC_KINDS[a[2]]; }) ? 'Matching moldings' : 'Compatible accessories';
+  openSheet('<h3><span>' + head + '</span></h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
     '<div class="acclist">' + rows + '</div>');
-  $('sheetBody').onclick = function (e) { var b = e.target.closest('[data-accadd]'); if (!b) return;
+  $('sheetBody').onclick = function (e) {
+    var st = e.target.closest('[data-szq]'); if (st) { aqStep(st, Number(st.getAttribute('data-szq'))); return; }
+    var b = e.target.closest('[data-accadd]'); if (!b) return;
     var n = b.getAttribute('data-accadd'); try { n = decodeURIComponent(n); } catch (er) {}
-    var r = itemRow(n); if (!r) return; var it = itemFromRow(r);
-    var line = { name: it.name, desc: it.desc.slice(0, 110), qty: 1, photo: it.photo || '' };
+    var r = itemRow(n); if (!r) return; var it = itemFromRow(r), q = accQtyOf(b), qi = b.parentNode.querySelector('.aqty input'); if (qi) qi.value = 1;
+    var line = { name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' };
     if (toNote && toNote.c && toNote.n) { var keep = curCust; setCur(toNote.c, toNote.n); addToNote(line); curCust = keep; if (keep) saveCur(); else { localStorage.removeItem(curKey()); renderCustBar(); } }
     else addToNote(line);
     b.textContent = 'Added ✓'; b.disabled = true; };
+}
+// ---- 20261019a (Ray 2026-10-19): Countertops "Sizes (n)": every size / edge / backsplash of the same stone color, computed on the page from the
+// bundle. Group = brand prefix + color code: QTZ-G069-, GRNT-001-, VCT-51-, SOLID-ES-101- (letters-only 2nd part joins the next part: ES-101,
+// F-RT003, MW-3722). Discontinued and hidden items are left out; a color with only 1 item gets no button.
+var SIZE_GRP_ = null;
+function sizeKey_(code) { var s = String(code || '').split('-'); if (s.length < 2 || !s[1]) return null;
+  var col = s[1], SZ = /^(\d+(\.\d+)?\s*['"]|BS|ISL|FB|EG|ESEG|PSL)/i;
+  if (/^[A-Z]+$/i.test(col) && s.length > 2 && (/^\d+$/.test(s[2]) || (s[2] && !SZ.test(s[2])))) col += '-' + s[2];
+  return (s[0] + '-' + col).toUpperCase(); }
+function sizeHidden_(r) { return /discontinu/i.test(r[1] || '') || !!(window.QuoteImport && QuoteImport.isHidden && QuoteImport.isHidden(r[0])); }
+function sizeGroups_(data) { var by = {};
+  (data.items || []).forEach(function (r) { if (!r || r[7] !== 'Countertops' || sizeHidden_(r)) return; var k = sizeKey_(r[0]); if (k) (by[k] = by[k] || []).push(r[0]); });
+  Object.keys(by).forEach(function (k) { by[k].sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' }); }); });
+  return by; }
+function sizesOf(name) { if (!localData || !localData.items) return [];
+  var hq = !!(window.QuoteImport && QuoteImport.isHidden);   // rebuilt once quote-import.js is loaded (hidden items are normally not in the bundle anyway)
+  if (!SIZE_GRP_ || SIZE_GRP_.d !== localData || SIZE_GRP_.hq !== hq) SIZE_GRP_ = { d: localData, hq: hq, by: sizeGroups_(localData) };
+  var r = itemRow(name); if (!r || r[7] !== 'Countertops') return [];
+  var g = SIZE_GRP_.by[sizeKey_(name)] || []; return g.length > 1 && g.indexOf(name) >= 0 ? g : []; }
+/** Short size label from the code: QTZ-G069-2' x 9' EASED EDGES -> 2' x 9' EASED EDGES, GRNT-007-8'-EG-PSL-2 -> 8'-EG-PSL-2. */
+function sizeLabel_(name) { var k = sizeKey_(name), t = k ? String(name).slice(k.length).replace(/^-+/, '') : ''; return t || String(name); }
+function sizeSheet(name, toNote) {   // toNote: {c: project, n: note} = add picks to that note (note page pill)
+  var g = sizesOf(name); if (!g.length) return;
+  var rows = g.map(function (n) { var r = itemRow(n); if (!r) return '';
+    var it = itemFromRow(r), oh = r[3], enc = encodeURIComponent(n).replace(/'/g, '%27');
+    return '<div class="accrow' + (n === name ? ' szcur' : '') + '" data-name="' + esc(n) + '">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
+      '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span class="notr">' + esc(sizeLabel_(n)) + '</span>' + (n === name ? ' <span class="cutchip">This item</span>' : '') + '</div>' +
+      '<div class="notr szdesc">' + esc(String(r[1] || '').slice(0, 110)) + '</div>' +
+      '<div style="font-size:12px"><span class="' + (oh > 0 ? 'accok' : 'accbad') + '">On hand</span> <b class="notr">' + (oh == null ? '—' : qty(oh)) + '</b>' +
+      (priceState.prices && r[2] != null ? ' · <span class="notr">' + money(r[2]) + '</span>' : '') + '</div></div>' +
+      accQtyHtml() + '<button class="primary" data-szadd="' + enc + '">Add</button></div>'; }).join('');
+  openSheet('<h3><span>All sizes</span></h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(sizeKey_(name)) + '- · ' + g.length + '</span></div>' +
+    '<div class="acclist">' + rows + '</div>');
+  $('sheetBody').onclick = function (e) {
+    var st = e.target.closest('[data-szq]'); if (st) { aqStep(st, Number(st.getAttribute('data-szq'))); return; }
+    var b = e.target.closest('[data-szadd]'); if (!b) return;
+    var n = b.getAttribute('data-szadd'); try { n = decodeURIComponent(n); } catch (er) {}
+    var r = itemRow(n); if (!r) return; var it = itemFromRow(r), qi = b.parentNode.querySelector('.aqty input');
+    var q = qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1;
+    var line = { name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' };
+    if (toNote && toNote.c && toNote.n) { var keep = curCust; setCur(toNote.c, toNote.n); addToNote(line); curCust = keep; if (keep) saveCur(); else { localStorage.removeItem(curKey()); renderCustBar(); } }
+    else addToNote(line);
+    b.textContent = 'Added ✓'; b.disabled = true; if (qi) qi.value = 1; };
 }
 function itemRow(name) { if (!localData) return null; var i = nameIndex_(localData)[name]; return i == null ? null : localData.items[i]; }
 // Per-line price override (p) and discount % (d) ride at the end of the line note as a hidden tag " ⟦p3.09;d15⟧"
@@ -2603,7 +2681,7 @@ function renderPicked() {
   $('cdItemsH').textContent = 'Items' + (it.length ? ' (' + it.length + ')' : '');
   $('cdItems').innerHTML = (it.length ? variantBar(n) : '') + (it.length ? it.map(function (l, i) { var r = itemRow(l.name), ph = l.photo || (r && r[13]) || '', pr = linePrice(l);
     var desc = l.desc || (r ? String(r[1] || '').slice(0, 110) : '');
-    var oh = r ? r[3] : null, ohN = Number(oh), open = !!lineOpen[l.id];
+    var oh = r ? r[3] : null, ohN = Number(oh), open = !!lineOpen[l.id], szN = sizesOf(l.name).length;
     // collapsed head: # · code/name · On hand (+ missing badge) · × qty · arrows (right)
     var head = '<div class="lhead" data-ltog="1"><span class="ln">' + (i + 1) + '</span>' + (ph ? '<img class="cthumb lthumb" loading="lazy" src="' + esc(ph) + '" alt="" onerror="this.remove()">' : '') + '<b class="lnm notr">' + esc(l.name) + '</b>' +
       (r ? '<span class="lsub lohs"><span class="' + (oh == null ? 'muted' : ohN > 0 ? 'good' : 'bad') + '"><span>On hand</span> <b class="notr">' + qty(oh) + '</b>' + lineLocHtml(l.name, r) + missBadges(l.name) + '</span></span>' : '') +
@@ -2611,8 +2689,9 @@ function renderPicked() {
       '<span class="lqty notr">×' + l.qty + lupHtml(l) + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
-      (pr != null || relOf(l.name).length ? '<span class="lsub' + (relOf(l.name).length ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + money(pr) + '</b></span>' : '') +
-        (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">Accessories <span class="notr">(' + relOf(l.name).length + ')</span></button>' : '') + '</span>' : '') +
+      (pr != null || relOf(l.name).length || szN ? '<span class="lsub' + (relOf(l.name).length || szN ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + money(pr) + '</b></span>' : '') +
+        (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">Accessories <span class="notr">(' + relOf(l.name).length + ')</span></button>' :
+         szN ? '<button type="button" class="accpill" data-lsz="' + esc(l.name) + '">Sizes <span class="notr">(' + szN + ')</span></button>' : '') + '</span>' : '') +
       '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
         (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
       lineVariants(l.name) +
@@ -3226,6 +3305,7 @@ document.addEventListener('click', function (e) { if (!e.target.closest('#cdItem
   var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
   var t = e.target, l = lineOf(t); if (!l) return;
   var acc = t.closest('[data-lacc]'); if (acc) { var nNow = curNote(); accSheet(acc.getAttribute('data-lacc'), false, custOpen && nNow ? { c: custOpen, n: nNow } : null); return; }
+  var szb = t.closest('[data-lsz]'); if (szb) { var nSz = curNote(); sizeSheet(szb.getAttribute('data-lsz'), custOpen && nSz ? { c: custOpen, n: nSz } : null); return; }
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), mv = t.closest('[data-lord]');
   var found = t.closest('[data-found]'), rdel = t.closest('[data-rdel]');
   if (found) { reportAct(found.dataset.found, false); return; }

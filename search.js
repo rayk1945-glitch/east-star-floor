@@ -2,6 +2,7 @@
  * East Star Red app - forgiving ranked search (v2). Pure JS, no Apps Script services, so the same
  * file runs in Apps Script, the local test server and the Node index builder (sync/build_index.js).
  * 20261017o: one-digit wildcards in codes: "67x" / "67?" = 670-679 anywhere in a code, "67xx" = 2 digits, "67*" = any run (wildPattern_).
+ * 20261019a: flooring moldings (floorMoldMap_) are left out of results unless f.moldings; facets.moldings counts them.
  * 20261018a: categories v2 words (tub, tub filler / roman tub, plumbing, light, hardware, door / trim, panel, tool, labor) via categoryWords_().
  *
  * Bundle (built by Red's sync step):
@@ -83,6 +84,85 @@ function isFloorProduct_(r) {
   var n = String((r && r[0]) || '');
   return /^LF-/i.test(n) && !isFloorMolding_(n);
 }
+/** 20261019a (Ray 2026-10-19): flooring trim / moldings (reducer, T-molding, stair nose, quarter round, end cap, stair tread, base molding)
+ *  for a flooring line or color. Kind from the code (LF-*, LMF-*, HWF-*), or from the description for other Flooring rows. '' = not a molding. */
+var FLOOR_MOLD_KIND_ = { RDC: 'reducer', R: 'reducer', RD: 'reducer', STN: 'stairnose', BN: 'stairnose', ECP: 'endcap', EC: 'endcap', TM: 'tmold', T: 'tmold', QR: 'qround', BM: 'base', STAIR: 'stair' };
+function floorMoldKind_(r) {
+  var n = String((r && r[0]) || '').toUpperCase(), d = String((r && r[1]) || '').toUpperCase(), m;
+  if (r && r[7] && r[7] !== 'Flooring') return '';
+  if ((m = /^LF-(RDC|STN|ECP|TM|BN|EC|QR|R|T)-/.exec(n))) return /1\/4 ROUND|QUARTER ROUND/.test(d) ? 'qround' : FLOOR_MOLD_KIND_[m[1]];
+  if ((m = /^LMF-(RD|STN|TM|STAIR)\s*-/.exec(n))) return FLOOR_MOLD_KIND_[m[1]];
+  if ((m = /^HWF-(?:BAMBOO-)?(BN|STN|BM|T|STAIR)(?:-|$)/.exec(n))) return FLOOR_MOLD_KIND_[m[1]];
+  if (!r || r[7] !== 'Flooring') return '';
+  if (/REDUCER/.test(d)) return 'reducer'; if (/T-? ?MOU?LDING/.test(d)) return 'tmold'; if (/STAIR ?NOS|BULLNOSE/.test(d)) return 'stairnose';
+  if (/QUARTER ROUND|1\/4 ROUND/.test(d)) return 'qround'; if (/END ?-? ?CAP/.test(d)) return 'endcap'; if (/THRESHOLD/.test(d)) return 'threshold';
+  return '';
+}
+function floorMoldZ_(k) { return String(k).replace(/(^|[A-Z])0+(?=\d)/g, '$1'); }
+function floorMoldNorm_(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+/** Color keys a flooring row answers to: LF-ESV-78066-1-SPC -> 78066-1, ESV-78066-1; LMF-ES12-501 -> 501; HWF-EG-OAK-1512-AB -> OAK-1512-AB. */
+function floorColorKeys_(code, desc) {
+  var c = String(code || '').toUpperCase().trim(), d = desc, out = [], add = function (k) { var t = String(k).charAt(0) === '~' ? '~' : ''; k = t + floorMoldNorm_(k); if (k.length > t.length && out.indexOf(k) < 0) out.push(k); }, m;
+  if ((m = /^LF-(.+)$/.exec(c))) { var rest = m[1].replace(/-(SPC|MSPC|WPC|LVP)(-\d+MM)?$/, ''); add(rest); add(m[1]); var s2 = rest.replace(/^[A-Z]{2,4}-(?=\d)/, ''); add(s2);
+    if (/-[A-Z]+-\d+$/.test(s2)) add('~' + s2.replace(/-\d+$/, ''));
+    out.slice().forEach(function (k) { if (k.charAt(0) !== '~') { var z = floorMoldZ_(k); if (z !== k) add('~' + z); } }); }   // B0001 = B00001 (leading zeros)   // loose key, only when nothing matches exactly: LF-9032-H-1 -> 9032-H
+  else if ((m = /^LMF-ES\d+-(\d+)$/.exec(c))) add('LMF' + m[1]);
+  else if ((m = /^HWF-(?:EG-)?(.+)$/.exec(c))) { add('HWF' + m[1]);
+    var nl = /^HWF-EG-OAK-([A-Z ]+?) ?(15|18)\/\d/.exec(c); if (nl) add('~N' + floorMoldNorm_(nl[1]) + nl[2]);
+    var hk = hwfHashKey_(d); if (hk) add('~' + hk); }
+  return out;
+}
+/** "#15401" / "#11" in a hardwood description + the species: WHITE-OAK SMOKE GREY #11 -> #WO11 (BIRCH #15410 is not WHITE-OAK #15410). */
+function hwfHashKey_(d) { d = String(d || '').toUpperCase(); var n = /#\s?(\d{2,5})\b/.exec(d) || /\b(\d{2})#/.exec(d); if (!n) return '';
+  var sp = /WHITE[- ]OAK|WTO\b/.test(d) ? 'WO' : /BIRCH/.test(d) ? 'BI' : /MAPLE/.test(d) ? 'MA' : /HICKORY/.test(d) ? 'HI' : /WALNUT/.test(d) ? 'WA' : /OAK/.test(d) ? 'OA' : '';
+  return sp ? 'H' + sp + n[1].replace(/^0+/, '') : ''; }
+/** The color key(s) a molding names: from "FOR (6017-1)" in the description, else the code after the type part. */
+function moldColorKeys_(r) {
+  var c = String(r[0] || '').toUpperCase().trim(), d = String(r[1] || '').toUpperCase(), out = [], m;
+  if ((m = /\bFOR\s*\(\s*([A-Z0-9][A-Z0-9 -]*?)\s*\)/.exec(d))) out.push(floorMoldNorm_(m[1]));
+  if ((m = /^LF-(?:RDC|STN|ECP|TM|BN|EC|QR|R|T)-(.+)$/.exec(c))) out.push(floorMoldNorm_(m[1]));
+  else if ((m = /^LMF-(?:RD|STN|TM|STAIR)\s*-\s*(\d+)$/.exec(c))) out.push('LMF' + m[1]);
+  else if ((m = /^HWF-(?:BN|STN|BM)-(.+)$/.exec(c))) { out.push('HWF' + floorMoldNorm_(m[1]));
+    var t = /^(.+?)-?(15|18)MM$/.exec(m[1]); if (t) { out.push('~HWF' + floorMoldNorm_(t[1])); out.push('~HWF' + floorMoldNorm_(t[1].replace(/^OAK-/, ''))); }
+    var nl = /^([A-Z ]+?) (15|18)$/.exec(m[1]); if (nl) out.push('~N' + floorMoldNorm_(nl[1]) + nl[2]);
+    var hk = hwfHashKey_(d); if (hk) out.push('~' + hk); }
+  return out.filter(function (k, i, a) { return k && a.indexOf(k) === i; });
+}
+/** Gloss / shade words in Chinese descriptions: a molding and a floor of the same species must agree on them (HWF-BN-TAUN is 中色, HWF-TAUN is 浅色). */
+var FLOOR_GLOSS_ = ['亮光', '哑光'], FLOOR_TONE_ = ['浅色', '中色', '深色', '本色', '柚木色', '咖啡紫', '咖啡黄', '碳化', '黑胡桃色'];
+function floorShade_(d) { d = String(d || ''); var one = function (l) { return l.filter(function (w) { return d.indexOf(w) >= 0; }).join(','); }; return { g: one(FLOOR_GLOSS_), t: one(FLOOR_TONE_) }; }
+/** Same gloss and tone wherever both descriptions name one (a missing word is not a conflict). strict: every word the molding names is in the floor too. */
+function shadeOk_(ms, fs, strict) { var ok = function (a, b) { return !a || (!b ? !strict : a === b); }; return ok(ms.g, fs.g) && ok(ms.t, fs.t); }
+var FLOOR_MOLD_CACHE_ = { ver: null, d: null, map: null };
+/** {byFloor: {floor: [[molding, description, kind], ...]}, molds: {molding: kind}, unmatched: [molding, ...]} for the whole bundle. */
+function floorMoldMap_(bundle) {
+  if (FLOOR_MOLD_CACHE_.d === bundle && FLOOR_MOLD_CACHE_.map) return FLOOR_MOLD_CACHE_.map;
+  var items = bundle.items || [], floors = {}, molds = {}, byFloor = {}, unmatched = [], i;
+  for (i = 0; i < items.length; i++) { var r = items[i]; if (!r || r[7] !== 'Flooring' && !/^(LF|LMF|HWF)-/i.test(r[0])) continue;
+    if (/discontinu/i.test(r[1] || '')) continue;
+    var k = floorMoldKind_(r); if (k) { molds[r[0]] = k; continue; }
+    if (!isFloorProductRow_(r)) continue;
+    floorColorKeys_(r[0], r[1]).forEach(function (fk) { (floors[fk] = floors[fk] || []).push(r); }); }
+  for (i = 0; i < items.length; i++) { var m = items[i]; if (!m || !molds[m[0]]) continue;
+    var hit = [], ks = moldColorKeys_(m), sh = floorShade_(m[1]);
+    var shok = function (f) { return shadeOk_(sh, floorShade_(f[1])); };
+    ks = ks.concat(ks.map(function (k) { return '~' + k; }), ks.map(function (k) { return '~' + floorMoldZ_(k); }));
+    for (var j = 0; j < ks.length && !hit.length; j++) hit = (floors[ks[j]] || []).filter(shok);
+    if (!hit.length) ks.forEach(function (k) { var nk = /^~N([A-Z]+)(15|18)$/.exec(k); if (!nk || hit.length) return;   // LANDSCRAPE 18 -> OAK-LANDS18/4
+      Object.keys(floors).forEach(function (fk) { var fm = /^~N([A-Z]+)(15|18)$/.exec(fk); if (fm && fm[2] === nk[2] && fm[1].length >= 4 && nk[1].indexOf(fm[1]) === 0) hit = hit.concat(floors[fk].filter(shok)); }); });
+    var sp = /^HWF-(?:BN|STN)-([A-Z]{4,})(?:-\d+)?$/.exec(String(m[0]).toUpperCase());   // HWF-BN-TAUN-7 (咖啡黄哑光) -> the HWF-TAUN-* floor with the same gloss + tone
+    if (!hit.length && sp && sh.g && sh.t) Object.keys(floors).forEach(function (fk) { if (fk.indexOf('HWF' + sp[1]) === 0) hit = hit.concat(floors[fk].filter(function (f) { return shadeOk_(sh, floorShade_(f[1]), true); })); });
+    hit = hit.filter(function (f, x, a) { return a.indexOf(f) === x; });
+    if (!hit.length) { unmatched.push(m[0]); continue; }
+    hit.forEach(function (f) { (byFloor[f[0]] = byFloor[f[0]] || []).push([m[0], String(m[1] || '').slice(0, 110), molds[m[0]]]); }); }
+  var map = { byFloor: byFloor, molds: molds, unmatched: unmatched };
+  FLOOR_MOLD_CACHE_ = { ver: bundle.version, d: bundle, map: map };
+  return map;
+}
+function isFloorMoldRow_(bundle, r) { return !!(r && floorMoldMap_(bundle).molds[r[0]]); }
+/** A flooring product (planks / tiles, not trim, pads, touch-up kits or glue): has sq ft per box or a floor word, and is not a molding. */
+function isFloorProductRow_(r) { var d = String(r[1] || ''); if (r[7] !== 'Flooring' || floorMoldKind_(r) || /^(MHK|PAD|TEC)-|^PAD$/i.test(r[0])) return false;
+  return /^LF-/i.test(r[0]) || /SQ\.? ?FT|FLOOR|SPC|WPC|LAMINATE|ENGINEERED|HARDWOOD|BAMBOO/i.test(d); }   // every LF- row that is not trim is a floor
 var DEFAULT_SYNONYMS_ = { tokens: { WB: ['WBC'], REP: ['REFPN', 'REFPN1'] }, phrases: {} };
 
 function normCode_(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
@@ -398,6 +478,10 @@ function searchBundle_(bundle, q, limit, f) {
     }
     return b[0] - a[0] || b[1] - a[1] || a[2] - b[2];
   });
+  // 20261019a (Ray): flooring moldings stay out of the results unless f.moldings (the Moldings chip); they open from the floor's Accessories.
+  // When the search matches ONLY moldings (a molding code, "stair nose"), they are listed anyway so a search never comes back empty.
+  var fmm = floorMoldMap_(bundle), isMold = function (c) { return !!fmm.molds[items[c[3]][0]]; }, moldOut = [];
+  if (!f.moldings) { var keepC = cands.filter(function (c) { return !isMold(c); }); if (keepC.length && keepC.length < cands.length) { moldOut = cands.filter(isMold); cands = keepC; } }
   var exactCount = cands.filter(function (c) { return c[0] === T; }).length;
   // ---- filters + facets (over the whole match set, not just the first page)
   var set = cands;                                     // exact set, or (fallback) every close match that is listed
@@ -430,6 +514,8 @@ function searchBundle_(bundle, q, limit, f) {
   facets.brands = Object.keys(br).map(function (k) { return [k, br[k]]; }).sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });   // biggest first
   facets.sizes = Object.keys(sz).map(function (k) { return [k, sz[k]]; }).sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); }).slice(0, 12);
   facets.finishes = Object.keys(fin).map(function (k) { return [k, fin[k].n, fin[k].named]; }).sort(function (a, b) { return b[2] - a[2] || b[1] - a[1] || (a[0] < b[0] ? -1 : 1); }).slice(0, 24);
+  facets.moldings = (f.moldings ? set.filter(isMold) : moldOut).filter(function (c) { return pass(items[c[3]]); }).length;
+  facets.moldHidden = moldOut.length > 0;
   var filtered = f.cat || f.inStock || store || (sizeOn && f.size) || f.finish || f.flooring || endsOn || !!f.brand;
   var list = filtered ? cands.filter(function (c) { return pass(items[c[3]]); }) : cands;
   var offset = Math.max(0, Math.floor(Number(f.offset) || 0));
