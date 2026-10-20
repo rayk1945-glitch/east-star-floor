@@ -299,7 +299,7 @@
   .pline .lhead .lthumb { width:36px; height:36px; border-radius:7px; }
   .pline.hasord { width:100%; max-width:100%; box-sizing:border-box; overflow:hidden; gap:6px; }
   .pline .lbody { overflow:hidden; } .pline .lhead .lnm { overflow-wrap:anywhere; flex:1 1 90px; }
-  .pline .lhead .lohs, .pline .lhead .lohs * { overflow-wrap:anywhere; } .pline .m { flex-wrap:wrap; } .pline .m .lnote { min-width:0; flex:1 1 120px; }
+  .pline .lhead .lohs, .pline .lhead .lohs * { overflow-wrap:anywhere; } .pline .m { flex-wrap:wrap; } .pline .m .lnote { min-width:0; flex:1 1 60px; width:0; }
   .pline .ord { flex:0 0 auto; margin-right:2px; } .pline .ord button { width:34px; height:34px; }
   .lbtns { display:grid; grid-template-columns:40px 40px; column-gap:8px; row-gap:10px; flex:none; align-self:flex-start; } .lbrow { display:contents; } .lbtns .x.lmenu { margin-right:0; }
   .lbtns .discpill { grid-column:1; justify-self:center; }
@@ -351,6 +351,8 @@
   .pline .ph img, .pline .ph .ld { width:54px; height:54px; border-radius:8px; object-fit:cover; background:#eef0f3; cursor:pointer; display:inline-block; }
   .phbtn { display:inline-flex; align-items:center; min-height:36px; border:1px solid var(--line-strong); border-radius:999px; padding:0 11px; font-size:13px; font-weight:600; cursor:pointer; background:#fff; }
   .phbtn input { display:none; }
+  .pline .m { flex-wrap:nowrap; gap:6px; } .pline .m .stepper { flex:0 0 auto; } .pline .m .stepper button { width:30px; } .pline .m .stepper input { width:38px; }
+  .pline .m .lnok { flex:0 0 auto; margin-left:auto; min-height:34px; padding:0 12px; border:1px solid var(--line-strong); border-radius:999px; background:#fff; font:inherit; font-size:14px; font-weight:700; color:#1e3a6e; cursor:pointer; }
   .pline .amt2 { font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .btn.sec { background:#fff; color:#7f1d1d; border:1.5px solid #7f1d1d; margin-top:10px; }
   .vrow { padding:9px 0; border-bottom:1px solid var(--line); } .vrow .h { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted); }
@@ -731,7 +733,7 @@
 <script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261020c"></script>
+<script src="i18n.js?v=20261020d"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -809,7 +811,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261020c';
+var PAGE_VER = '20261020d';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -2726,8 +2728,8 @@ function renderPicked() {
       '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
         (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
       lineVariants(l.name) +
-      '<div class="m"><div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' +
-      (hingeFinishHtml(l.name) || '<input class="lnote" data-lnote="1" placeholder="Note: color, size…" value="' + esc(noteText(l.note)) + '" maxlength="280">') + '<span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span></div>' +
+      '<div class="m"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span>' +
+      '<div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' + (hingeFinishHtml(l.name) || lnoteInput(l)) + '<button type="button" class="lnok" data-lnok="1">OK</button>' + '</div>' +
       (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isMoldRow(r) ? '<button class="link ltc" data-lmc="1">▦ Molding calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
       '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button></div>';
     return '<div class="pline hasord' + (open ? ' open' : '') + '" data-lid="' + esc(l.id) + '"><div class="lbody">' + head + det + '</div>' + (it.length > 1 ? ordHtml(i, it.length) : '') + '</div>';
@@ -3332,9 +3334,12 @@ function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
     return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; rememberNoteVersion(n); }); }); }
 var lnoteT = {};
 var qtyT = {};
+/* 20261020d: empty line note shows an OK pill; tapping it confirms the note (saves it) and closes the keyboard */
+function lnoteInput(l) { return '<input class="lnote" data-lnote="1" placeholder="Note" value="' + esc(noteText(l.note)) + '" maxlength="280">'; }
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return;
   var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
   var t = e.target, l = lineOf(t); if (!l) return;
+  var okb = t.closest('[data-lnok]'); if (okb) { var ni = okb.closest('.m').querySelector('[data-lnote]'); if (ni) { l.note = withMeta(ni.value, lmeta(l)); var nk = curNote(); if (nk) lineHold[l.id] = nk.id; scheduleAutosave(); ni.blur(); } if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
   var acc = t.closest('[data-lacc]'); if (acc) { var nNow = curNote(); accSheet(acc.getAttribute('data-lacc'), false, custOpen && nNow ? { c: custOpen, n: nNow } : null); return; }
   var szb = t.closest('[data-lsz]'); if (szb) { var nSz = curNote(); sizeSheet(szb.getAttribute('data-lsz'), custOpen && nSz ? { c: custOpen, n: nSz } : null); return; }
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), mv = t.closest('[data-lord]');
