@@ -735,7 +735,7 @@
 <script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261021c"></script>
+<script src="i18n.js?v=20261021c2"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -813,7 +813,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261021c';
+var PAGE_VER = '20261021c2';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -4136,7 +4136,14 @@ function drainSaves() {
   var all = flushBatch().then(function () {
     return Promise.all(Object.keys(saveRun).map(function (k) { return saveRun[k]; }));
   }).then(function () { saveState(); return !Object.keys(saveQ).length && !isBatchDirty() && !(OB && OB.pending()); });
-  return Promise.race([all, new Promise(function (r) { setTimeout(function () { r(false); }, 12000); })]);   // offline: the outbox keeps it, the caller hears "not saved yet"
+  // 20261021c2: a slow server (2-3 s per write, several queued colour/qty saves) can need >12 s. While saves are still
+  // running and we are online, keep waiting (up to 60 s); only give up early when offline or nothing is in flight.
+  var t0 = Date.now();
+  return new Promise(function (res) { var done = false; all.then(function (v) { done = true; res(v); }, function () { done = true; res(false); });
+    (function tick() { if (done) return; var el = Date.now() - t0, offline = navigator.onLine === false || (OB && OB.state().offline), busy = Object.keys(saveRun).length || saveFlushing;
+      if (el >= 60000 || (el >= 12000 && (offline || !busy))) { done = true; res(false); return; }
+      if (el >= 4000 && busy && typeof toast === 'function' && !tick.t) { tick.t = 1; toast('Still saving…'); }
+      setTimeout(tick, 500); })(); });
 }
 /* Idle auto-close: after 30 min with no taps/typing/scroll, if the open project has any content,
  * save (when dirty) and start a blank new project so the next customer is not added to the old one. */
