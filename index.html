@@ -733,7 +733,7 @@
 <script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261020d"></script>
+<script src="i18n.js?v=20261020e"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -811,7 +811,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261020d';
+var PAGE_VER = '20261020e';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -3334,12 +3334,17 @@ function setLine(l, ch) { var c = custOpen, n = curNote(), id = l.id;
     return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: id, qty: cur.qty, note: cur.note || '' }).then(function (r) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; rememberNoteVersion(n); }); }); }
 var lnoteT = {};
 var qtyT = {};
-/* 20261020d: empty line note shows an OK pill; tapping it confirms the note (saves it) and closes the keyboard */
+/* 20261020e: empty line note shows an OK pill; tapping it confirms the note (saves it) and closes the keyboard */
 function lnoteInput(l) { return '<input class="lnote" data-lnote="1" placeholder="Note" value="' + esc(noteText(l.note)) + '" maxlength="280">'; }
 document.addEventListener('click', function (e) { if (!e.target.closest('#cdItems')) return;
   var all = e.target.closest('[data-vall]'); if (all) { switchNoteFinish(all.dataset.vall); return; }
   var t = e.target, l = lineOf(t); if (!l) return;
-  var okb = t.closest('[data-lnok]'); if (okb) { var ni = okb.closest('.m').querySelector('[data-lnote]'); if (ni) { l.note = withMeta(ni.value, lmeta(l)); var nk = curNote(); if (nk) lineHold[l.id] = nk.id; scheduleAutosave(); ni.blur(); } if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
+  var okb = t.closest('[data-lnok]'); if (okb) { var row = okb.closest('.m'), ni = row.querySelector('[data-lnote]'), qi = row.querySelector('[data-lqv]'), nk = curNote();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    if (qi) { l.qty = Math.max(1, parseInt(qi.value, 10) || 1); qi.value = l.qty; renderTotals(); updateAmt(okb, l); }   // 20261020e: OK commits a typed qty too
+    if (ni) l.note = withMeta(ni.value, lmeta(l));
+    if (nk) lineHold[l.id] = nk.id; scheduleAutosave(); saveBg();
+    var pl = okb.closest('.pline'); if (pl && lineOpen[l.id]) toggleLine(pl, l); return; }   // 20261020e: OK also collapses the line   // save now, not after the 1 s batch delay
   var acc = t.closest('[data-lacc]'); if (acc) { var nNow = curNote(); accSheet(acc.getAttribute('data-lacc'), false, custOpen && nNow ? { c: custOpen, n: nNow } : null); return; }
   var szb = t.closest('[data-lsz]'); if (szb) { var nSz = curNote(); sizeSheet(szb.getAttribute('data-lsz'), custOpen && nSz ? { c: custOpen, n: nSz } : null); return; }
   var q = t.closest('[data-lq]'), rm = t.closest('[data-lrm]'), mv = t.closest('[data-lord]');
@@ -4082,7 +4087,8 @@ function openNoteHistory(c, n) {
   $('sheetBody').onclick = function (e) { var m = e.target.closest('[data-mgundo]'); if (m) { closeSheet(); mergeUndo(c.id, +m.dataset.mgundo); return; }
     var b = e.target.closest('[data-hv]'); if (!b || !histOpen) return; versionPreview(histOpen, +b.dataset.hv); };
 }
-function updateAmt(t, l) { var a = t.closest('.pline').querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty); }
+function updateAmt(t, l) { var pl = t.closest('.pline'), a = pl.querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty);
+  var h = pl.querySelector('.lhead .lqty'); if (h) h.innerHTML = '×' + l.qty + lupHtml(l); }   // 20261020e: keep the header ×qty in step with the stepper
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
   if (t.dataset.lqv) { l.qty = Math.max(1, parseInt(t.value, 10) || 1); t.value = l.qty; renderTotals(); updateAmt(t, l); var nq = curNote(); if (nq) lineHold[l.id] = nq.id; scheduleAutosave(); }
