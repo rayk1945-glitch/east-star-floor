@@ -353,6 +353,8 @@
   .phbtn input { display:none; }
   .pline .m { flex-wrap:nowrap; gap:6px; } .pline .m .stepper { flex:0 0 auto; } .pline .m .stepper button { width:30px; } .pline .m .stepper input { width:38px; }
   .pline .m .lnok { flex:0 0 auto; margin-left:auto; min-height:34px; padding:0 12px; border:1px solid var(--line-strong); border-radius:999px; background:#fff; font:inherit; font-size:14px; font-weight:700; color:#1e3a6e; cursor:pointer; }
+  .pline .amtc { display:inline-flex; flex-direction:column; align-items:flex-start; line-height:1.15; flex:0 0 auto; } .pline .lsf { font-size:11px; font-weight:600; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .pline .m .lnote { text-overflow:ellipsis; } .pline .m input.lnote { font-size:14px; padding:7px 8px; } .pline .m .lnok { padding:0 10px; } .pline .m { gap:6px 8px; flex-wrap:wrap !important; } .pline .m .lbrk { flex:0 0 100%; height:0; } .pline .m .lnote { flex:1 1 0 !important; width:auto !important; min-width:0; } .pline .m .lnok { margin-left:0; } /* 20261021c: row 1 amount+stepper, row 2 full-width note + OK */
   .pline .amt2 { font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .btn.sec { background:#fff; color:#7f1d1d; border:1.5px solid #7f1d1d; margin-top:10px; }
   .vrow { padding:9px 0; border-bottom:1px solid var(--line); } .vrow .h { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted); }
@@ -733,7 +735,7 @@
 <script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261020e"></script>
+<script src="i18n.js?v=20261021c"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -811,7 +813,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261020e';
+var PAGE_VER = '20261021c';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -2728,8 +2730,8 @@ function renderPicked() {
       '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
         (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
       lineVariants(l.name) +
-      '<div class="m"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span>' +
-      '<div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' + (hingeFinishHtml(l.name) || lnoteInput(l)) + '<button type="button" class="lnok" data-lnok="1">OK</button>' + '</div>' +
+      '<div class="m"><span class="amtc"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span>' + lsfHtml(l, r) + '</span>' +
+      '<div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' + '<span class="lbrk"></span>' + (hingeFinishHtml(l.name) || lnoteInput(l)) + '<button type="button" class="lnok" data-lnok="1">OK</button>' + '</div>' +
       (isFloorRow(r) ? '<button class="link ltc" data-lfc="1">▦ Flooring calculator</button>' : isMoldRow(r) ? '<button class="link ltc" data-lmc="1">▦ Molding calculator</button>' : isTileRow(r) ? '<button class="link ltc" data-ltc="1">▦ Tile calculator</button>' : '') +
       '<button type="button" class="link ltc rmfeat" data-rmiss="1">Report missing</button></div>';
     return '<div class="pline hasord' + (open ? ' open' : '') + '" data-lid="' + esc(l.id) + '"><div class="lbody">' + head + det + '</div>' + (it.length > 1 ? ordHtml(i, it.length) : '') + '</div>';
@@ -2780,7 +2782,7 @@ function hingeFamily(name) { var m = /^Hinge-(\S+) (.+)$/.exec(name || ''); if (
   var fam = HINGE_FIN_.by[m[2]] || []; return fam.length > 1 && fam.some(function (x) { return x.name === name; }) ? fam : null; }
 function hingeFinishHtml(name) { var fam = hingeFamily(name); if (!fam) return '';
   return '<select class="lnote lfin" data-lfin="1" aria-label="Finish">' + fam.map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === name ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select>'; }
-function switchHingeFinish(l, to) { var n = curNote(); if (!n || !l || l.name === to || varBusy || ordBusy) return;
+function switchHingeFinish(l, to) { var n = curNote(); if (!n || !l || l.name === to || ordBusy) return;   /* 20261021c */
   if (!applyVariantToLine(l, to)) { toast('Could not switch 1 item'); renderPicked(); return; }
   varMiss = null; renderPicked(); syncCount(); toast('Switched 1 item'); saveNoteVariants(n, [l]); }
 function applyVariantToLine(l, sibName) {
@@ -2793,7 +2795,7 @@ function missHtml(label, names) {
   return '<div class="vmiss"><span>Could not switch to </span><b>' + esc(label) + '</b><span class="notr">: ' + esc(shownN.join(', ')) + more + '</span></div>';
 }
 function switchNoteFinish(label) {
-  if (varBusy || ordBusy) return; var n = curNote(); if (!n || !localData) return;
+  if (ordBusy) return; /* 20261021c */ var n = curNote(); if (!n || !localData) return;
   var changed = [], missed = [], swaps = [];
   (n.items || []).forEach(function (l) {
     var sibs = variantSiblings(l.name);
@@ -2814,7 +2816,7 @@ function switchNoteFinish(label) {
   saveNoteVariants(n, changed);
 }
 function switchLineFinish(l, label) {
-  if (varBusy || ordBusy) return; var n = curNote(); if (!n || !l || typeof variantPick_ !== 'function') return;
+  /* 20261021c: taps are no longer ignored while a finish switch is saving (varBusy); saveNoteVariants queues the next save */ if (ordBusy) { toast('Saving the order, try again'); return; } var n = curNote(); if (!n || !l || typeof variantPick_ !== 'function') return;
   var pick = variantPick_(variantSiblings(l.name), l.name, label);
   if (pick === null || !pick) return;
   var was = l.name;
@@ -2862,7 +2864,7 @@ function pushVariants(c, n, snap, ids) {
       return api('customerItem', { id: c.id, noteId: n.id, op: 'set', lineId: l.id, qty: live.qty, note: live.note || '', name: live.name, desc: live.desc || '', photo: live.photo || '' })
         .then(function (r) {
           if (r && r.note) { n.updated = r.note.updated; n.updated_by = r.note.updated_by; }
-          if (r && r.items) { saw++; var s = r.items.filter(function (x) { return x.id === l.id; })[0]; if (!s || s.name !== l.name) bad++; }
+          if (r && r.items) { saw++; var s = r.items.filter(function (x) { return x.id === l.id; })[0]; if (!s || s.name !== live.name) bad++; /* 20261021c: compare with what was sent */ }
         }, function (er) { if (/sign in|signed out/i.test(er.message || '')) throw er; bad++; });
     });
   });
@@ -4087,7 +4089,12 @@ function openNoteHistory(c, n) {
   $('sheetBody').onclick = function (e) { var m = e.target.closest('[data-mgundo]'); if (m) { closeSheet(); mergeUndo(c.id, +m.dataset.mgundo); return; }
     var b = e.target.closest('[data-hv]'); if (!b || !histOpen) return; versionPreview(histOpen, +b.dataset.hv); };
 }
-function updateAmt(t, l) { var pl = t.closest('.pline'), a = pl.querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty);
+// 20261021c: total sq ft on flooring lines (boxes x sq ft/box) and tile lines (pcs x sq ft/pc), under the amount; live with the stepper.
+function lineSf(l, r) { if (!r) return null; var it = itemFromRow(r), f = floorOf(it); if (f) return f.sf > 0 ? f.sf : null; if (moldOf(it)) return null; return isTileRow(r) ? r[11].sqftPc : null; }
+function sfTxt(l, r) { var u = lineSf(l, r); return u ? (+(u * l.qty).toFixed(1)) + ' sq ft' : ''; }
+function lsfHtml(l, r) { var t = sfTxt(l, r); return t ? '<span class="lsf notr">' + t + '</span>' : ''; }
+function updateAmt(t, l) { var sfe = t.closest('.pline').querySelector('.lsf'); if (sfe) sfe.textContent = sfTxt(l, itemRow(l.name));
+  var pl = t.closest('.pline'), a = pl.querySelector('.amt2'), p = linePrice(l); if (a && p != null) a.textContent = money(p * l.qty);
   var h = pl.querySelector('.lhead .lqty'); if (h) h.innerHTML = '×' + l.qty + lupHtml(l); }   // 20261020e: keep the header ×qty in step with the stepper
 function syncCount() { var n = curNote(); if (n && isCurNote(custOpen.id, n.id)) { curCust.count = n.items.length; saveCur(); } }
 document.addEventListener('change', function (e) { var t = e.target; if (!t.closest('#cdItems')) return; var l = lineOf(t); if (!l) return;
@@ -4672,24 +4679,24 @@ function tileCalcFor(it, target) {
   calc();
   $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast('Enter the area first'); return; }
     closeSheet();
-    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta('', { p: s.p }) }]); };   // 20261021c: calculators leave the note empty (sq ft shows under the amount)
 }
 /** Calculator result -> THIS line: qty = pieces to buy, note = "120 sq ft + 10%" (replaces an older sq ft note, keeps other words). Autosaved. */
 function setTileLine(c, n, l, s, unit) {
   var m = lmeta(l), rest = noteText(l.note).replace(MOLD_NOTE_RE, ' ').replace(CALC_NOTE_RE, ' ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
   if (s.priced) m.p = s.p == null ? undefined : s.p;
-  l.qty = s.buy; l.note = withMeta((s.note + (rest ? ' · ' + rest : '')).slice(0, 280), { p: m.p, d: m.d, a: m.a });
+  l.qty = s.buy; l.note = withMeta(noteText(l.note), { p: m.p, d: m.d, a: m.a });   // 20261021c: note text untouched (only qty + price meta)
   if (custOpen === c && noteOpenId === n.id && $('cdItems')) renderPicked();
   setLine(l, { qty: l.qty, note: l.note });
 }
 /** Line calculators write straight into the line as the numbers change (debounced autosave); Done / tap outside flushes. */
 var lineFlush = null, lineTimer = null;
 function liveLine(target, s, unit) {
-  var ln = target.line, pm = lmeta(ln).p; if (!s.buy || (ln.qty === s.buy && noteText(ln.note).indexOf(s.note) === 0 && (!s.priced || (pm == null ? null : pm) === (s.p == null ? null : s.p)))) return;
+  var ln = target.line, pm = lmeta(ln).p; if (!s.buy || (ln.qty === s.buy && (!s.priced || (pm == null ? null : pm) === (s.p == null ? null : s.p)))) return;
   clearTimeout(lineTimer);
   lineFlush = function () { clearTimeout(lineTimer); lineFlush = null; setTileLine(target.c, target.n, ln, s, unit); };
   lineTimer = setTimeout(function () { if (lineFlush) lineFlush(); }, 700);
-  var st = $('tcLive'); if (st) st.textContent = 'Line: ' + s.buy + ' ' + unit + ' · ' + s.note + (s.p != null ? ' · price set' : '') + ' (saved automatically)';
+  var st = $('tcLive'); if (st) st.textContent = 'Line: ' + s.buy + ' ' + unit + (s.p != null ? ' · price set' : '') + ' (saved automatically)';
 }
 var tcState = null;
 function floorCalc(name) { floorCalcFor(shown[name], null); }
@@ -4728,7 +4735,7 @@ function floorCalcFor(it, target) {
   calc();
   $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(s.sf ? 'Enter the area first' : 'Enter the sq ft per box first'); return; }
     closeSheet();
-    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta('', { p: s.p }) }]); };   // 20261021c: calculators leave the note empty (sq ft shows under the amount)
 }
 // ---------------- molding calculator: MOLDING- trim only (base, casing, crown, chair rail, jambs...). Flooring moldings
 // (LMF-/LF-/HWF-...) get no calculator. Piece length from the description (16 ft, 16', 94", 2100mm, leading 2400*45*12mm),
@@ -4803,7 +4810,7 @@ function moldCalcFor(it, target) {
   $('tcA').value = mode === 'lf' ? lfV : bV; mode = mode; setMode(mode); calc();
   $('tcAdd').onclick = function () { var s = tcState; if (ln) { closeSheet(); return; } if (!s.buy) { toast(mode === 'b' ? z('Enter the bundles and pcs per bundle first', '請先輸入捆數和每捆支數') : s.len ? z('Enter the linear ft first', '請先輸入長度') : z('Enter the length per piece first', '請先輸入每支長度')); return; }
     closeSheet();
-    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta(s.note, { p: s.p }) }]); };
+    addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta('', { p: s.p }) }]); };   // 20261021c: calculators leave the note empty (sq ft shows under the amount)
 }
 // ---------------- line discount: % or $ off this line (staff, prices visible only). Cap: #3007/#3008 cabinets 35%, others 100%.
 function discSheet(l) { if (linePrice(l) == null) return; var cap = discCap(l.name), base = lineBase(l), full = Math.round(base * l.qty * 100) / 100, maxAmt = Math.round(full * cap) / 100;
