@@ -735,7 +735,7 @@
 <script src="search.js?v=20261019a"></script>
 <script src="sync.js?v=20261017h"></script>
 <script src="resume.js?v=20261017k"></script>
-<script src="i18n.js?v=20261021c2"></script>
+<script src="i18n.js?v=20261021d2"></script>
 <script src="photoq.js?v=20261017l"></script>
 <script>
 'use strict';
@@ -813,7 +813,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261021c2';
+var PAGE_VER = '20261021d2';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1125,7 +1125,7 @@ function card(it) {
     missBadges(it.name) + locStockHtml(it) + (inc ? '<div class="incoming">' + inc + '</div>' : '') +
     '<div class="desc notr" onclick="descTap(this)">' + esc(it.desc) + '</div>' +
     '<div class="actions sact">' + (floorOf(it) ? '<button onclick="floorCalc(decodeURIComponent(\'' + nm + '\'))" title="Flooring calculator">' + actLab('Flooring calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : moldOf(it) ? '<button onclick="moldCalc(decodeURIComponent(\'' + nm + '\'))" title="Molding calculator">' + actLab('Molding calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : it.cat !== 'Flooring' && it.tile && it.tile.sqftPc ? '<button onclick="tileCalc(decodeURIComponent(\'' + nm + '\'))" title="Tile calculator">' + actLab('Tile calculator', 'Calculator', 'Calculator', '\uD83E\uDDEE') + '</button>' : '') +
-    (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))" title="Accessories">' + actLab('Accessories', 'Acc.', 'Acc.') + ' <span class="notr">(' + relOf(it.name).length + ')</span></button>' :
+    (relOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'))" title="Accessories">' + actLab(accBtnLab(it.name), accBtnLab(it.name, 1), accBtnLab(it.name, 1)) + ' <span class="notr">(' + relOf(it.name).length + ')</span></button>' :
      sizesOf(it.name).length ? '<button onclick="sizeSheet(decodeURIComponent(\'' + nm + '\'))" title="Sizes">' + actLab('Sizes', 'Sizes', 'Sizes') + ' <span class="notr">(' + sizesOf(it.name).length + ')</span></button>' :
      moldFloorsOf(it.name).length ? '<button onclick="accSheet(decodeURIComponent(\'' + nm + '\'), false, null, moldFloorsOf(decodeURIComponent(\'' + nm + '\')))" title="Matching floors">' + actLab('Floors', 'Floors', 'Floors') + ' <span class="notr">(' + moldFloorsOf(it.name).length + ')</span></button>' : '') +
     '<button class="rmfeat" onclick="reportMissing(decodeURIComponent(\'' + nm + '\'))" title="Report missing">' + actLab('Report missing', 'Missing', 'Missing', '\u26A0\uFE0E') + '</button>' +
@@ -1688,7 +1688,8 @@ function addItem(name, btn) { var it = shown[name], qi = btn && btn.previousElem
   var q = qi ? Math.max(1, Math.min(99999, Math.round(Number(qi.value)) || 1)) : 1; if (qi) qi.value = 1;
   addToNote({ name: it.name, desc: it.desc.slice(0, 110), qty: q, photo: it.photo || '' }); }   // accessories open only from the Accessories button (Ray 2026-10-16)
 // ---- sink -> compatible accessories (bundle.related from accessories.csv: {sink: [[accessory, note, kind], ...]}), Blanco + Franke
-function relOf(name) { var m = localData && localData.related, r = (m && m[name]) || [];
+function relOf(name) { var m = localData && localData.related, r = (m && m[name]) || [], pr = localData && localData.pairs && localData.pairs[name];
+  if (pr && pr.length) r = pr.filter(function (x) { return !!itemRow(x[0]); }).concat(r);   // 20261021d: Duravit vanity <-> top pairs (bundle.pairs) first
   if (!r.length && localData && localData.items && typeof floorMoldMap_ === 'function') r = floorMoldMap_(localData).byFloor[name] || [];   // 20261019a: a floor's matching moldings
   return r; }
 /** 20261019a: a flooring molding's matching floor(s) (reverse of floorMoldMap_), as [[floor, description, 'floor'], ...]. */
@@ -1699,9 +1700,12 @@ function moldFloorsOf(name) { if (!localData || !localData.items || typeof floor
       mm.byFloor[fl].forEach(function (x) { (o[x[0]] = o[x[0]] || []).push([fl, r ? String(r[1] || '').slice(0, 110) : '', 'floor']); }); });
     MOLD_FLOORS_ = { d: localData, m: o }; }
   return MOLD_FLOORS_.m[name] || []; }
-var ACC_KIND = { seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, washlet: 14, autoflush: 15, jamb: 16, hinge: 17, lever: 18, stop: 19, pack: 21, reducer: 22, tmold: 23, stairnose: 24, endcap: 25, qround: 26, threshold: 27, stair: 28, base: 29, floor: 30 };
+var ACC_KIND = { self: -3, top: -2, vanity: -1, seat: 0, grid: 1, rack: 2, colander: 3, board: 4, strainer: 5, drain: 6, 'rough-in': 7, bar: 8, hose: 9, union: 10, arm: 11, frame: 12, plate: 13, washlet: 14, autoflush: 15, jamb: 16, hinge: 17, lever: 18, stop: 19, pack: 21, reducer: 22, tmold: 23, stairnose: 24, endcap: 25, qround: 26, threshold: 27, stair: 28, base: 29, floor: 30 };
+/** 20261021d: Accessories button label: "Matching tops" / "Matching vanities" when the list is only Duravit pairs. */
+function accBtnLab(name, short) { var r = relOf(name), k = r.length && r.every(function (a) { return a[2] === 'top'; }) ? 'top' : r.length && r.every(function (a) { return a[2] === 'vanity'; }) ? 'vanity' : '';
+  return k === 'top' ? (short ? 'Tops' : 'Matching tops') : k === 'vanity' ? (short ? 'Vanities' : 'Matching vanities') : (short ? 'Acc.' : 'Accessories'); }
 function accKind(k) { return Object.prototype.hasOwnProperty.call(ACC_KIND, k) ? ACC_KIND[k] : 20; }
-var ACC_LABEL = { jamb: 'Frame', hinge: 'Hinge', lever: 'Lever', stop: 'Door stop', pack: 'Door pack',
+var ACC_LABEL = { self: 'This item', top: 'Top', vanity: 'Vanity', jamb: 'Frame', hinge: 'Hinge', lever: 'Lever', stop: 'Door stop', pack: 'Door pack',
   reducer: 'Reducer', tmold: 'T-molding', stairnose: 'Stair nose', endcap: 'End cap', qround: 'Quarter round', threshold: 'Threshold', stair: 'Stair tread', base: 'Base molding' };
 var FLOOR_ACC_KINDS = { reducer: 1, tmold: 1, stairnose: 1, endcap: 1, qround: 1, threshold: 1, stair: 1, base: 1 };
 /** 20261019a: qty stepper for a sheet row (same look as the search card stepper); Add uses its number. */
@@ -1784,21 +1788,24 @@ function packSwap(c, n, swaps, changed) {
 function accSheet(sink, justAdded, toNote, list) {   // toNote: {c: project, n: note} = add picks to that note (note page pill); list = rows to show instead of relOf (molding -> floors)
   var rel = (list || relOf(sink)).slice().sort(function (a, b) { return accKind(a[2]) - accKind(b[2]); });
   if (!rel.length) return;
-  var rows = rel.map(function (a) { var r = itemRow(a[0]); if (!r) return '';
+  var rowHtml = function (a) { var r = itemRow(a[0]); if (!r) return '';
     var it = itemFromRow(r), oh = r[3], enc = encodeURIComponent(a[0]).replace(/'/g, '%27');
     return '<div class="accrow" data-name="' + esc(a[0]) + '">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
       '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span class="notr">' + esc(a[0]) + '</span>' + (ACC_LABEL[a[2]] ? ' <span class="cutchip">' + ACC_LABEL[a[2]] + '</span>' : '') + '</div>' +
       '<div class="notr" style="font-size:12px;color:var(--muted)">' + esc(a[1] || '') + '</div>' +
       '<div style="font-size:12px"><span class="' + (oh > 0 ? 'accok' : 'accbad') + '">On hand</span> <b class="notr">' + (oh == null ? '—' : qty(oh)) + '</b>' +
       (priceState.prices && r[2] != null ? ' · <span class="notr">' + money(r[2]) + '</span>' : '') + '</div></div>' +
-      accQtyHtml() + '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }).join('');
+      accQtyHtml() + '<button class="primary" data-accadd="' + enc + '">Add</button></div>'; }, rows = rel.map(rowHtml).join('');
+  var head = rel.every(function (a) { return a[2] === 'seat'; }) ? 'Compatible seats' : rel.every(function (a) { return a[2] === 'floor'; }) ? 'Matching floors' :
+    rel.every(function (a) { return a[2] === 'top'; }) ? 'Matching tops' : rel.every(function (a) { return a[2] === 'vanity'; }) ? 'Matching vanities' :
+    rel.every(function (a) { return FLOOR_ACC_KINDS[a[2]]; }) ? 'Matching moldings' : 'Compatible accessories';
+  // 20261021d (Ray: "Add the original item to the accessories list too for all"): the item itself is the first row (door packs keep their "Door only" row)
+  if (!(packOf(sink) && !toNote) && itemRow(sink) && !rel.some(function (a) { return a[0] === sink; })) { var sr = itemRow(sink); rel = [[sink, String(sr[1] || '').slice(0, 110), 'self']].concat(rel); rows = rowHtml(rel[0]) + rows; }
   if (packOf(sink) && !toNote) { var dr = itemRow(sink); if (dr) { var di = itemFromRow(dr);   // door pack doors: the card button adds the pack; this row adds the door alone
     rows = '<div class="accrow" data-name="' + esc(sink) + '">' + (di.photo ? '<img class="thumb" loading="lazy" src="' + esc(di.photo) + '" alt="" onerror="this.remove()">' : '<div class="thumb accnoph"></div>') +
       '<div style="flex:1;min-width:0"><div class="name" style="font-weight:700"><span>Door only</span></div>' +
       '<div style="font-size:12px;color:var(--muted)"><span>No frame, no hinges</span></div></div>' +
       accQtyHtml() + '<button class="primary" data-accadd="' + encodeURIComponent(sink).replace(/'/g, '%27') + '">Add</button></div>' + rows; } }
-  var head = rel.every(function (a) { return a[2] === 'seat'; }) ? 'Compatible seats' : rel.every(function (a) { return a[2] === 'floor'; }) ? 'Matching floors' :
-    rel.every(function (a) { return FLOOR_ACC_KINDS[a[2]]; }) ? 'Matching moldings' : 'Compatible accessories';
   openSheet('<h3><span>' + head + '</span></h3><div style="font-size:13px;color:var(--muted)">' + (justAdded ? '<span>Added</span> ' : '') + '<span class="notr">' + esc(sink) + '</span></div>' +
     '<div class="acclist">' + rows + '</div>');
   $('sheetBody').onclick = function (e) {
@@ -2725,7 +2732,7 @@ function renderPicked() {
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
       (pr != null || relOf(l.name).length || szN ? '<span class="lsub' + (relOf(l.name).length || szN ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + money(pr) + '</b></span>' : '') +
-        (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">Accessories <span class="notr">(' + relOf(l.name).length + ')</span></button>' :
+        (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">' + accBtnLab(l.name) + ' <span class="notr">(' + relOf(l.name).length + ')</span></button>' :
          szN ? '<button type="button" class="accpill" data-lsz="' + esc(l.name) + '">Sizes <span class="notr">(' + szN + ')</span></button>' : '') + '</span>' : '') +
       '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
         (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
