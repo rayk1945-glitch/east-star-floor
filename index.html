@@ -303,6 +303,8 @@
   .pline .ord { flex:0 0 auto; margin-right:2px; } .pline .ord button { width:34px; height:34px; }
   .lbtns { display:grid; grid-template-columns:40px 40px; column-gap:8px; row-gap:10px; flex:none; align-self:flex-start; } .lbrow { display:contents; } .lbtns .x.lmenu { margin-right:0; }
   .lbtns .discpill { grid-column:1; justify-self:center; }
+  .saleprice { color:#b42318; font-weight:700; } .salereg { color:var(--muted); font-weight:400; margin-right:2px; }
+  .saletag { display:inline-block; margin-top:3px; padding:1px 7px; border-radius:9px; background:#fdecec; color:#b42318; font-size:11px; font-weight:600; white-space:nowrap; max-width:100%; box-sizing:border-box; } .lsub .saletag, .cartline .saletag { white-space:normal; overflow-wrap:anywhere; }
   .discpill { border:1.5px solid var(--accent); color:var(--accent); background:#fff; border-radius:999px; font-size:12px; font-weight:700; padding:0 6px; line-height:1; cursor:pointer; min-width:40px; height:40px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
   .discpill:not(.on) { width:40px; padding:0; font-size:16px; background:#eef0f3; border:0; color:#374151; font-weight:800; }
   .dsrow { display:flex; gap:5px; margin:10px 0 8px; } .dsopt { flex:1; border:1.5px solid var(--accent); color:var(--accent); background:#fff; border-radius:999px; font:inherit; font-size:12.5px; font-weight:700; padding:7px 2px; white-space:nowrap; cursor:pointer; }
@@ -813,7 +815,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261021d2';
+var PAGE_VER = '20261022sale';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -1114,8 +1116,8 @@ function card(it) {
   var ps = perSqft(it), disc = /discontinu/i.test(it.desc) ? ' <span class="chip" style="background:#fdecec;color:#7f1d1d">discontinued</span>' : '';
   var nm = encodeURIComponent(it.name).replace(/'/g, '%27');  // names like 2' x 9' must not break the inline onclick string
   return '<div class="card item" data-name="' + nm + '"><div class="row1">' + (it.photo ? '<img class="thumb" loading="lazy" src="' + esc(it.photo) + '" alt="" onerror="this.remove()">' : '') +
-    '<div style="flex:1;min-width:0"><div class="top"><div class="name"><span class="notr">' + esc(it.name) + '</span>' + cutChip(it) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : money(it.price) +
-    '<small' + (packPrice(it.name) != null ? ' style="white-space:nowrap">Pack ' + money(packPrice(it.name)) : '>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail')) + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + missTagHtml(it.name) + '</div></div>' +
+    '<div style="flex:1;min-width:0"><div class="top"><div class="name"><span class="notr">' + esc(it.name) + '</span>' + cutChip(it) + disc + '</div><div class="price">' + (it.price == null && !priceState.prices ? '' : (saleOf(it.name) ? '<s class="salereg">' + money(saleOf(it.name)[0]) + '</s> <span class="saleprice">' + money(saleOf(it.name)[1]) + '</span>' : money(it.price)) +
+    '<small' + (packPrice(it.name) != null ? ' style="white-space:nowrap">Pack ' + money(packPrice(it.name)) : '>' + (floorOf(it) ? 'per box' : it.tile ? 'per piece' : 'retail')) + '</small>' + (ps ? '<div class="persq">' + money(ps) + '/sq ft</div>' : '')) + missTagHtml(it.name) + (saleOf(it.name) ? saleTag() : '') + '</div></div>' +
     '<div style="font-size:12px;color:var(--muted);margin-top:2px"><span class="notr">' + esc([it.cat, it.brand, it.size].filter(Boolean).join(' · ')) + '</span>' + cardDocsHtml(it.name) + '</div></div></div>' +
     '<div class="stats shelves"><div class="stat ohstat ' + (it.onHand == null ? '' : oh > 0 ? 'good' : 'bad') + '"><b class="notr">' + ohCubeHtml(it.name, it.onHand) + '</b><span>On hand</span></div>' +
     '<div class="stat"><b>' + qty(it.onOrder) + '</b><span>Order</span></div>' +
@@ -1871,8 +1873,11 @@ function withMeta(text, o) { var b = []; if (o.p != null) b.push('p' + o.p); if 
 /** Unit size the $/sq ft (or $/pc for molding) override multiplies: sq ft per box (flooring), sq ft per piece (tile), 1 (molding). */
 function lineUnitSize(r) { if (!r) return null; var it = itemFromRow(r), f = floorOf(it); if (f) return f.sf || null; if (moldOf(it)) return 1; return isTileRow(r) ? r[11].sqftPc : null; }
 /** Max line discount: #3007/#3008 cabinets 35% (store rule); everything else up to 100% (clearance). $ off never exceeds the cap share of the line total. */
-function discCap(name) { return /#300[78]\b/.test(name) ? 35 : 100; }
-function lineBase(l) { var r = itemRow(l.name); if (!priceState.prices || !r || r[2] == null) return null; var m = lmeta(l), u = m.p != null ? lineUnitSize(r) : null;
+function discCap(name) { return saleOf(name) ? 0 : /#300[78]\b/.test(name) ? 35 : 100; }
+/** 20261022sale: clearance map in bundle.sale {code:[regular,sale]}, until bundle.saleEnds (YYYY-MM-DD, inclusive). Sale lines: sale price, no discounts, no price override. */
+function saleOf(name) { var d = localData, m = d && d.sale && d.sale[name]; if (!m || (d.saleEnds && new Date().toISOString().slice(0, 10) > d.saleEnds)) return null; return m; }
+function saleTag() { return '<span class="saletag">' + esc((localData && localData.saleTag) || 'Clearance · no extra discount') + '</span>'; }
+function lineBase(l) { var r = itemRow(l.name); if (!priceState.prices || !r || r[2] == null) return null; var sl = saleOf(l.name); if (sl) return sl[1]; var m = lmeta(l), u = m.p != null ? lineUnitSize(r) : null;
   return u ? Math.round(m.p * u * 100) / 100 : r[2]; }
 function lineDisc(l) { var d = lmeta(l).d || 0; return Math.min(d, discCap(l.name)); }
 /** $ off the whole line (a), capped at the same % cap applied to the line's retail. */
@@ -2731,11 +2736,11 @@ function renderPicked() {
       '<span class="lqty notr">×' + l.qty + lupHtml(l) + '</span><span class="lcaret" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></div>';
     var det = '<div class="ldet"><div class="t">' +
       '<div class="n"><span class="notr">' + esc(desc) + '</span>' +
-      (pr != null || relOf(l.name).length || szN ? '<span class="lsub' + (relOf(l.name).length || szN ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + money(pr) + '</b></span>' : '') +
+      (pr != null || relOf(l.name).length || szN ? '<span class="lsub' + (relOf(l.name).length || szN ? ' hasacc' : '') + '">' + (pr != null ? '<span class="muted"><span>retail</span> <b class="notr">' + (r && r[2] != null && Math.abs(pr - r[2]) > 0.004 ? '<s>' + money(r[2]) + '</s> ' : '') + (saleOf(l.name) ? '<span class="saleprice">' + money(pr) + '</span>' : money(pr)) + '</b></span>' + (saleOf(l.name) ? saleTag() : '') : '') +
         (relOf(l.name).length ? '<button type="button" class="accpill" data-lacc="' + esc(l.name) + '">' + accBtnLab(l.name) + ' <span class="notr">(' + relOf(l.name).length + ')</span></button>' :
          szN ? '<button type="button" class="accpill" data-lsz="' + esc(l.name) + '">Sizes <span class="notr">(' + szN + ')</span></button>' : '') + '</span>' : '') +
       '</div><div class="lbtns"><div class="lbrow"><button class="x lmenu" data-lmenu="1" aria-label="Move or copy">⋯</button><button class="x" data-lrm="1" aria-label="Remove">×</button></div>' +
-        (pr != null ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
+        (pr != null && !saleOf(l.name) ? '<button type="button" class="discpill' + (hasDisc(l) ? ' on' : '') + '" data-ldisc="1" aria-label="Discount">' + (hasDisc(l) ? discLabel(l) : '%') + '</button>' : '') + '</div></div>' +
       lineVariants(l.name) +
       '<div class="m"><span class="amtc"><span class="amt2">' + (pr != null ? money(pr * l.qty) : '') + '</span>' + lsfHtml(l, r) + '</span>' +
       '<div class="stepper"><button data-lq="-1">−</button><input inputmode="numeric" value="' + l.qty + '" data-lqv="1"><button data-lq="1">+</button></div>' + '<span class="lbrk"></span>' + (hingeFinishHtml(l.name) || lnoteInput(l)) + '<button type="button" class="lnok" data-lnok="1">OK</button>' + '</div>' +
@@ -4132,10 +4137,10 @@ function lineDiscOut(l) { var d = lineDisc(l), a = lineDiscAmt(l), b = lineBase(
   return { name: 'DISCOUNT — ' + l.name + ' ' + (d ? d + '%' : money(a)), discount_for: l.name, qty: 1, discount_pct: d || undefined,
     amount: amt != null ? -amt : undefined, unit_price: amt != null ? -amt : undefined, is_discount: true }; }
 function lineNoteBits(it) { var out = []; (it || []).forEach(function (l) { var t = noteText(l.note).trim(), m = lmeta(l), x = lineDiscOut(l);
-  var bits = [t, m.p != null && lineBase(l) != null ? 'unit price ' + money(lineBase(l)) : ''].filter(Boolean).join(' · ');
+  var bits = [t, saleOf(l.name) ? 'Clearance ' + money(lineBase(l)) + ' (reg ' + money(saleOf(l.name)[0]) + ') · no extra discount' : m.p != null && lineBase(l) != null ? 'unit price ' + money(lineBase(l)) : ''].filter(Boolean).join(' · ');
   if (bits) out.push(l.name + ': ' + bits);
   if (x) out.push(x.name + (x.amount != null ? ': ' + '−' + money(-x.amount) : '')); }); return out; }
-function lineQs(l) { var o = { name: l.name, qty: l.qty }; if (lmeta(l).p != null && lineBase(l) != null) o.unit_price = lineBase(l);
+function lineQs(l) { var o = { name: l.name, qty: l.qty }; if ((lmeta(l).p != null || saleOf(l.name)) && lineBase(l) != null) o.unit_price = lineBase(l); if (saleOf(l.name)) { o.sale = true; o.no_discount = true; o.regular_price = saleOf(l.name)[0]; }
   var x = lineDiscOut(l); if (x && o.unit_price == null && lineBase(l) != null) o.unit_price = lineBase(l) /* catalog, undiscounted */; return x ? [o, x] : [o]; }
 function linesQ(it) { return (it || []).reduce(function (a, l) { return a.concat(lineQs(l)); }, []); }
 function quoteSent(r) { msg($('cdMsg'), r.sent ? 'Sent to ' + (session.bot || 'the bot') + '. Request ' + r.request_id + ', ' + r.lines + ' items. The quote comes back to East Star Max.' : 'Saved as ' + r.request_id + ' but the bot did not answer (' + r.status + '). Re-send it from History.', r.sent); }
@@ -4827,7 +4832,7 @@ function moldCalcFor(it, target) {
     addToNote([{ name: s.it.name, desc: s.it.desc.slice(0, 110), qty: s.buy, photo: s.it.photo || '', note: withMeta('', { p: s.p }) }]); };   // 20261021c: calculators leave the note empty (sq ft shows under the amount)
 }
 // ---------------- line discount: % or $ off this line (staff, prices visible only). Cap: #3007/#3008 cabinets 35%, others 100%.
-function discSheet(l) { if (linePrice(l) == null) return; var cap = discCap(l.name), base = lineBase(l), full = Math.round(base * l.qty * 100) / 100, maxAmt = Math.round(full * cap) / 100;
+function discSheet(l) { if (linePrice(l) == null || saleOf(l.name)) return; var cap = discCap(l.name), base = lineBase(l), full = Math.round(base * l.qty * 100) / 100, maxAmt = Math.round(full * cap) / 100;
   var m = lmeta(l), mode = m.d ? 'pct' : m.a ? 'amt' : 'pct';
   openSheet('<h3>Line discount</h3><div style="font-size:13px;color:var(--muted)"><span class="notr">' + esc(l.name) + '</span> · ' + money(base) + ' × ' + l.qty + ' = ' + money(full) + (cap < 100 ? ' · max ' + cap + '%' : '') + '</div>' +
     '<div class="dsrow"><button class="dsopt" data-dsq="5">5%</button><button class="dsopt" data-dsq="10">10%</button><button class="dsopt" data-dsm="amt">$ amount</button><button class="dsopt" data-dsm="pct">Custom %</button><button class="dsopt dsclr" data-dsclr="1">Clear</button></div>' +
