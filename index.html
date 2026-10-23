@@ -616,7 +616,7 @@
   button.busy::after, .btn.busy::after { content:''; display:inline-block; width:12px; height:12px; margin-left:6px; vertical-align:-2px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:pfxspin .7s linear infinite; }
   @keyframes pfxspin { to { transform: rotate(360deg); } }
   .ngshare { border:0; background:#2563eb; color:#fff; font-weight:700; font-size:16px; border-radius:10px; min-height:46px; padding:10px 16px; margin-left:auto; width:auto !important; flex:0 0 auto !important; cursor:pointer; flex-shrink:0; }
-  .ngtop .ngclose { margin-left:0; } .proj { padding-bottom:84px; } /* clear of WeChat's floating button */
+  .ngtop .ngclose { margin-left:0; } .nord { display:flex; gap:4px; flex:none; margin-left:auto; } .nord button { width:34px; height:34px; border:1.5px solid var(--accent); background:var(--info-bg); border-radius:10px; font:inherit; font-size:18px; line-height:1; font-weight:800; color:var(--info-fg); padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer; } .nord button:disabled { opacity:.28; cursor:default; } .nord button.pfx { transform:scale(1.08); } .proj { padding-bottom:84px; } /* clear of WeChat's floating button */
   .newc.pfx, .addnote.pfx { transform:scale(1.04); } .newc.busy, .addnote.busy { background:#eff6ff; border-color:#2563eb; color:#1d4ed8; opacity:1; } .nedit .ngtop { flex-wrap:wrap !important; row-gap:4px; } .nedit .ngtop .ntitle { flex:1 0 100% !important; width:100%; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -851,7 +851,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261023exp';
+var PAGE_VER = '20261023ord';
 /** 20261023btn3: a new release used to reload the page at once, even with item adds still queued in memory (saveQ) =
  *  those adds were lost (Ray #1093, 2026-10-23, the morning of two releases). Now: send everything first, reload only when
  *  nothing is waiting; a save that keeps failing holds the reload (the old page keeps working, "Not saved, tap to retry"). */
@@ -2453,12 +2453,12 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
     ns.forEach(function (x) { noteOpenSet[x.id] = 1; });   // 20261023exp (Ray): every note always expanded
     Object.keys(noteOpenSet).forEach(function (k) { if (!ns.some(function (x) { return x.id === k; })) delete noteOpenSet[k]; });
     noteOpenMem[c.id] = noteOpenId; }
-  $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
-    if (n.id !== noteOpenId && noteOpenSet[n.id]) return noteRoHtml(n, isCur, pill);
+  $('cdNotes').innerHTML = ns.length ? ns.map(function (n, ni) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
+    if (n.id !== noteOpenId && noteOpenSet[n.id]) return noteRoHtml(n, isCur, pill, ni, ns.length);
     if (n.id !== noteOpenId) return '<div class="card ngroup' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div></button>' +
       noteChipRow(n) + '<button class="nghead" data-nopen="' + esc(n.id) + '"><span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
     return '<div class="card ngroup open nedit' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
-      '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<span class="nroedit on">Active</span><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
+      '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<span class="nroedit on">Active</span>' + noteOrdHtml(n, ni, ns.length) + '<button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
         '</div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
@@ -2495,6 +2495,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
 /** Tap a collapsed header: open that group (the open one collapses); tap ▴ to collapse. */
 document.addEventListener('click', function (e) { if (!custOpen || !e.target.closest('#cdNotes')) return;
   var nsh = e.target.closest('[data-nshare]'); if (nsh) { var cS = custOpen; flushBatch().then(function () { if (custOpen === cS) openClientLink(cS); }); return; }
+  var nor = e.target.closest('[data-nord]'); if (nor) { e.preventDefault(); if (!nor.disabled) moveNote(nor.dataset.nid, nor.dataset.nord === 'up' ? -1 : 1); return; }
   var nm = e.target.closest('[data-nmenu]'); if (nm) { noteMenu(nm.dataset.nmenu); return; }
   var chip = e.target.closest('[data-nchip]'); if (chip) { e.preventDefault(); applyNoteChip(chip); return; }
   var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]');
@@ -2531,9 +2532,34 @@ function photosHtmlRO(n) { var ps = n.photos || []; if (!ps.length) return '<spa
 function loadRoPhotos() { var c = custOpen; if (!c) return;
   document.querySelectorAll('#cdNotes .nphro .ld[data-rofid]').forEach(function (s) { var f = s.dataset.rofid; if (String(f).indexOf('phtmp-') === 0) return;
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); }); }
-function noteRoHtml(n, isCur, pill) { var cnt = (n.items || []).length;
+/** 20261023ord (Ray): move a whole note up / down in its project. Same arrow style as the item arrows. The new order is
+ *  saved for everyone with one server call (noteOrder, server v31) queued in saveQ, so projPending/savesWaiting count it and a
+ *  refresh / version reload can't undo it. */
+function noteOrdHtml(n, i, len) {
+  return '<span class="nord"><button type="button" class="nordb" data-nord="up" data-nid="' + esc(n.id) + '" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+    '<button type="button" class="nordb" data-nord="down" data-nid="' + esc(n.id) + '" aria-label="Move down"' + (i === len - 1 ? ' disabled' : '') + '>↓</button></span>';
+}
+function moveNote(nid, dir) { var c = custOpen; if (!c) return false; var ns = c.notes || [], i = -1;
+  ns.forEach(function (x, k) { if (x.id === nid) i = k; }); var j = i + dir; if (i < 0 || j < 0 || j >= ns.length) return false;
+  if ($('nTitle') && $('nText')) { var cn = curNote(); if (cn) { cn.title = $('nTitle').value.trim() || cn.title; cn.text = $('nText').value; } }
+  var g0 = document.querySelector('[data-ng="' + nid + '"]'), y0 = g0 ? g0.getBoundingClientRect().top : null;
+  var t = ns[i]; ns[i] = ns[j]; ns[j] = t;
+  try { pcSave(c); } catch (e) {}
+  renderNoteCards();
+  try { var g = document.querySelector('[data-ng="' + nid + '"]'); if (g && y0 != null) { var y1 = g.getBoundingClientRect().top; window.scrollBy(0, y1 - y0);
+    if (g.animate) liftMove(g, 0); var bt = g.querySelector('[data-nord="' + (dir < 0 ? 'up' : 'down') + '"]'); if (bt && !bt.disabled) bt.focus({ preventScroll: true }); } } catch (e) {}
+  queueNoteOrder(c); return true; }
+function queueNoteOrder(c) { var cid = c.id;
+  return autoSave('nord:' + cid, function () {
+    var cc = custOpen && custOpen.id === cid ? custOpen : c;
+    var ids = (cc.notes || []).map(function (x) { return x.id; });
+    return Promise.all(ids.map(function (id) { return tmpNotes[id] ? tmpNotes[id] : id; })).then(function (order) {
+      return api('noteOrder', { id: cid, order: order });
+    }).catch(function (er) { if (/unknown action/i.test(er && er.message || '')) { toast('Note order is not saved yet: the server needs the v31 update.'); return; } throw er; });
+  }); }
+function noteRoHtml(n, isCur, pill, ni, nl) { var cnt = (n.items || []).length;
   return '<div class="card ngroup open nro' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
-    '<div class="ngtop"><b class="notr ntitle-ro" data-nro="' + esc(n.id) + '">' + esc(n.title) + '</b>' + pill + '<button class="nroedit" data-nro="' + esc(n.id) + '">View</button><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
+    '<div class="ngtop"><b class="notr ntitle-ro" data-nro="' + esc(n.id) + '">' + esc(n.title) + '</b>' + pill + '<button class="nroedit" data-nro="' + esc(n.id) + '">View</button>' + (ni == null ? '' : noteOrdHtml(n, ni, nl)) + '<button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
       '</div>' +
     '<div data-nro="' + esc(n.id) + '">' + (n.text ? '<div class="nrotext">' + esc(n.text) + '</div>' : '') +
     '<div class="sec-h" style="margin-top:10px"><h2>Items' + (cnt ? ' (' + cnt + ')' : '') + '</h2></div>' + itemsHtmlRO(n) + '<div>' + totalsHtmlRO(n) + '</div></div>' +
