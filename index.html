@@ -851,7 +851,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261023btn3';
+var PAGE_VER = '20261023exp';
 /** 20261023btn3: a new release used to reload the page at once, even with item adds still queued in memory (saveQ) =
  *  those adds were lost (Ray #1093, 2026-10-23, the morning of two releases). Now: send everything first, reload only when
  *  nothing is waiting; a save that keeps failing holds the reload (the old page keeps working, "Not saved, tap to retry"). */
@@ -2450,6 +2450,7 @@ function syncCurTitle(n) { if (!n || !custOpen || !isCurNote(custOpen.id, n.id) 
 /** All note groups. Only the open one has the editing ids (nTitle, cdItems, nPhotos, cdQuote...). */
 function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNotes')) return;
   if (c && c.id) { if (noteSetMem[c.id] !== noteOpenSet) noteOpenSet = noteSetMem[c.id] = (noteSetMem[c.id] || {}); if (noteOpenId) noteOpenSet[noteOpenId] = 1;
+    ns.forEach(function (x) { noteOpenSet[x.id] = 1; });   // 20261023exp (Ray): every note always expanded
     Object.keys(noteOpenSet).forEach(function (k) { if (!ns.some(function (x) { return x.id === k; })) delete noteOpenSet[k]; });
     noteOpenMem[c.id] = noteOpenId; }
   $('cdNotes').innerHTML = ns.length ? ns.map(function (n) { var isCur = isCurNote(c.id, n.id), pill = isCur ? '<span class="cur">adding here</span>' : '';
@@ -2458,7 +2459,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
       noteChipRow(n) + '<button class="nghead" data-nopen="' + esc(n.id) + '"><span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
     return '<div class="card ngroup open nedit' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
       '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<span class="nroedit on">Active</span><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
-        '<button class="ngclose" data-nclose="1" aria-label="Close note" title="Close note">✕</button></div>' + noteChipRow(n) +
+        '</div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px"><h2 id="cdItemsH">Items</h2><button type="button" class="addsrch" id="cdAddMore">+ Add from Search</button></div>' +
@@ -2500,6 +2501,7 @@ document.addEventListener('click', function (e) { if (!custOpen || !e.target.clo
   var ro = e.target.closest('[data-nro]'), ph = e.target.closest('.nphro img[data-fid]');
   if (ph) { openPhotoZoom(ph.src); return; }
   if (ro && e.target.closest('img.cthumb')) return;   // item thumb in a read-only note: full-screen only (global handler), don't switch edit
+  if (x) return;   // 20261023exp: notes never collapse
   if (x && x.dataset.nclose === 'ro') { delete noteOpenSet[x.dataset.nid]; keepTyped(); var hs0 = noteHeights(); renderNoteCards(); flipNotes(hs0); return; }
   if (!b && !x && ro) b = { dataset: { nopen: ro.dataset.nro } };   // tap a read-only expanded note: make it the edit note
   if (!b && !x) return;
@@ -2532,7 +2534,7 @@ function loadRoPhotos() { var c = custOpen; if (!c) return;
 function noteRoHtml(n, isCur, pill) { var cnt = (n.items || []).length;
   return '<div class="card ngroup open nro' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
     '<div class="ngtop"><b class="notr ntitle-ro" data-nro="' + esc(n.id) + '">' + esc(n.title) + '</b>' + pill + '<button class="nroedit" data-nro="' + esc(n.id) + '">View</button><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
-      '<button class="ngclose" data-nclose="ro" data-nid="' + esc(n.id) + '" aria-label="Close note" title="Close note">✕</button></div>' +
+      '</div>' +
     '<div data-nro="' + esc(n.id) + '">' + (n.text ? '<div class="nrotext">' + esc(n.text) + '</div>' : '') +
     '<div class="sec-h" style="margin-top:10px"><h2>Items' + (cnt ? ' (' + cnt + ')' : '') + '</h2></div>' + itemsHtmlRO(n) + '<div>' + totalsHtmlRO(n) + '</div></div>' +
     ((n.photos || []).length ? '<div class="sec-h" style="margin-top:12px"><h2>Photos (' + n.photos.length + ')</h2></div><div class="nph nphro">' + photosHtmlRO(n) + '</div>' : '') + '</div>'; }
