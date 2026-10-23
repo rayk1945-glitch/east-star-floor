@@ -851,13 +851,27 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261023btn2';
+var PAGE_VER = '20261023btn3';
+/** 20261023btn3: a new release used to reload the page at once, even with item adds still queued in memory (saveQ) =
+ *  those adds were lost (Ray #1093, 2026-10-23, the morning of two releases). Now: send everything first, reload only when
+ *  nothing is waiting; a save that keeps failing holds the reload (the old page keeps working, "Not saved, tap to retry"). */
+function savesWaiting() { return (typeof saveQ !== 'undefined' && (Object.keys(saveQ).length || Object.keys(saveRun).length)) || (typeof OB !== 'undefined' && OB && OB.pending()) ||
+  (typeof tmpNotes !== 'undefined' && Object.keys(tmpNotes).length) || (typeof isBatchDirty === 'function' && isBatchDirty()) || (typeof pqMem !== 'undefined' && Object.keys(pqMem).length); }
+var reloadWait = null;
+function reloadWhenSaved(page) {
+  if (reloadWait) return; var tries = 0;
+  (function step() {
+    if (!savesWaiting()) { reloadWait = null; sessionStorage.setItem('esReloadedFor', page); location.reload(); return; }
+    if (tries++ === 0 && typeof saveBg === 'function') saveBg();
+    reloadWait = setTimeout(function () { reloadWait = null; step(); }, 2000);
+  })();
+}
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
     if (!v || !v.page || v.page === PAGE_VER) return;
     if (sessionStorage.getItem('esReloadedFor') === v.page) return;   // never loop if the CDN still serves the old page
-    sessionStorage.setItem('esReloadedFor', v.page); location.reload();
+    reloadWhenSaved(v.page);
   }).catch(function () {});
 }
 checkPageVersion();
@@ -922,7 +936,10 @@ function pcWipe() { try { Object.keys(localStorage).forEach(function (k) { if (k
 /** Cache the open project as it is now (notes still being created on the phone are left out). */
 function pcSave(c) { c = c || custOpen; if (!c || !c.notes) return; var o = {}; Object.keys(c).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = c[k]; });
   o.notes = c.notes.filter(function (n) { return String(n.id).indexOf('tmp-') !== 0; }); pcPut('c:' + c.id, o); }
-function projPending(id) { return Object.keys(saveQ).some(function (k) { return k.indexOf(':' + id) > 0 || k.indexOf('note:') === 0 || k.indexOf('newnote:' + id) === 0; }) || noteDirty || !!batchT || (lineHold && Object.keys(lineHold).length) || (ordDirty && Object.keys(ordDirty).length) || (custOpen && custOpen.id === id && custOpen._infoDirty); }
+/** 20261023btn3: ANY queued / failed save (item adds are keyed 'add:tmpl-…' with no project id, so they were missed) or an op
+ *  still in the outbox blocks the server refresh; before, a refresh during a failed / pending add replaced the project and the
+ *  item vanished from the screen (Ray #1093), and a reload then lost it for good. */
+function projPending(id) { return Object.keys(saveQ).length > 0 || Object.keys(saveRun).length > 0 || !!(OB && OB.pending()) || Object.keys(tmpNotes).length > 0 || noteDirty || !!batchT || (lineHold && Object.keys(lineHold).length) || (ordDirty && Object.keys(ordDirty).length) || (custOpen && custOpen.id === id && custOpen._infoDirty); }
 function wipeLocalData() { pcWipe(); localData = null; dataP = null; if (window.indexedDB) idb('readwrite', function (st) { st.clear(); }).catch(function () {}); }
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkPageVersion(); checkIdleClose(); }
   if (document.hidden && typeof isBatchDirty === 'function' && isBatchDirty()) saveBg();
@@ -2045,7 +2062,7 @@ function openCust(id, pre, noteId) {
   api('customerGet', { id: id }).then(function (c) { if (!custOpen || custOpen.id !== id) return;
     c = adoptContacts(c, cached);
     if (cached) { if (custOpen !== cached) return;                                         // something else opened since
-      if (projPending(id) || document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && $('cuDetail').contains(document.activeElement)) { pcSave(c); return; }   // don't yank what they're typing; next open shows it
+      if (projPending(id) || document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && $('cuDetail').contains(document.activeElement)) { if (!projPending(id)) pcSave(c); return; }   // don't yank what they're typing; next open shows it (20261023btn3: never cache over unsaved local adds)
       if (JSON.stringify(c) === JSON.stringify(cached)) return; }
     custOpen = c; pcSave(c);
     if ((!noteOpenId && !keepClosed) || (noteOpenId && !curNote())) noteOpenId = c.notes && c.notes.length ? c.notes[0].id : null; renderCustDetail(); if (noteId) scrollToNote(noteId);
