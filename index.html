@@ -227,7 +227,7 @@
   .pline.ro .lhead { cursor:default; } .lronote { font-size:12.5px; color:var(--muted); margin:2px 0 0 26px; } [data-nro] { cursor:pointer; }
   .ngroup .chev { color:#8a93a0; font-size:16px; } .ngroup .cur { font-size:11px; font-weight:800; background:var(--ok-bg); color:var(--ok-fg); border-radius:6px; padding:1px 6px; white-space:nowrap; }
   .ngroup.open { border:2px solid #1f2937; } .ngtop { display:flex; align-items:center; gap:8px; } .ngtop .ntitle { flex:1; min-width:0; }
-  .ngclose { border:0; background:#e6e9ee; border-radius:999px; width:34px; height:34px; font-size:15px; color:#475569; cursor:pointer; flex-shrink:0; }
+  .ngclose { border:0; background:transparent; border-radius:999px; width:22px; height:22px; padding:0; line-height:22px; font-size:12px; opacity:.7; color:#475569; cursor:pointer; flex-shrink:0; }
   .proj { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 10px 10px; margin-bottom:12px; }
   .proj .phead { padding:0 2px 10px; border-bottom:1px solid var(--line); margin-bottom:10px; } .proj .nhead { margin:0 0 4px; }
   .proj .pinfo { margin:10px 0 2px; } .proj .shline { margin-top:6px; }
@@ -609,6 +609,14 @@
   .cbar.cbfresh .nm { animation:aNumNew 1.3s ease-out; border-radius:6px; padding-left:4px; margin-left:-4px; }
   .cbar.cbfresh-rm { animation:aBarNewRm 1.5s ease-out; }
   .cdoc{color:var(--accent,#1a73e8);text-decoration:underline;white-space:nowrap}
+  /* 20261023btn: instant press feedback + busy state for server round trips (one shared helper: pressFx) */
+  button, .btn, .phbtn { transition: transform .08s ease; }
+  button.pfx, .btn.pfx { transform: scale(1.06); }
+  button.busy, .btn.busy { position:relative; opacity:.75; pointer-events:none; }
+  button.busy::after, .btn.busy::after { content:''; display:inline-block; width:12px; height:12px; margin-left:6px; vertical-align:-2px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:pfxspin .7s linear infinite; }
+  @keyframes pfxspin { to { transform: rotate(360deg); } }
+  .ngshare { border:0; background:#2563eb; color:#fff; font-weight:700; font-size:16px; border-radius:10px; min-height:40px; padding:8px 14px; margin-left:auto; cursor:pointer; flex-shrink:0; }
+  .ngtop .ngclose { margin-left:2px; } .nedit .ngtop { flex-wrap:wrap !important; row-gap:4px; } .nedit .ngtop .ntitle { flex:1 0 100% !important; width:100%; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -762,8 +770,25 @@ var tmpNotes = {};
 function realIds(data) { var w = [];
   ['noteId', 'toNoteId'].forEach(function (k) { var t = data && data[k]; if (t && tmpNotes[t]) w.push(tmpNotes[t].then(function (id) { data[k] = id; })); });
   return w.length ? Promise.all(w).then(function () { return data; }) : null; }
-function api(action, data) {
-  var w = realIds(data); if (w) return w.then(function (d) { return api(action, d); });
+/** 20261023btn pressFx: one shared helper for every button. Press = instant grow; any api() call that starts within 600 ms
+ *  of the press is tied to that button: spinner + disabled while it runs, re-enabled when all settle (success or failure);
+ *  each screen keeps its own revert + error toast. Local actions (search on the phone) don't spin. */
+var pressFx = { btn: null, at: 0, n: new WeakMap() };
+document.addEventListener('pointerdown', function (e) { var b = e.target.closest && e.target.closest('button, .btn, .phbtn'); if (!b || b.disabled) return;
+  b.classList.add('pfx'); setTimeout(function () { b.classList.remove('pfx'); }, 160); }, true);
+document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('button, .btn'); if (b) { pressFx.btn = b; pressFx.at = Date.now(); } }, true);
+function pressTrack(action, p) {
+  var b = pressFx.btn; if (!b || Date.now() - pressFx.at > 600 || LOCAL_ACTIONS[action] || !b.isConnected) return p;
+  var k = (pressFx.n.get(b) || 0) + 1; pressFx.n.set(b, k);
+  if (k === 1) { b.dataset.pfxDis = b.disabled ? '1' : ''; b.classList.add('busy'); b.disabled = true; b.setAttribute('aria-busy', 'true'); }
+  var done = function () { var m = (pressFx.n.get(b) || 1) - 1; pressFx.n.set(b, m); if (m > 0) return;
+    b.classList.remove('busy'); b.removeAttribute('aria-busy'); if (b.dataset.pfxDis !== '1' && !b.dataset.cooling) b.disabled = false; delete b.dataset.pfxDis; };
+  p.then(done, done);
+  return p;
+}
+function api(action, data) { return pressTrack(action, apiRaw(action, data)); }
+function apiRaw(action, data) {
+  var w = realIds(data); if (w) return w.then(function (d) { return apiRaw(action, d); });
   if (LOCAL_ACTIONS[action] && (localData || dataP)) return (localData ? Promise.resolve(localData) : dataP).then(function (b) {
     if (!b) return serverApi(action, data);                                       // download failed: ask the server as before
     return JSON.parse(JSON.stringify(LOCAL_ACTIONS[action](b, data || {})));       // same functions the server runs
@@ -815,7 +840,7 @@ var localData = null, dataP = null, dataChecked = 0;
 /** Page release check: GitHub Pages caches index.html for 10 min and an installed home-screen app can stay open for days,
  * so a phone could keep running an old page after an upload. version.json is fetched uncached on open / return to the app;
  * when it names a newer release the page reloads itself (once per release). Bump PAGE_VER and version.json together. */
-var PAGE_VER = '20261022sale';
+var PAGE_VER = '20261023btn';
 function checkPageVersion() {
   if (!window.fetch) return;
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
@@ -2189,7 +2214,7 @@ function renderOverview() {
       '<button class="vtog hidden" id="cdVoiceT" aria-expanded="false"></button></div><div id="cdLive" class="live hidden"></div><div id="cdVoice" class="hidden"></div></div>' +
     '<div id="cdNotes"></div><button class="addnote" id="cdNewNote">+ Add note</button>' +
       '<div class="psave" id="cdSaveRow"><button type="button" class="pst" id="cdSaveSt" aria-live="polite"></button><span class="pwho" id="cdWho"></span></div>' +
-      '<div class="qrow"><button type="button" class="btn sec" id="cdShareProj">Share</button>' + (canShare ? '<button type="button" class="btn sec" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button>' : '') + '</div>' +
+      (canShare ? '<div class="qrow"><button type="button" class="btn sec" id="cdShare">' + (c.shared ? 'Sharing' : 'Share to team') + '</button></div>' : '') +
       '<button type="button" class="btn sec" id="cdCloneProj" data-cloneproj="1">Clone project</button>' +
       '<div class="qrow"><button class="btn sec" id="cdQuote">Quote this note</button><button class="btn sec" id="cdQuoteAll">Quote project</button></div><div id="cdMsg" class="msg hidden"></div></div>' +
     (canShare ? '<div style="text-align:center;margin:4px 0 14px"><button class="link" id="cdDel" style="color:#7f1d1d">Delete this project</button></div>' : '');
@@ -2401,8 +2426,8 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
     if (n.id !== noteOpenId) return '<div class="card ngroup' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '"><button class="nghead" data-nopen="' + esc(n.id) + '"><div class="t"><b class="notr">' + esc(n.title) + '</b>' + pill + '<span class="chev">▾</span></div></button>' +
       noteChipRow(n) + '<button class="nghead" data-nopen="' + esc(n.id) + '"><span class="s">' + noteSummary(n) + '</span>' + (n.text ? '<span class="p">' + esc(n.text.slice(0, 90)) + '</span>' : '') + '</button><button class="ngmenu abs" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button></div>';
     return '<div class="card ngroup open nedit' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
-      '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<span class="nroedit on">Active</span><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
-        '<button class="ngclose" data-nclose="1" aria-label="Collapse note">▴</button></div>' + noteChipRow(n) +
+      '<div class="ngtop"><input id="nTitle" class="ntitle" value="' + esc(n.title) + '" maxlength="60" aria-label="Note title">' + pill + '<span class="nroedit on">Active</span><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
+        '<button class="ngclose" data-nclose="1" aria-label="Close note" title="Close note">✕</button></div>' + noteChipRow(n) +
       (isCur ? '' : '<button class="link" id="cdUse" style="margin:-4px 0 8px">Add items from Search here</button>') +
       '<textarea id="nText" rows="3" placeholder="What they want, colors, measurements, timing">' + esc(n.text) + '</textarea><div class="saved" id="nSaved">' + (n.updated ? 'Saved ' + esc(whenTxt(n.updated)) + (n.updated_by ? ' by ' + esc(n.updated_by) : '') : '') + '</div>' +
       '<div class="sec-h" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px"><h2 id="cdItemsH">Items</h2><button type="button" class="addsrch" id="cdAddMore">+ Add from Search</button></div>' +
@@ -2437,6 +2462,7 @@ function renderNoteCards() { var c = custOpen, ns = c.notes || []; if (!$('cdNot
 }
 /** Tap a collapsed header: open that group (the open one collapses); tap ▴ to collapse. */
 document.addEventListener('click', function (e) { if (!custOpen || !e.target.closest('#cdNotes')) return;
+  var nsh = e.target.closest('[data-nshare]'); if (nsh) { var cS = custOpen; flushBatch().then(function () { if (custOpen === cS) openClientLink(cS); }); return; }
   var nm = e.target.closest('[data-nmenu]'); if (nm) { noteMenu(nm.dataset.nmenu); return; }
   var chip = e.target.closest('[data-nchip]'); if (chip) { e.preventDefault(); applyNoteChip(chip); return; }
   var b = e.target.closest('[data-nopen]'), x = e.target.closest('[data-nclose]');
@@ -2474,8 +2500,8 @@ function loadRoPhotos() { var c = custOpen; if (!c) return;
     api('customerFile', { id: c.id, fileId: f }).then(function (r) { fileCache[f] = r.data; var img = document.createElement('img'); img.src = r.data; img.dataset.fid = f; img.alt = 'photo'; if (s.parentNode) s.replaceWith(img); }).catch(function () {}); }); }
 function noteRoHtml(n, isCur, pill) { var cnt = (n.items || []).length;
   return '<div class="card ngroup open nro' + (isCur ? ' act' : '') + '" data-ng="' + esc(n.id) + '">' +
-    '<div class="ngtop"><b class="notr ntitle-ro" data-nro="' + esc(n.id) + '">' + esc(n.title) + '</b>' + pill + '<button class="nroedit" data-nro="' + esc(n.id) + '">View</button><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button>' +
-      '<button class="ngclose" data-nclose="ro" data-nid="' + esc(n.id) + '" aria-label="Collapse note">▴</button></div>' +
+    '<div class="ngtop"><b class="notr ntitle-ro" data-nro="' + esc(n.id) + '">' + esc(n.title) + '</b>' + pill + '<button class="nroedit" data-nro="' + esc(n.id) + '">View</button><button class="ngmenu" data-nmenu="' + esc(n.id) + '" aria-label="Note actions">⋯</button><button type="button" class="ngshare" data-nshare="1">Share</button>' +
+      '<button class="ngclose" data-nclose="ro" data-nid="' + esc(n.id) + '" aria-label="Close note" title="Close note">✕</button></div>' +
     '<div data-nro="' + esc(n.id) + '">' + (n.text ? '<div class="nrotext">' + esc(n.text) + '</div>' : '') +
     '<div class="sec-h" style="margin-top:10px"><h2>Items' + (cnt ? ' (' + cnt + ')' : '') + '</h2></div>' + itemsHtmlRO(n) + '<div>' + totalsHtmlRO(n) + '</div></div>' +
     ((n.photos || []).length ? '<div class="sec-h" style="margin-top:12px"><h2>Photos (' + n.photos.length + ')</h2></div><div class="nph nphro">' + photosHtmlRO(n) + '</div>' : '') + '</div>'; }
